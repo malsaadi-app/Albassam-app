@@ -56,6 +56,11 @@ model User {
   referralsReceived             WorkflowReferral[]            @relation("WorkflowReferredTo")
   referralsSent                 WorkflowReferral[]            @relation("WorkflowReferredBy")
 
+  // Supplier onboarding requests
+  supplierRequestsRequested SupplierRequest[] @relation("SupplierRequestRequestedBy")
+  supplierRequestsApproved  SupplierRequest[] @relation("SupplierRequestApprovedBy")
+  supplierRequestsRejected  SupplierRequest[] @relation("SupplierRequestRejectedBy")
+
   // Replacement workflow
   replacementRequestsRequested  ReplacementRequest[]           @relation("ReplacementRequester")
   replacementRequestsEvaluated  ReplacementRequest[]           @relation("ReplacementEvaluator")
@@ -1110,6 +1115,8 @@ enum EmployeeRole {
 enum Role {
   ADMIN
   HR_EMPLOYEE
+  PROCUREMENT_OFFICER // موظف مشتريات
+  SUPPORT_SERVICES_MANAGER // مدير الخدمات المساندة
   USER
 }
 
@@ -1338,24 +1345,72 @@ enum PurchaseRequestStatus {
 }
 
 model Supplier {
-  id             String          @id @default(cuid())
-  name           String
-  contactPerson  String?
-  email          String?
-  phone          String?
-  address        String?
-  category       String? // نوع المورد (قرطاسية، أثاث، إلخ)
-  taxNumber      String? // الرقم الضريبي
-  rating         Float           @default(0) // تقييم من 0-5
-  notes          String?
-  isActive       Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  quotations     Quotation[]
-  purchaseOrders PurchaseOrder[] @relation("SupplierOrders")
+  id               String            @id @default(cuid())
+  name             String
+  contactPerson    String?
+  email            String?
+  phone            String?
+  address          String?
+  category         String? // نوع المورد (قرطاسية، أثاث، إلخ)
+  taxNumber        String? // الرقم الضريبي
+  rating           Float             @default(0) // تقييم من 0-5
+  notes            String?
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  quotations       Quotation[]
+  purchaseOrders   PurchaseOrder[]   @relation("SupplierOrders")
+  supplierRequests SupplierRequest[]
 
   @@index([name])
   @@index([isActive])
+}
+
+enum SupplierRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model SupplierRequest {
+  id     String                @id @default(cuid())
+  status SupplierRequestStatus @default(PENDING)
+
+  // Requested by
+  requestedById String
+  requestedBy   User   @relation("SupplierRequestRequestedBy", fields: [requestedById], references: [id])
+
+  // Approval
+  approvedById String?
+  approvedBy   User?     @relation("SupplierRequestApprovedBy", fields: [approvedById], references: [id])
+  approvedAt   DateTime?
+
+  rejectedById    String?
+  rejectedBy      User?     @relation("SupplierRequestRejectedBy", fields: [rejectedById], references: [id])
+  rejectedAt      DateTime?
+  rejectionReason String?
+
+  // Supplier fields snapshot
+  name          String
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  category      String?
+  taxNumber     String?
+  rating        Float   @default(0)
+  notes         String?
+
+  createdSupplierId String?
+  createdSupplier   Supplier? @relation(fields: [createdSupplierId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([requestedById])
+  @@index([approvedById])
+  @@index([createdAt])
 }
 
 model Quotation {
@@ -2008,28 +2063,28 @@ enum WorkflowApproverType {
 }
 
 model WorkflowStep {
-  id                String               @id @default(cuid())
-  workflowId        String
-  name              String // اسم المرحلة (مثل: مراجعة المدير)
-  order             Int
-  level             WorkflowLevel
-  approverType      WorkflowApproverType @default(ROLE)
-  approverUserId    String? // إذا كان SPECIFIC_USER
-  workflowRoleId    String? // إذا كان ROLE (nullable الآن)
+  id                 String               @id @default(cuid())
+  workflowId         String
+  name               String // اسم المرحلة (مثل: مراجعة المدير)
+  order              Int
+  level              WorkflowLevel
+  approverType       WorkflowApproverType @default(ROLE)
+  approverUserId     String? // إذا كان SPECIFIC_USER
+  workflowRoleId     String? // إذا كان ROLE (nullable الآن)
   approverSystemRole String? // إذا كان SYSTEM_ROLE (ADMIN, HR_MANAGER, etc)
-  condition         String? // e.g., "amount > 5000"
-  allowReject       Boolean              @default(true)
-  autoEscalateDays  Int? // تصعيد تلقائي بعد X أيام
-  notifyOnEntry     Boolean              @default(true)
-  notifyOnApproval  Boolean              @default(true)
-  notifyOnReject    Boolean              @default(true)
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  condition          String? // e.g., "amount > 5000"
+  allowReject        Boolean              @default(true)
+  autoEscalateDays   Int? // تصعيد تلقائي بعد X أيام
+  notifyOnEntry      Boolean              @default(true)
+  notifyOnApproval   Boolean              @default(true)
+  notifyOnReject     Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
-  workflow      Workflow              @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  workflowRole  WorkflowRole?         @relation(fields: [workflowRoleId], references: [id])
-  approverUser  User?                 @relation("WorkflowStepApprover", fields: [approverUserId], references: [id])
-  approvals     WorkflowApprovalLog[]
+  workflow     Workflow              @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflowRole WorkflowRole?         @relation(fields: [workflowRoleId], references: [id])
+  approverUser User?                 @relation("WorkflowStepApprover", fields: [approverUserId], references: [id])
+  approvals    WorkflowApprovalLog[]
 
   @@index([workflowId])
   @@index([order])
@@ -2064,9 +2119,9 @@ model WorkflowApprovalLog {
   createdAt      DateTime               @default(now())
   reviewedAt     DateTime?
 
-  step          WorkflowStep           @relation(fields: [workflowStepId], references: [id])
-  approver      User                   @relation("WorkflowApprovals", fields: [approverId], references: [id])
-  referrals     WorkflowReferral[]
+  step      WorkflowStep       @relation(fields: [workflowStepId], references: [id])
+  approver  User               @relation("WorkflowApprovals", fields: [approverId], references: [id])
+  referrals WorkflowReferral[]
 
   @@index([requestType, requestId])
   @@index([approverId])
@@ -2075,24 +2130,23 @@ model WorkflowApprovalLog {
 }
 
 model WorkflowReferral {
-  id             String   @id @default(cuid())
-  approvalId     String   // الموافقة الأصلية
-  referredToId   String   // الشخص المُحال إليه
-  referredById   String   // من قام بالإحالة
-  status         String   @default("PENDING") // PENDING, COMPLETED, CANCELLED
-  comments       String?  // تعليقات الإحالة
-  response       String?  // رد الشخص المُحال إليه
-  priority       String?  // URGENT, NORMAL
-  createdAt      DateTime @default(now())
-  respondedAt    DateTime?
-  
-  approval    WorkflowApprovalLog @relation(fields: [approvalId], references: [id])
-  referredTo  User                @relation("WorkflowReferredTo", fields: [referredToId], references: [id])
-  referredBy  User                @relation("WorkflowReferredBy", fields: [referredById], references: [id])
+  id           String    @id @default(cuid())
+  approvalId   String // الموافقة الأصلية
+  referredToId String // الشخص المُحال إليه
+  referredById String // من قام بالإحالة
+  status       String    @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  comments     String? // تعليقات الإحالة
+  response     String? // رد الشخص المُحال إليه
+  priority     String? // URGENT, NORMAL
+  createdAt    DateTime  @default(now())
+  respondedAt  DateTime?
+
+  approval   WorkflowApprovalLog @relation(fields: [approvalId], references: [id])
+  referredTo User                @relation("WorkflowReferredTo", fields: [referredToId], references: [id])
+  referredBy User                @relation("WorkflowReferredBy", fields: [referredById], references: [id])
 
   @@index([approvalId])
   @@index([referredToId])
   @@index([status])
   @@index([createdAt])
 }
-

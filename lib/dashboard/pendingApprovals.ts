@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { getApproverUserIdsForHRRequestStep } from '@/lib/hrWorkflowRouting'
+import { approvalAudienceForRole } from '@/lib/approvalsPolicy'
 
 export type PendingApprovalItem = {
   id: string
@@ -14,12 +15,14 @@ export type PendingApprovalItem = {
 
 export async function getPendingApprovals(params: {
   userId: string
-  userRole: 'ADMIN' | 'HR_EMPLOYEE' | 'USER'
+  userRole: string
   take?: number
-}): Promise<{ approvals: PendingApprovalItem[]; total: number }> {
+}): Promise<{ approvals: PendingApprovalItem[]; total: number }> { 
   const { userId, userRole, take = 20 } = params
 
   const pendingApprovals: PendingApprovalItem[] = []
+
+  const audience = approvalAudienceForRole(userRole)
 
   // 1) HR Requests
   if (userRole === 'ADMIN' || userRole === 'HR_EMPLOYEE') {
@@ -75,7 +78,7 @@ export async function getPendingApprovals(params: {
   }
 
   // 2) Purchase Requests
-  if (userRole === 'ADMIN') {
+  if (audience.canApprovePurchaseRequests) {
     const purchaseRequests = await prisma.purchaseRequest.findMany({
       where: { status: { in: ['PENDING_REVIEW', 'REVIEWED'] } },
       include: { requestedBy: true },
@@ -122,7 +125,7 @@ export async function getPendingApprovals(params: {
   }
 
   // 3) Purchase Orders
-  if (userRole === 'ADMIN') {
+  if (audience.canApprovePurchaseRequests) {
     const purchaseOrders = await prisma.purchaseOrder.findMany({
       where: { status: 'PENDING' },
       include: { supplier: true },
@@ -140,6 +143,29 @@ export async function getPendingApprovals(params: {
         status: order.status,
         action: 'اعتماد',
         url: `/procurement/purchase-orders/${order.id}`
+      })
+    }
+  }
+
+  // 4) Supplier Requests (onboarding)
+  if (audience.canApproveSupplierRequests) {
+    const supplierRequests = await prisma.supplierRequest.findMany({
+      where: { status: 'PENDING' },
+      include: { requestedBy: true },
+      orderBy: { createdAt: 'desc' },
+      take: 10
+    })
+
+    for (const req of supplierRequests) {
+      pendingApprovals.push({
+        id: req.id,
+        type: 'supplier_request',
+        title: `طلب إضافة مورد - ${req.name}`,
+        submittedBy: req.requestedBy.displayName,
+        submittedAt: req.createdAt,
+        status: req.status,
+        action: 'اعتماد إضافة مورد',
+        url: `/procurement/suppliers/requests/${req.id}`
       })
     }
   }

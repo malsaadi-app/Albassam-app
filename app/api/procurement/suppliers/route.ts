@@ -62,9 +62,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
     }
 
-    // Only ADMIN or HR_EMPLOYEE can create suppliers
+    // Only ADMIN or HR_EMPLOYEE can create suppliers directly.
+    // Procurement officer should create a SupplierRequest instead.
     if (session.user.role !== 'ADMIN' && session.user.role !== 'HR_EMPLOYEE') {
-      return NextResponse.json({ error: 'غير مصرح بإنشاء موردين' }, { status: 403 });
+      return NextResponse.json({ error: 'غير مصرح بإنشاء موردين مباشرة. ارفع طلب إضافة مورد.' }, { status: 403 });
     }
 
     const body = await request.json();
