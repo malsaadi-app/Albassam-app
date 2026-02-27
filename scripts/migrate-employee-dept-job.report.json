@@ -1,0 +1,94 @@
+{
+  "counts": {
+    "employees": 30,
+    "uniqueDepts": 9,
+    "uniquePositions": 9,
+    "attemptedUpdates": 30,
+    "updatedRows": 30,
+    "fullyMappedEmployees": 30,
+    "problematicEmployees": 0
+  },
+  "unmatched": {
+    "departments": [],
+    "jobTitles": []
+  },
+  "problematicEmployees": [],
+  "mappings": {
+    "departments": [
+      [
+        "الإدارة العليا - بنين",
+        "cmlnt48ej000vp9y0acqr4nta"
+      ],
+      [
+        "الإدارة المالية",
+        "cmlnt48en000wp9y0crjxph6b"
+      ],
+      [
+        "القسم الإعلامي",
+        "cmlnt48g9001bp9y0z8zkgsoo"
+      ],
+      [
+        "اللغة الإنجليزية",
+        "cmlnt48g20019p9y0gpo0tyk5"
+      ],
+      [
+        "قسم التدريب",
+        "cmlnt48gy001hp9y063lyy1o8"
+      ],
+      [
+        "قسم الخدمات المساندة",
+        "cmlnt48h4001ip9y0ec6tens2"
+      ],
+      [
+        "قسم الشؤون الإدارية",
+        "cmlnt48hk001lp9y0o5xtn9w3"
+      ],
+      [
+        "قسم الموارد البشرية",
+        "cmlnt48i1001pp9y0rdqqkqj0"
+      ],
+      [
+        "قسم تقنية المعلومات",
+        "cmlnt48i6001qp9y0tfz3b4zd"
+      ]
+    ],
+    "jobTitles": [
+      [
+        "المشرف العام",
+        "cmlnt489q0000p9y01u2tgn7x"
+      ],
+      [
+        "طاقم مساند",
+        "cmlnt48e4000rp9y0coue79t4"
+      ],
+      [
+        "محاسب",
+        "cmlnt48cw000gp9y0sgby388w"
+      ],
+      [
+        "مدير الموارد البشرية",
+        "cmlnt48ba0007p9y08owdi8v5"
+      ],
+      [
+        "مدير مرحلة",
+        "cmlnt48a50001p9y08u4l2qki"
+      ],
+      [
+        "مساعد إداري",
+        "cmlnt48d8000jp9y0ec9fb17z"
+      ],
+      [
+        "مشرف تربوي",
+        "cmlnt48bo0008p9y0ez6adrqe"
+      ],
+      [
+        "معلم",
+        "cmlnt48cj000dp9y0eonrlrb2"
+      ],
+      [
+        "موظف",
+        "cmlnt48dg000lp9y03oc9nel2"
+      ]
+    ]
+  }
+}

@@ -1,0 +1,2098 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                            String                        @id @default(cuid())
+  username                      String                        @unique
+  displayName                   String
+  role                          Role                          @default(USER) // Legacy - keep for backward compatibility
+  roleId                        String? // New RBAC system
+  systemRole                    SystemRole?                   @relation(fields: [roleId], references: [id])
+  passwordHash                  String
+  telegramId                    String?
+  notificationsEnabled          Boolean                       @default(true)
+  notifyOverdue                 Boolean                       @default(true)
+  notifyDueSoon                 Boolean                       @default(true)
+  notifyDailySummary            Boolean                       @default(true)
+  createdAt                     DateTime                      @default(now())
+  updatedAt                     DateTime                      @updatedAt
+  activityLogs                  ActivityLog[]
+  comments                      Comment[]
+  employee                      Employee?
+  hrRequestsApproved            HRRequest[]                   @relation("ApprovedRequests")
+  hrRequestsReviewed            HRRequest[]                   @relation("ReviewedRequests")
+  hrRequestsSubmitted           HRRequest[]                   @relation("SubmittedRequests")
+  notifications                 Notification[]
+  tasksCreated                  Task[]                        @relation("CreatedTasks")
+  tasksOwned                    Task[]                        @relation("OwnedTasks")
+  templatesCreated              TaskTemplate[]
+  delegationsCreated            HRDelegation[]                @relation("DelegationCreatedBy")
+  delegationsReceived           HRDelegation[]                @relation("DelegationDelegateTo")
+  hrRequestAuditLogs            HRRequestAuditLog[]
+  attendanceRecords             AttendanceRecord[]
+  purchaseRequestsCreated       PurchaseRequest[]             @relation("PurchaseRequestsCreated")
+  purchaseRequestsReviewed      PurchaseRequest[]             @relation("PurchaseRequestsReviewed")
+  purchaseRequestsApproved      PurchaseRequest[]             @relation("PurchaseRequestsApproved")
+  hrWorkflowAsReviewer          HRWorkflowSettings[]          @relation("HRReviewer")
+  hrWorkflowAsApprover          HRWorkflowSettings[]          @relation("HRApprover")
+  hrWorkflowSettingsUpdates     HRWorkflowSettings[]          @relation("HRSettingsUpdater")
+  hrTypeWorkflowAsReviewer      HRRequestTypeWorkflow[]       @relation("HRTypeReviewer")
+  hrTypeWorkflowAsApprover      HRRequestTypeWorkflow[]       @relation("HRTypeApprover")
+  hrTypeWorkflowUpdates         HRRequestTypeWorkflow[]       @relation("HRTypeWorkflowUpdater")
+  attendanceRequests            AttendanceRequest[]           @relation("AttendanceRequests")
+  attendanceReviews             AttendanceRequest[]           @relation("AttendanceReviewer")
+  procurementWorkflowAsReviewer ProcurementCategoryWorkflow[] @relation("ProcurementReviewer")
+  procurementWorkflowAsApprover ProcurementCategoryWorkflow[] @relation("ProcurementApprover")
+  procurementWorkflowUpdates    ProcurementCategoryWorkflow[] @relation("ProcurementWorkflowUpdater")
+  hrWorkflowSteps               HRWorkflowStep[]              @relation("HRStepUser")
+  procurementWorkflowSteps      ProcurementWorkflowStep[]     @relation("ProcurementStepUser")
+  workflowStepsAsApprover       WorkflowStep[]                @relation("WorkflowStepApprover")
+  referralsReceived             WorkflowReferral[]            @relation("WorkflowReferredTo")
+  referralsSent                 WorkflowReferral[]            @relation("WorkflowReferredBy")
+
+  // Replacement workflow
+  replacementRequestsRequested  ReplacementRequest[]           @relation("ReplacementRequester")
+  replacementRequestsEvaluated  ReplacementRequest[]           @relation("ReplacementEvaluator")
+  replacementRequestsDecided    ReplacementRequest[]           @relation("ReplacementDecisionMaker")
+  replacementNotifications      ReplacementNotification[]      @relation("ReplacementNotifRecipient")
+  replacementPerformanceReports ReplacementPerformanceReport[] @relation("ReplacementReportUser")
+  replacementTimelineEvents     ReplacementTimeline[]          @relation("ReplacementTimelineUser")
+
+  // Finance Module
+  financeRequestsCreated  FinanceRequest[]      @relation("FinanceRequester")
+  financeRequestsReviewed FinanceRequest[]      @relation("FinanceReviewer")
+  financeRequestsApproved FinanceRequest[]      @relation("FinanceApprover")
+  workflowApprovals       WorkflowApprovalLog[] @relation("WorkflowApprovals")
+
+  @@index([role])
+  @@index([roleId])
+  @@index([telegramId])
+}
+
+model Task {
+  id           String        @id @default(cuid())
+  title        String
+  description  String?
+  category     TaskCategory
+  status       TaskStatus    @default(NEW)
+  priority     TaskPriority  @default(MEDIUM)
+  isPrivate    Boolean       @default(false)
+  attachments  String?
+  dueDate      DateTime?
+  checklist    String?
+  dependsOn    String?
+  ownerId      String
+  createdById  String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  activityLogs ActivityLog[]
+  comments     Comment[]
+  createdBy    User          @relation("CreatedTasks", fields: [createdById], references: [id])
+  owner        User          @relation("OwnedTasks", fields: [ownerId], references: [id])
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([category])
+  @@index([priority])
+  @@index([dueDate])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  content   String
+  mentions  String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([createdAt])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  action    String
+  changes   String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([createdAt])
+}
+
+model TaskTemplate {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  category    TaskCategory
+  priority    TaskPriority @default(MEDIUM)
+  checklist   String?
+  createdById String
+  createdAt   DateTime     @default(now())
+  createdBy   User         @relation(fields: [createdById], references: [id])
+}
+
+model Employee {
+  id                 String              @id @default(cuid())
+  fullNameAr         String
+  fullNameEn         String?
+  nationalId         String              @unique
+  nationality        String
+  dateOfBirth        DateTime
+  gender             Gender
+  maritalStatus      MaritalStatus
+  phone              String
+  email              String?
+  address            String?
+  city               String?
+  employeeNumber     String              @unique
+  department         String // Legacy free-text department name (to be migrated)
+  position           String // Legacy free-text position name (to be migrated)
+  departmentId       String? // FK to Department master data
+  jobTitleId         String? // FK to JobTitle master data
+  departmentRef      Department?         @relation("EmployeeDepartment", fields: [departmentId], references: [id])
+  jobTitleRef        JobTitle?           @relation("EmployeeJobTitle", fields: [jobTitleId], references: [id])
+  directManager      String?
+  hireDate           DateTime
+  deductionAuditLogs DeductionAuditLog[] @relation("EmployeeDeductionAudits")
+  employmentType     EmploymentType
+  contractEndDate    DateTime?
+  status             EmployeeStatus      @default(ACTIVE)
+  basicSalary        Float
+  housingAllowance   Float               @default(0)
+  transportAllowance Float               @default(0)
+  otherAllowances    Float               @default(0)
+  bankName           String?
+  bankAccountNumber  String?
+  iban               String?
+  education          String?
+  specialization     String?
+  certifications     String?
+  photoUrl           String?
+  userId             String?             @unique
+
+  // RBAC System Role Assignment (optional - used when creating User account)
+  systemRoleId String?
+  systemRole   SystemRole? @relation("EmployeeSystemRole", fields: [systemRoleId], references: [id])
+
+  // Branch & Stage Assignment
+  branchId        String?
+  branch          Branch?      @relation(fields: [branchId], references: [id])
+  stageId         String?
+  stage           Stage?       @relation(fields: [stageId], references: [id])
+  managedStages   Stage[]      @relation("StageManager")
+  deputyForStages Stage[]      @relation("StageDeputy")
+  employeeRole    EmployeeRole @default(EMPLOYEE)
+
+  // Attendance grace overrides (minutes)
+  // If set, overrides global AttendanceSettings.lateThresholdMinutes for morning check-in lateness.
+  morningGraceMinutes Int?
+
+  // Maintenance
+  maintenanceRole               MaintenanceRole?
+  maintenanceTeam               MaintenanceTeam?
+  maintenanceRequestsCreated    MaintenanceRequest[] @relation("RequestCreator")
+  maintenanceRequestsAssigned   MaintenanceRequest[] @relation("AssignedTechnician")
+  maintenanceRequestsCompleted  MaintenanceRequest[] @relation("Completer")
+  maintenanceRequestsAssignedBy MaintenanceRequest[] @relation("Assigner")
+  maintenanceComments           MaintenanceComment[]
+  maintenanceHistory            MaintenanceHistory[]
+
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  documents             Document[]
+  payrollLines          PayrollLine[]
+  recurringPayrollItems PayrollRecurringItem[]
+  user                  User?                  @relation(fields: [userId], references: [id])
+  leaves                Leave[]
+  leaveBalance          LeaveBalance?
+
+  // ==================== POSITION & HEADCOUNT MANAGEMENT ====================
+  currentPosition OrganizationalPosition? @relation("CurrentPosition")
+
+  // Replacement workflow (as the employee being replaced / new hire)
+  replacementsAsCurrent ReplacementRequest[] @relation("ReplacementCurrentEmployee")
+  replacementsAsNew     ReplacementRequest[] @relation("ReplacementNewEmployee")
+
+  positionsOpened                  OrganizationalPosition[] @relation("PositionOpenedBy")
+  positionHistoryPerformed         PositionHistory[]        @relation("PositionHistoryPerformer")
+  positionHistoryAsEmployee        PositionHistory[]        @relation("PositionHistoryEmployee")
+  positionOpeningRequestsRequested PositionOpeningRequest[] @relation("PositionOpeningRequestedBy")
+  positionOpeningRequestsReviewed  PositionOpeningRequest[] @relation("PositionOpeningReviewer")
+  headcountApprovals               DepartmentHeadcount[]    @relation("HeadcountApprovedBy")
+  headcountChangeRequestsRequested HeadcountChangeRequest[] @relation("HeadcountRequestedBy")
+  headcountChangeRequestsReviewed  HeadcountChangeRequest[] @relation("HeadcountReviewer")
+  jobApplicationsCreated           JobApplication[]         @relation("JobApplicationCreatedBy")
+  departmentHeaded                 Department?              @relation("DepartmentHead")
+
+  @@index([employeeNumber])
+  @@index([nationalId])
+  @@index([status])
+  @@index([department])
+  @@index([branchId])
+  @@index([stageId])
+}
+
+model Leave {
+  id          String      @id @default(cuid())
+  employeeId  String
+  type        LeaveType
+  startDate   DateTime
+  endDate     DateTime
+  days        Int
+  reason      String?
+  status      LeaveStatus @default(PENDING)
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  reviewNotes String?
+  attachments String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([type])
+  @@index([startDate])
+}
+
+model LeaveBalance {
+  id                 String   @id @default(cuid())
+  employeeId         String   @unique
+  annualTotal        Int      @default(30)
+  annualUsed         Int      @default(0)
+  annualRemaining    Int      @default(30)
+  casualTotal        Int      @default(5)
+  casualUsed         Int      @default(0)
+  casualRemaining    Int      @default(5)
+  emergencyTotal     Int      @default(0) // إجازات اضطرارية (5 للإناث، 0 للذكور افتراضياً)
+  emergencyUsed      Int      @default(0)
+  emergencyRemaining Int      @default(0)
+  year               Int
+  updatedAt          DateTime @updatedAt
+  employee           Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([year])
+}
+
+model Document {
+  id         String       @id @default(cuid())
+  employeeId String
+  title      String
+  type       DocumentType
+  category   String?
+  filePath   String
+  fileName   String
+  fileSize   Int
+  mimeType   String
+  issueDate  DateTime?
+  expiryDate DateTime?
+  notes      String?
+  uploadedBy String
+  uploadedAt DateTime     @default(now())
+  employee   Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([type])
+  @@index([expiryDate])
+}
+
+model HRRequest {
+  id                    String              @id @default(cuid())
+  type                  RequestType
+  status                RequestStatus       @default(PENDING_REVIEW)
+  currentWorkflowStep   Int? // Current step order in workflow (null = not started, 0 = step 1, etc.)
+  employeeId            String
+  startDate             DateTime?
+  endDate               DateTime?
+  leaveType             String?
+  destination           String?
+  travelDate            DateTime?
+  departureDate         DateTime?
+  returnDate            DateTime?
+  amount                Float?
+  period                String?
+  purpose               String?
+  recipientOrganization String?
+  reason                String?
+  attachment            String?
+  attachments           String?
+  reviewedBy            String?
+  reviewComment         String?
+  reviewedAt            DateTime?
+  approvedBy            String?
+  approvalComment       String?
+  approvedAt            DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  approver              User?               @relation("ApprovedRequests", fields: [approvedBy], references: [id])
+  reviewer              User?               @relation("ReviewedRequests", fields: [reviewedBy], references: [id])
+  employee              User                @relation("SubmittedRequests", fields: [employeeId], references: [id])
+  auditLogs             HRRequestAuditLog[]
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@index([currentWorkflowStep])
+}
+
+model HRRequestAuditLog {
+  id          String   @id @default(cuid())
+  requestId   String
+  actorUserId String
+  action      String
+  message     String?
+  diffJson    String?
+  createdAt   DateTime @default(now())
+
+  request HRRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actor   User      @relation(fields: [actorUserId], references: [id])
+
+  @@index([requestId])
+  @@index([actorUserId])
+  @@index([createdAt])
+}
+
+model HRDelegation {
+  id               String    @id @default(cuid())
+  delegateToUserId String
+  createdByUserId  String
+  startAt          DateTime
+  endAt            DateTime
+  active           Boolean   @default(true)
+  startNotifiedAt  DateTime?
+  endNotifiedAt    DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  delegateTo User @relation("DelegationDelegateTo", fields: [delegateToUserId], references: [id])
+  createdBy  User @relation("DelegationCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([delegateToUserId])
+  @@index([active])
+  @@index([startAt])
+  @@index([endAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  relatedId String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+// ==================== REPLACEMENT WORKFLOW ====================
+
+model ReplacementRequest {
+  id            Int    @id @default(autoincrement())
+  requestNumber String @unique // REP-2026-001
+
+  // Position & Employees
+  positionId Int
+  position   OrganizationalPosition @relation("ReplacementPosition", fields: [positionId], references: [id])
+
+  currentEmployeeId String
+  currentEmployee   Employee @relation("ReplacementCurrentEmployee", fields: [currentEmployeeId], references: [id])
+
+  newEmployeeId String
+  newEmployee   Employee @relation("ReplacementNewEmployee", fields: [newEmployeeId], references: [id])
+
+  // Probation Period
+  probationStartDate DateTime
+  probationEndDate   DateTime
+  probationMonths    Int // 1-3
+
+  // Status
+  status String @default("ACTIVE") // ACTIVE, EXTENDED, COMPLETED_SUCCESS, COMPLETED_FAILED, CANCELLED
+
+  // Evaluation
+  evaluationScore   Int?
+  evaluationNotes   String?
+  evaluatedByUserId String?
+  evaluatedByUser   User?     @relation("ReplacementEvaluator", fields: [evaluatedByUserId], references: [id])
+  evaluatedAt       DateTime?
+
+  // Decision
+  decision         String? // CONFIRM_NEW, KEEP_OLD, EXTEND_PROBATION
+  decisionReason   String?
+  decisionByUserId String?
+  decisionByUser   User?     @relation("ReplacementDecisionMaker", fields: [decisionByUserId], references: [id])
+  decisionAt       DateTime?
+
+  // Justification
+  replacementReason   String
+  expectedImprovement String?
+
+  // Metadata
+  requestedByUserId String
+  requestedByUser   User     @relation("ReplacementRequester", fields: [requestedByUserId], references: [id])
+  requestedAt       DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  notifications      ReplacementNotification[]
+  performanceReports ReplacementPerformanceReport[]
+  timeline           ReplacementTimeline[]
+
+  // Back relation for OrganizationalPosition.activeReplacement
+  activeForPosition OrganizationalPosition? @relation("PositionActiveReplacement")
+
+  @@index([positionId])
+  @@index([status])
+  @@index([probationEndDate])
+}
+
+model ReplacementNotification {
+  id            Int                @id @default(autoincrement())
+  replacementId Int
+  replacement   ReplacementRequest @relation(fields: [replacementId], references: [id], onDelete: Cascade)
+
+  notificationType String // WEEK_BEFORE_END, DAY_BEFORE_END, EVALUATION_DUE, DECISION_DUE, STARTED, DECISION_MADE
+  scheduledFor     DateTime
+  sent             Boolean   @default(false)
+  sentAt           DateTime?
+
+  recipientUserId String
+  recipientUser   User   @relation("ReplacementNotifRecipient", fields: [recipientUserId], references: [id])
+
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([replacementId])
+  @@index([recipientUserId])
+  @@index([sent])
+  @@index([scheduledFor])
+}
+
+model ReplacementPerformanceReport {
+  id            Int                @id @default(autoincrement())
+  replacementId Int
+  replacement   ReplacementRequest @relation(fields: [replacementId], references: [id], onDelete: Cascade)
+
+  reportDate   DateTime @default(now())
+  reportPeriod String // WEEK_1, WEEK_2, MONTH_1, MONTH_2, FINAL
+
+  // Current Employee Metrics
+  currentEmployeeScore Int?
+  currentEmployeeNotes String?
+
+  // New Employee Metrics
+  newEmployeeScore Int?
+  newEmployeeNotes String?
+
+  // Comparison
+  comparisonNotes String?
+  recommendation  String? // CONTINUE, CONFIRM_NEW, CANCEL
+
+  // Reporter
+  reportedByUserId String
+  reportedByUser   User   @relation("ReplacementReportUser", fields: [reportedByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([replacementId])
+  @@index([reportDate])
+  @@index([reportedByUserId])
+}
+
+model ReplacementTimeline {
+  id            Int                @id @default(autoincrement())
+  replacementId Int
+  replacement   ReplacementRequest @relation(fields: [replacementId], references: [id], onDelete: Cascade)
+
+  eventType        String // STARTED, REPORT_SUBMITTED, EVALUATION_ADDED, DECISION_MADE, COMPLETED, CANCELLED, PROBATION_EXTENDED
+  eventDescription String
+
+  performedByUserId String?
+  performedByUser   User?   @relation("ReplacementTimelineUser", fields: [performedByUserId], references: [id])
+
+  metadataJson String?
+  createdAt    DateTime @default(now())
+
+  @@index([replacementId])
+  @@index([createdAt])
+  @@index([eventType])
+}
+
+// ==================== POSITION & HEADCOUNT MANAGEMENT ====================
+
+model OrganizationalPosition {
+  id         Int     @id @default(autoincrement())
+  code       String  @unique // POS-2026-001
+  title      String // معلم رياضيات
+  titleEn    String? // Math Teacher
+  department String // القسم
+  level      String // المستوى الوظيفي (Junior/Mid/Senior/Manager)
+  status     String  @default("VACANT") // VACANT, FILLED, CLOSED
+
+  // Current occupant
+  currentEmployeeId String?   @unique
+  currentEmployee   Employee? @relation("CurrentPosition", fields: [currentEmployeeId], references: [id])
+
+  // Replacement workflow
+  inReplacement       Boolean             @default(false)
+  activeReplacementId Int?                @unique
+  activeReplacement   ReplacementRequest? @relation("PositionActiveReplacement", fields: [activeReplacementId], references: [id])
+
+  // Metadata
+  salaryMin    Float?
+  salaryMax    Float?
+  description  String?
+  requirements String?
+
+  // History
+  openedAt     DateTime  @default(now())
+  openedBy     String
+  openedByUser Employee  @relation("PositionOpenedBy", fields: [openedBy], references: [id])
+  closedAt     DateTime?
+  closedReason String?
+
+  // Approval proof (when opened)
+  approvalDocument String? // File path to approval doc
+  approvalNotes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  applications              JobApplication[]
+  history                   PositionHistory[]
+  createdFromOpeningRequest PositionOpeningRequest? @relation("PositionOpeningRequestCreatedPosition")
+  replacementRequests       ReplacementRequest[]    @relation("ReplacementPosition")
+
+  @@index([department])
+  @@index([status])
+  @@index([level])
+}
+
+model DepartmentHeadcount {
+  id            Int    @id @default(autoincrement())
+  department    String @unique // القسم
+  approvedCount Int // الكادر المعتمد
+  currentCount  Int    @default(0) // العدد الفعلي (calculated)
+
+  // Approval for headcount
+  approvalDocument String? // File path
+  approvedBy       String?
+  approvedByUser   Employee? @relation("HeadcountApprovedBy", fields: [approvedBy], references: [id])
+  approvedAt       DateTime?
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // History
+  changes HeadcountChangeRequest[]
+
+  @@index([department])
+}
+
+model HeadcountChangeRequest {
+  id            Int    @id @default(autoincrement())
+  requestNumber String @unique // HCR-2026-001
+
+  department            String
+  departmentHeadcountId Int
+  departmentHeadcount   DepartmentHeadcount @relation(fields: [departmentHeadcountId], references: [id])
+
+  requestType    String // INCREASE, DECREASE
+  currentCount   Int
+  requestedCount Int
+  changeAmount   Int // +5, -2
+
+  justification    String
+  approvalDocument String // Required PDF/image
+
+  // Requester
+  requestedBy     String
+  requestedByUser Employee @relation("HeadcountRequestedBy", fields: [requestedBy], references: [id])
+  requestedAt     DateTime @default(now())
+
+  // Approval workflow
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewedBy     String?
+  reviewedByUser Employee? @relation("HeadcountReviewer", fields: [reviewedBy], references: [id])
+  reviewedAt     DateTime?
+  reviewNotes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([department])
+  @@index([status])
+  @@index([requestedAt])
+}
+
+model PositionHistory {
+  id         Int                    @id @default(autoincrement())
+  positionId Int
+  position   OrganizationalPosition @relation(fields: [positionId], references: [id])
+
+  action     String // OPENED, FILLED, VACATED, CLOSED
+  employeeId String?
+  employee   Employee? @relation("PositionHistoryEmployee", fields: [employeeId], references: [id])
+
+  performedBy     String
+  performedByUser Employee @relation("PositionHistoryPerformer", fields: [performedBy], references: [id])
+
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([positionId])
+  @@index([createdAt])
+  @@index([action])
+}
+
+model PositionOpeningRequest {
+  id            Int    @id @default(autoincrement())
+  requestNumber String @unique // POR-2026-001
+
+  title            String
+  department       String
+  level            String
+  justification    String
+  approvalDocument String // Required
+
+  salaryMin Float?
+  salaryMax Float?
+
+  // Requester
+  requestedBy     String
+  requestedByUser Employee @relation("PositionOpeningRequestedBy", fields: [requestedBy], references: [id])
+  requestedAt     DateTime @default(now())
+
+  // Approval workflow
+  status         String    @default("PENDING")
+  reviewedBy     String?
+  reviewedByUser Employee? @relation("PositionOpeningReviewer", fields: [reviewedBy], references: [id])
+  reviewedAt     DateTime?
+  reviewNotes    String?
+
+  // Result
+  createdPositionId Int?                    @unique
+  createdPosition   OrganizationalPosition? @relation("PositionOpeningRequestCreatedPosition", fields: [createdPositionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([department])
+  @@index([status])
+  @@index([requestedAt])
+}
+
+model JobApplication {
+  id                String @id @default(cuid())
+  applicationNumber String @unique
+
+  // Basic Info
+  applicantName String
+  fullNameAr    String?
+  fullNameEn    String?
+  nationalId    String?   @unique
+  nationality   String?
+  dateOfBirth   DateTime?
+  gender        String? // MALE, FEMALE
+  maritalStatus String? // SINGLE, MARRIED, DIVORCED, WIDOWED
+
+  // Contact
+  applicantPhone String?
+  applicantEmail String?
+  address        String?
+  city           String?
+
+  // Education & Experience
+  education      String?
+  certifications String?
+  experience     String?
+  coverLetter    String?
+
+  // Application Info
+  department String?
+  positionId Int?
+  position   OrganizationalPosition? @relation(fields: [positionId], references: [id])
+
+  status          String   @default("PENDING") // PENDING, SUBMITTED, REVIEWING, INTERVIEWED, OFFERED, HIRED, REJECTED
+  source          String?  @default("INTERNAL") // INTERNAL, PUBLIC_FORM, LINKEDIN, etc.
+  applicationDate DateTime @default(now())
+  notes           String?
+
+  createdBy     String?
+  createdByUser Employee? @relation("JobApplicationCreatedBy", fields: [createdBy], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([department])
+  @@index([status])
+  @@index([positionId])
+  @@index([createdAt])
+  @@index([nationalId])
+  @@index([source])
+}
+
+// ==================== MAINTENANCE MANAGEMENT ====================
+
+model MaintenanceRequest {
+  id            String @id @default(cuid())
+  requestNumber String @unique // REQ-2026-0001
+
+  type     MaintenanceType
+  kind     MaintenanceKind     @default(CORRECTIVE)
+  category String
+  priority MaintenancePriority @default(NORMAL)
+  status   MaintenanceStatus   @default(SUBMITTED)
+
+  // Location
+  branchId        String
+  branch          Branch  @relation(fields: [branchId], references: [id])
+  stageId         String?
+  stage           Stage?  @relation(fields: [stageId], references: [id])
+  locationDetails String
+
+  // Description
+  description String
+  imagesJson  String? // JSON array of uploaded image URLs
+
+  // Asset (optional)
+  assetId String?
+  asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  // Assignment
+  assignedToId String?
+  assignedTo   Employee? @relation("AssignedTechnician", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedAt   DateTime?
+  assignedById String?
+  assignedBy   Employee? @relation("Assigner", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  // Requester
+  requestedById String
+  requestedBy   Employee @relation("RequestCreator", fields: [requestedById], references: [id])
+  requestedAt   DateTime @default(now())
+
+  // Completion
+  completedAt   DateTime?
+  completedById String?
+  completedBy   Employee? @relation("Completer", fields: [completedById], references: [id], onDelete: SetNull)
+
+  // Rating (after completion)
+  rating        Int?
+  ratingComment String?
+
+  // Costs
+  laborHours Float?
+  partsCost  Float?
+  totalCost  Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  comments MaintenanceComment[]
+  history  MaintenanceHistory[]
+  parts    MaintenanceRequestPart[]
+
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+  @@index([branchId])
+  @@index([stageId])
+  @@index([assignedToId])
+  @@index([requestedById])
+  @@index([assetId])
+  @@index([createdAt])
+}
+
+model Asset {
+  id          String @id @default(cuid())
+  assetNumber String @unique // AST-2026-0001
+
+  type         String
+  category     AssetCategory
+  name         String
+  serialNumber String?
+
+  // Location
+  branchId        String
+  branch          Branch  @relation(fields: [branchId], references: [id])
+  stageId         String?
+  stage           Stage?  @relation(fields: [stageId], references: [id])
+  locationDetails String
+
+  // Purchase info
+  purchaseDate  DateTime?
+  warrantyStart DateTime?
+  warrantyEnd   DateTime?
+  purchasePrice Float?
+
+  status AssetStatus @default(GOOD)
+
+  // Preventive maintenance
+  lastMaintenanceDate DateTime?
+  nextMaintenanceDate DateTime?
+  maintenanceInterval Int? // days
+
+  maintenanceRequests MaintenanceRequest[]
+  maintenanceHistory  MaintenanceHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([branchId])
+  @@index([stageId])
+  @@index([serialNumber])
+}
+
+model MaintenanceComment {
+  id        String             @id @default(cuid())
+  requestId String
+  request   MaintenanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   Employee @relation(fields: [userId], references: [id])
+
+  comment    String
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([requestId])
+  @@index([createdAt])
+}
+
+model MaintenanceHistory {
+  id        String              @id @default(cuid())
+  requestId String?
+  request   MaintenanceRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  assetId String?
+  asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  action   MaintenanceHistoryAction
+  oldValue String?
+  newValue String?
+  notes    String?
+
+  userId String
+  user   Employee @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([requestId])
+  @@index([assetId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model MaintenanceRequestPart {
+  id        String             @id @default(cuid())
+  requestId String
+  request   MaintenanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  partName  String
+  quantity  Int
+  unitCost  Float
+  totalCost Float
+
+  createdAt DateTime @default(now())
+
+  @@index([requestId])
+}
+
+// ==================== BRANCH & STAGE MANAGEMENT ====================
+
+model Branch {
+  id              String     @id @default(cuid())
+  name            String // "مجمع البسام الأهلية بنين"
+  type            BranchType // SCHOOL | INSTITUTE | COMPANY
+  commercialRegNo String? // رقم السجل التجاري
+  buildingNo      String? // رقم المبنى
+  address         String? // العنوان الكامل
+  city            String? // المدينة
+  postalCode      String? // الرمز البريدي
+
+  // GPS & Geofencing
+  latitude       Float?
+  longitude      Float?
+  geofenceRadius Int    @default(100) // meters
+
+  // Contact
+  phone String?
+  email String?
+
+  // Work Schedule (default for all stages unless overridden)
+  workStartTime String @default("07:00")
+  workEndTime   String @default("14:00")
+  workDays      String @default("0,1,2,3,4") // 0=Sun, 1=Mon, ... 4=Thu, 5=Fri, 6=Sat
+
+  status    BranchStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  stages            Stage[]
+  employees         Employee[]
+  attendanceRecords AttendanceRecord[]
+
+  // Maintenance
+  maintenanceRequests MaintenanceRequest[]
+  assets              Asset[]
+
+  // Workflows
+  workflowBranches WorkflowBranch[]
+
+  @@index([name])
+  @@index([type])
+  @@index([status])
+}
+
+model Stage {
+  id       String @id @default(cuid())
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  name String // "ابتدائية" | "متوسطة" | "ثانوية" | "رياض أطفال"
+  code String? // كود المرحلة (اختياري)
+
+  // GPS (can be different from branch if different building)
+  latitude       Float?
+  longitude      Float?
+  geofenceRadius Int    @default(100) // meters
+
+  // Work Schedule (inherits from branch by default, can override)
+  workStartTime String? // if null, use branch default
+  workEndTime   String? // if null, use branch default
+
+  // Management
+  managerId String? // مدير المرحلة
+  manager   Employee? @relation("StageManager", fields: [managerId], references: [id], onDelete: SetNull)
+
+  deputyId String? // نائب مدير المرحلة
+  deputy   Employee? @relation("StageDeputy", fields: [deputyId], references: [id], onDelete: SetNull)
+
+  status    StageStatus @default(ACTIVE)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  employees         Employee[]
+  attendanceRecords AttendanceRecord[]
+  workflowStages    WorkflowStage[]
+
+  // Maintenance
+  maintenanceRequests MaintenanceRequest[]
+  assets              Asset[]
+
+  @@unique([branchId, name])
+  @@index([branchId])
+  @@index([name])
+  @@index([managerId])
+  @@index([status])
+}
+
+enum BranchType {
+  SCHOOL
+  INSTITUTE
+  COMPANY
+}
+
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum StageStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// ==================== MAINTENANCE ENUMS ====================
+
+enum MaintenanceTeam {
+  BUILDING
+  IT
+}
+
+enum MaintenanceRole {
+  BUILDING_MANAGER
+  IT_MANAGER
+  BUILDING_TECH
+  IT_TECH
+}
+
+enum MaintenanceType {
+  BUILDING
+  ELECTRONICS
+}
+
+enum MaintenanceKind {
+  CORRECTIVE
+  EMERGENCY
+  PREVENTIVE
+}
+
+enum MaintenancePriority {
+  NORMAL
+  HIGH
+  EMERGENCY
+}
+
+enum MaintenanceStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED_PENDING_CONFIRMATION
+  COMPLETED
+  CANCELLED
+  REJECTED
+  ON_HOLD
+  REOPENED
+}
+
+enum MaintenanceHistoryAction {
+  CREATED
+  STATUS_CHANGED
+  ASSIGNED
+  UNASSIGNED
+  COMMENT_ADDED
+  PART_ADDED
+  COMPLETED
+  RATED
+  ASSET_LINKED
+  ASSET_UNLINKED
+}
+
+enum AssetCategory {
+  ELECTRONICS
+  BUILDING_EQUIPMENT
+}
+
+enum AssetStatus {
+  GOOD
+  NEEDS_MAINTENANCE
+  BROKEN
+  OUT_OF_SERVICE
+}
+
+enum EmployeeRole {
+  EMPLOYEE // موظف عادي
+  TEACHER // معلم
+  SUPERVISOR // مشرف
+  COUNSELOR // مرشد
+  DEPUTY // وكيل
+  STAGE_MANAGER // مدير مرحلة
+  BRANCH_MANAGER // مدير فرع
+  ADMIN // إداري (محمد)
+}
+
+enum Role {
+  ADMIN
+  HR_EMPLOYEE
+  USER
+}
+
+enum TaskCategory {
+  TRANSACTIONS
+  HR
+}
+
+enum TaskStatus {
+  NEW
+  IN_PROGRESS
+  ON_HOLD
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+}
+
+enum EmploymentType {
+  PERMANENT
+  TEMPORARY
+  CONTRACT
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  RESIGNED
+  TERMINATED
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  CASUAL
+  EMERGENCY // إجازة اضطرارية (للإناث فقط افتراضياً)
+  MATERNITY
+  HAJJ
+  UNPAID
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum DocumentType {
+  CONTRACT
+  ID
+  PASSPORT
+  CERTIFICATE
+  EXPERIENCE_LETTER
+  MEDICAL_REPORT
+  INSURANCE
+  WARNING_LETTER
+  PROMOTION_LETTER
+  OTHER
+}
+
+enum RequestType {
+  LEAVE
+  UNPAID_LEAVE
+  TICKET_ALLOWANCE
+  FLIGHT_BOOKING
+  SALARY_CERTIFICATE
+  HOUSING_ALLOWANCE
+
+  // Visa requests
+  VISA_EXIT_REENTRY_SINGLE
+  VISA_EXIT_REENTRY_MULTI
+
+  // Employment lifecycle
+  RESIGNATION
+}
+
+enum RequestStatus {
+  PENDING_REVIEW
+  RETURNED
+  PENDING_APPROVAL
+  // Prepared for a future finance stage (not used in UI/logic yet)
+  FINANCE_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model AttendanceRecord {
+  id        String           @id @default(cuid())
+  userId    String
+  checkIn   DateTime
+  checkOut  DateTime?
+  workHours Float?
+  location  String?
+  date      DateTime
+  status    AttendanceStatus @default(PRESENT)
+  notes     String?
+
+  // GPS & Branch/Stage tracking
+  branchId           String?
+  branch             Branch? @relation(fields: [branchId], references: [id])
+  stageId            String?
+  stage              Stage?  @relation(fields: [stageId], references: [id])
+  latitude           Float?
+  longitude          Float?
+  distanceFromBranch Float? // distance in meters
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+  @@index([branchId])
+  @@index([stageId])
+  @@index([userId, date])
+}
+
+model AttendanceSettings {
+  id                   String   @id @default(cuid())
+  lateThresholdMinutes Int      @default(15)
+  workHoursPerDay      Float    @default(8)
+  workingDaysPerMonth  Int      @default(22)
+  workStartTime        String   @default("08:00")
+  workEndTime          String   @default("16:00")
+  requireCheckOut      Boolean  @default(true)
+  enableGpsTracking    Boolean  @default(false)
+  enableGeofencing     Boolean  @default(false)
+  officeLatitude       Float?
+  officeLongitude      Float?
+  maxDistanceMeters    Int      @default(500)
+  updatedAt            DateTime @updatedAt
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  HALF_DAY
+  EXCUSED
+}
+
+// ==================== PROCUREMENT MODULE ====================
+
+model PurchaseRequest {
+  id                  String                @id @default(cuid())
+  requestNumber       String                @unique
+  requestedById       String
+  department          String
+  category            PurchaseCategory
+  items               String // JSON array of {name, quantity, unit, specifications, estimatedPrice}
+  priority            PurchasePriority      @default(NORMAL)
+  status              PurchaseRequestStatus @default(PENDING_REVIEW)
+  currentWorkflowStep Int? // Current step order in workflow
+  justification       String?
+  attachments         String? // JSON array of file paths
+  estimatedBudget     Float?
+  requiredDate        DateTime?
+  supplierId          String? // المورد المفضل
+  reviewedById        String?
+  reviewedAt          DateTime?
+  reviewNotes         String?
+  approvedById        String?
+  approvedAt          DateTime?
+  approvalNotes       String?
+  rejectedReason      String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  requestedBy User  @relation("PurchaseRequestsCreated", fields: [requestedById], references: [id])
+  reviewedBy  User? @relation("PurchaseRequestsReviewed", fields: [reviewedById], references: [id])
+  approvedBy  User? @relation("PurchaseRequestsApproved", fields: [approvedById], references: [id])
+
+  @@index([requestedById])
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+  @@index([supplierId])
+  @@index([currentWorkflowStep])
+}
+
+enum PurchaseCategory {
+  STATIONERY // قرطاسية
+  CLEANING // نظافة
+  MAINTENANCE // صيانة
+  FOOD // مواد غذائية
+  EQUIPMENT // معدات
+  TECHNOLOGY // تقنية
+  FURNITURE // أثاث
+  TEXTBOOKS // كتب دراسية
+  UNIFORMS // زي مدرسي
+  OTHER // أخرى
+}
+
+enum PurchasePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum PurchaseRequestStatus {
+  PENDING_REVIEW // معلق - في انتظار المراجعة
+  REVIEWED // تمت المراجعة - في انتظار الموافقة
+  APPROVED // تمت الموافقة
+  REJECTED // مرفوض
+  IN_PROGRESS // قيد التنفيذ (بعد إصدار أمر الشراء)
+  COMPLETED // مكتمل (تم الاستلام)
+  CANCELLED // ملغي
+}
+
+model Supplier {
+  id             String          @id @default(cuid())
+  name           String
+  contactPerson  String?
+  email          String?
+  phone          String?
+  address        String?
+  category       String? // نوع المورد (قرطاسية، أثاث، إلخ)
+  taxNumber      String? // الرقم الضريبي
+  rating         Float           @default(0) // تقييم من 0-5
+  notes          String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  quotations     Quotation[]
+  purchaseOrders PurchaseOrder[] @relation("SupplierOrders")
+
+  @@index([name])
+  @@index([isActive])
+}
+
+model Quotation {
+  id                String          @id @default(cuid())
+  purchaseRequestId String
+  supplierId        String
+  quotationNumber   String          @unique
+  quotedItems       String // JSON array of {itemName, quantity, unitPrice, totalPrice, notes}
+  totalAmount       Float
+  validUntil        DateTime?
+  paymentTerms      String?
+  deliveryTime      String? // مثال: "7-10 أيام"
+  notes             String?
+  status            QuotationStatus @default(PENDING)
+  attachments       String? // JSON array of file paths
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+
+  @@index([purchaseRequestId])
+  @@index([supplierId])
+  @@index([status])
+}
+
+enum QuotationStatus {
+  PENDING // معلق - في انتظار المراجعة
+  ACCEPTED // مقبول - تم اختياره
+  REJECTED // مرفوض
+  EXPIRED // منتهي الصلاحية
+}
+
+// ==================== PROCUREMENT WORKFLOW ====================
+
+model ProcurementCategoryWorkflow {
+  id                  String           @id @default(cuid())
+  category            PurchaseCategory @unique
+  reviewerUserId      String?
+  approverUserId      String?
+  requireReview       Boolean          @default(true)
+  requireApproval     Boolean          @default(true)
+  autoApprove         Boolean          @default(false)
+  reviewTimeoutDays   Int              @default(3)
+  approvalTimeoutDays Int              @default(3)
+  updatedAt           DateTime         @updatedAt
+  updatedBy           String?
+
+  reviewer User?                     @relation("ProcurementReviewer", fields: [reviewerUserId], references: [id])
+  approver User?                     @relation("ProcurementApprover", fields: [approverUserId], references: [id])
+  updater  User?                     @relation("ProcurementWorkflowUpdater", fields: [updatedBy], references: [id])
+  steps    ProcurementWorkflowStep[]
+
+  @@index([category])
+  @@index([reviewerUserId])
+  @@index([approverUserId])
+}
+
+model ProcurementWorkflowStep {
+  id         String   @id @default(cuid())
+  workflowId String
+  order      Int
+  userId     String
+  statusName String // "موافقة المالية", "اعتماد المدير العام", etc.
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  workflow ProcurementCategoryWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user     User                        @relation("ProcurementStepUser", fields: [userId], references: [id])
+
+  @@index([workflowId])
+  @@index([order])
+  @@index([userId])
+}
+
+// ==================== SYSTEM SETTINGS ====================
+
+model HRWorkflowSettings {
+  id                  String   @id @default(cuid())
+  reviewerUserId      String? // Who reviews requests (can be null for auto-approve)
+  approverUserId      String? // Who approves requests (can be null for single-step)
+  requireReview       Boolean  @default(true) // If false, goes directly to approval
+  requireApproval     Boolean  @default(true) // If false, auto-approve after review
+  autoApproveLeave    Boolean  @default(false) // Auto-approve leave requests
+  autoApproveTravel   Boolean  @default(false) // Auto-approve travel requests
+  autoApproveSalary   Boolean  @default(false) // Auto-approve salary certificates
+  reviewTimeoutDays   Int      @default(3) // Days before escalation
+  approvalTimeoutDays Int      @default(3) // Days before escalation
+  updatedAt           DateTime @updatedAt
+  updatedBy           String? // Who last updated settings
+
+  reviewer User? @relation("HRReviewer", fields: [reviewerUserId], references: [id])
+  approver User? @relation("HRApprover", fields: [approverUserId], references: [id])
+  updater  User? @relation("HRSettingsUpdater", fields: [updatedBy], references: [id])
+
+  @@index([reviewerUserId])
+  @@index([approverUserId])
+}
+
+// ==================== HR REQUEST TYPE WORKFLOW ====================
+
+model HRRequestTypeWorkflow {
+  id                  String      @id @default(cuid())
+  requestType         RequestType @unique // LEAVE, TICKET_ALLOWANCE, etc.
+  reviewerUserId      String?
+  approverUserId      String?
+  requireReview       Boolean     @default(true)
+  requireApproval     Boolean     @default(true)
+  autoApprove         Boolean     @default(false)
+  reviewTimeoutDays   Int         @default(3)
+  approvalTimeoutDays Int         @default(3)
+  updatedAt           DateTime    @updatedAt
+  updatedBy           String?
+
+  reviewer User?            @relation("HRTypeReviewer", fields: [reviewerUserId], references: [id])
+  approver User?            @relation("HRTypeApprover", fields: [approverUserId], references: [id])
+  updater  User?            @relation("HRTypeWorkflowUpdater", fields: [updatedBy], references: [id])
+  steps    HRWorkflowStep[]
+
+  @@index([requestType])
+  @@index([reviewerUserId])
+  @@index([approverUserId])
+}
+
+model HRWorkflowStep {
+  id         String   @id @default(cuid())
+  workflowId String
+  order      Int
+  userId     String
+  statusName String // "مراجعة أولية", "موافقة المدير", "اعتماد نهائي", etc.
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  workflow HRRequestTypeWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user     User                  @relation("HRStepUser", fields: [userId], references: [id])
+
+  @@index([workflowId])
+  @@index([order])
+  @@index([userId])
+}
+
+// ==================== ATTENDANCE REQUESTS ====================
+
+model AttendanceRequest {
+  id          String                  @id @default(cuid())
+  userId      String
+  type        AttendanceRequestType
+  requestDate DateTime // التاريخ المطلوب تبريره أو الاستئذان فيه
+  reason      String
+  status      AttendanceRequestStatus @default(PENDING)
+  attachment  String? // مرفق (شهادة طبية، إلخ)
+
+  // For CORRECTION type
+  attendanceRecordId String? // معرف سجل الحضور المراد تصحيحه
+  originalCheckIn    DateTime? // الوقت الأصلي للحضور
+  originalCheckOut   DateTime? // الوقت الأصلي للانصراف
+  requestedCheckIn   DateTime? // الوقت المطلوب للحضور
+  requestedCheckOut  DateTime? // الوقت المطلوب للانصراف
+  correctionType     String? // نوع التصحيح: missing_checkout, wrong_time, forgot_checkin
+
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  reviewComment String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user     User  @relation("AttendanceRequests", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("AttendanceReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([requestDate])
+  @@index([attendanceRecordId])
+}
+
+enum AttendanceRequestType {
+  EXCUSE // تبرير غياب أو تأخير
+  PERMISSION // استئذان (مغادرة مبكرة أو تأخير متوقع)
+  CORRECTION // تصحيح سجل حضور (وقت خاطئ، نسيان تسجيل)
+}
+
+enum AttendanceRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ==================== PROCUREMENT PHASE 4-7 ====================
+
+// Purchase Order - أمر الشراء (Phase 4)
+model PurchaseOrder {
+  id                String              @id @default(cuid())
+  orderNumber       String              @unique
+  purchaseRequestId String // ربط مع طلب الشراء الأصلي
+  supplierId        String
+  orderDate         DateTime            @default(now())
+  expectedDelivery  DateTime?
+  status            PurchaseOrderStatus @default(PENDING)
+  items             String // JSON array: [{name, quantity, unit, unitPrice, totalPrice, specifications}]
+  totalAmount       Float
+  tax               Float               @default(0)
+  discount          Float               @default(0)
+  finalAmount       Float
+  paymentTerms      String? // شروط الدفع
+  deliveryTerms     String? // شروط التسليم
+  notes             String?
+  attachments       String? // JSON array of file paths
+  createdById       String
+  approvedById      String?
+  approvedAt        DateTime?
+  cancelledReason   String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  supplier      Supplier       @relation("SupplierOrders", fields: [supplierId], references: [id])
+  goodsReceipts GoodsReceipt[]
+
+  @@index([supplierId])
+  @@index([status])
+  @@index([orderDate])
+  @@index([purchaseRequestId])
+}
+
+enum PurchaseOrderStatus {
+  PENDING // معلق
+  APPROVED // معتمد
+  SENT // تم الإرسال للمورد
+  CONFIRMED // مؤكد من المورد
+  IN_DELIVERY // قيد التوصيل
+  DELIVERED // تم التسليم
+  CANCELLED // ملغي
+  COMPLETED // مكتمل
+}
+
+// Goods Receipt - استلام البضائع (Phase 5)
+model GoodsReceipt {
+  id              String             @id @default(cuid())
+  receiptNumber   String             @unique
+  purchaseOrderId String
+  receiptDate     DateTime           @default(now())
+  receivedBy      String // اسم مستلم البضاعة
+  items           String // JSON array: [{name, orderedQty, receivedQty, unit, condition, notes}]
+  status          GoodsReceiptStatus @default(PENDING)
+  qualityCheck    Boolean            @default(false)
+  qualityNotes    String?
+  damageReport    String? // تقرير الأضرار إن وجدت
+  attachments     String? // JSON array (صور، مستندات)
+  notes           String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  purchaseOrder  PurchaseOrder   @relation(fields: [purchaseOrderId], references: [id])
+  stockMovements StockMovement[]
+
+  @@index([purchaseOrderId])
+  @@index([receiptDate])
+  @@index([status])
+}
+
+enum GoodsReceiptStatus {
+  PENDING // معلق
+  INSPECTED // تم الفحص
+  ACCEPTED // مقبول
+  REJECTED // مرفوض
+  PARTIAL // استلام جزئي
+}
+
+// Stock Item - عنصر المخزون (Phase 6)
+model StockItem {
+  id              String    @id @default(cuid())
+  itemCode        String    @unique
+  itemName        String
+  category        String
+  unit            String
+  currentStock    Float     @default(0)
+  minStock        Float     @default(0) // حد إعادة الطلب
+  maxStock        Float?
+  location        String? // موقع التخزين
+  lastRestockDate DateTime?
+  unitCost        Float     @default(0)
+  totalValue      Float     @default(0)
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  movements StockMovement[]
+
+  @@index([category])
+  @@index([currentStock])
+  @@index([itemCode])
+}
+
+// Stock Movement - حركة المخزون (Phase 6)
+model StockMovement {
+  id             String            @id @default(cuid())
+  stockItemId    String
+  movementType   StockMovementType
+  quantity       Float
+  unitCost       Float?
+  reference      String? // رقم المرجع (أمر شراء، إذن صرف، إلخ)
+  goodsReceiptId String?
+  notes          String?
+  movedBy        String? // اسم المسؤول عن الحركة
+  createdAt      DateTime          @default(now())
+
+  stockItem    StockItem     @relation(fields: [stockItemId], references: [id])
+  goodsReceipt GoodsReceipt? @relation(fields: [goodsReceiptId], references: [id])
+
+  @@index([stockItemId])
+  @@index([movementType])
+  @@index([createdAt])
+  @@index([goodsReceiptId])
+}
+
+enum StockMovementType {
+  IN // وارد
+  OUT // صادر
+  ADJUSTMENT // تسوية
+  RETURN // إرجاع
+  DAMAGE // تالف
+}
+
+// Payroll (مسير الرواتب)
+model PayrollRun {
+  id        String           @id @default(cuid())
+  year      Int
+  month     Int
+  status    PayrollRunStatus @default(DRAFT)
+  notes     String?
+  createdBy String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  lines PayrollLine[]
+
+  deductionAuditLogs DeductionAuditLog[] @relation("PayrollDeductionAudits")
+
+  @@unique([year, month])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  LOCKED
+}
+
+model PayrollLine {
+  id           String @id @default(cuid())
+  payrollRunId String
+  employeeId   String
+
+  // snapshots (at time of run)
+  employeeName String
+  nationalId   String
+  bankName     String?
+  iban         String?
+
+  // amounts (SAR)
+  basicSalary        Float
+  transportAllowance Float
+  housingAllowance   Float
+  otherAllowances    Float
+  additions          Float @default(0)
+  deductions         Float @default(0)
+  totalSalary        Float // computed: basic+allowances+additions-deductions
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payrollRun PayrollRun        @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employee   Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  items      PayrollLineItem[]
+
+  @@unique([payrollRunId, employeeId])
+  @@index([employeeId])
+  @@index([payrollRunId])
+}
+
+enum PayrollLineItemKind {
+  ADDITION
+  DEDUCTION
+}
+
+model PayrollLineItem {
+  id            String              @id @default(cuid())
+  payrollLineId String
+  kind          PayrollLineItemKind
+  title         String
+  amount        Float
+  notes         String?
+  createdAt     DateTime            @default(now())
+
+  payrollLine PayrollLine @relation(fields: [payrollLineId], references: [id], onDelete: Cascade)
+
+  @@index([payrollLineId])
+  @@index([kind])
+}
+
+model PayrollRecurringItem {
+  id         String              @id @default(cuid())
+  employeeId String
+  kind       PayrollLineItemKind
+  title      String
+  amount     Float
+  active     Boolean             @default(true)
+  startAt    DateTime?
+  endAt      DateTime?
+  createdAt  DateTime            @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([active])
+}
+
+// Audit log for attendance deduction adjustments
+model DeductionAuditLog {
+  id               String   @id @default(cuid())
+  payrollRunId     String
+  employeeId       String
+  employeeName     String
+  originalAmount   Float // المبلغ الأصلي المحسوب
+  adjustedAmount   Float // المبلغ بعد التعديل
+  adjustmentReason String? // سبب التعديل
+  ignoredDetails   String? // JSON array of ignored date entries
+  adjustedBy       String // User who made the adjustment
+  adjustedAt       DateTime @default(now())
+
+  payrollRun PayrollRun @relation("PayrollDeductionAudits", fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employee   Employee   @relation("EmployeeDeductionAudits", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([payrollRunId])
+  @@index([employeeId])
+  @@index([adjustedAt])
+}
+
+// ==================== MASTER DATA: DEPARTMENTS & JOB TITLES ====================
+
+model Department {
+  id          String   @id @default(cuid())
+  nameAr      String   @unique // اسم القسم بالعربي
+  nameEn      String? // اسم القسم بالإنجليزي (اختياري)
+  description String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  headId    String?    @unique // رئيس القسم
+  head      Employee?  @relation("DepartmentHead", fields: [headId], references: [id])
+  employees Employee[] @relation("EmployeeDepartment")
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model JobTitle {
+  id              String      @id @default(cuid())
+  nameAr          String      @unique // المسمى الوظيفي بالعربي
+  nameEn          String? // المسمى الوظيفي بالإنجليزي (اختياري)
+  description     String?
+  category        String? // تصنيف الوظيفة (إداري، تعليمي، فني، خدمات)
+  suggestedRoleId String? // الدور المقترح للوظيفة (يملأ تلقائياً عند إضافة موظف)
+  suggestedRole   SystemRole? @relation("JobTitleSuggestedRole", fields: [suggestedRoleId], references: [id])
+  isActive        Boolean     @default(true)
+  sortOrder       Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  employees Employee[] @relation("EmployeeJobTitle")
+
+  @@index([isActive])
+  @@index([category])
+  @@index([sortOrder])
+}
+
+// ==================== RBAC (Role-Based Access Control) ====================
+// نظام إدارة الصلاحيات المتقدم
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique // "employees.view", "hr_requests.approve"
+  nameAr      String // "عرض الموظفين", "الموافقة على الطلبات"
+  nameEn      String // "View Employees", "Approve Requests"
+  module      String // "employees", "hr", "attendance", "procurement"
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roles RolePermission[]
+
+  @@index([module])
+  @@index([name])
+}
+
+model SystemRole {
+  id          String   @id @default(cuid())
+  name        String   @unique // "SUPER_ADMIN", "HR_MANAGER", "BRANCH_MANAGER"
+  nameAr      String // "مدير النظام", "مدير الموارد البشرية"
+  nameEn      String // "Super Admin", "HR Manager"
+  description String?
+  isSystem    Boolean  @default(false) // الأدوار الأساسية (لا تُحذف/تُعدّل)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users            User[]
+  permissions      RolePermission[]
+  suggestedForJobs JobTitle[]       @relation("JobTitleSuggestedRole")
+  employees        Employee[]       @relation("EmployeeSystemRole")
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  grantedAt    DateTime @default(now())
+  grantedBy    String? // User ID who granted this permission
+
+  role       SystemRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+model PermissionAuditLog {
+  id             String   @id @default(cuid())
+  userId         String // المستخدم الذي قام بالتعديل
+  action         String // "GRANT", "REVOKE", "CREATE_ROLE", "DELETE_ROLE"
+  roleId         String?
+  roleName       String?
+  permissionId   String?
+  permissionName String?
+  details        String? // JSON details
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ==================== FINANCE MODULE ====================
+
+model FinanceRequest {
+  id              String    @id @default(cuid())
+  requestNumber   String    @unique
+  type            String // EMPLOYEE_EXPENSE, PROCUREMENT, UTILITIES, MAINTENANCE, OTHER
+  title           String
+  description     String?
+  amount          Float
+  beneficiaryName String?
+  status          String    @default("DRAFT") // DRAFT, PENDING, APPROVED, REJECTED, PAID
+  requesterId     String
+  reviewedBy      String?
+  approvedBy      String?
+  rejectionReason String?
+  sourceType      String? // HR, PROCUREMENT
+  sourceId        String? // Link to HRRequest or PurchaseRequest
+  createdAt       DateTime  @default(now())
+  reviewedAt      DateTime?
+  approvedAt      DateTime?
+  paidAt          DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  requester User  @relation("FinanceRequester", fields: [requesterId], references: [id])
+  reviewer  User? @relation("FinanceReviewer", fields: [reviewedBy], references: [id])
+  approver  User? @relation("FinanceApprover", fields: [approvedBy], references: [id])
+
+  @@index([requesterId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([sourceType, sourceId])
+}
+
+// ==================== WORKFLOW SYSTEM ====================
+
+enum WorkflowLevel {
+  STAGE // مستوى المرحلة (stage manager/deputy)
+  DEPARTMENT // مستوى القسم (department head)
+  COMPANY // مستوى الشركة (director, CEO, etc.)
+}
+
+enum WorkflowApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ESCALATED
+}
+
+model Workflow {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  type            String // HR, PROCUREMENT, MAINTENANCE, TASK
+  forHRType       String? // Deprecated - use forSpecificType
+  forSpecificType String? // Specific request type: LEAVE_REQUEST, PURCHASE_REQUEST_URGENT, etc
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  steps    WorkflowStep[]
+  branches WorkflowBranch[]
+  stages   WorkflowStage[]
+
+  @@index([type])
+  @@index([forSpecificType])
+  @@index([isActive])
+}
+
+model WorkflowBranch {
+  id         String   @id @default(cuid())
+  workflowId String
+  branchId   String
+  createdAt  DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, branchId])
+  @@index([workflowId])
+  @@index([branchId])
+}
+
+model WorkflowStage {
+  id         String   @id @default(cuid())
+  workflowId String
+  stageId    String
+  createdAt  DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  stage    Stage    @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, stageId])
+  @@index([workflowId])
+  @@index([stageId])
+}
+
+enum WorkflowApproverType {
+  SPECIFIC_USER // موظف محدد
+  ROLE // دور معين (مثل: مدير HR)
+  DIRECT_MANAGER // المدير المباشر
+  SYSTEM_ROLE // دور نظام (مثل: ADMIN)
+}
+
+model WorkflowStep {
+  id                String               @id @default(cuid())
+  workflowId        String
+  name              String // اسم المرحلة (مثل: مراجعة المدير)
+  order             Int
+  level             WorkflowLevel
+  approverType      WorkflowApproverType @default(ROLE)
+  approverUserId    String? // إذا كان SPECIFIC_USER
+  workflowRoleId    String? // إذا كان ROLE (nullable الآن)
+  approverSystemRole String? // إذا كان SYSTEM_ROLE (ADMIN, HR_MANAGER, etc)
+  condition         String? // e.g., "amount > 5000"
+  allowReject       Boolean              @default(true)
+  autoEscalateDays  Int? // تصعيد تلقائي بعد X أيام
+  notifyOnEntry     Boolean              @default(true)
+  notifyOnApproval  Boolean              @default(true)
+  notifyOnReject    Boolean              @default(true)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  workflow      Workflow              @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflowRole  WorkflowRole?         @relation(fields: [workflowRoleId], references: [id])
+  approverUser  User?                 @relation("WorkflowStepApprover", fields: [approverUserId], references: [id])
+  approvals     WorkflowApprovalLog[]
+
+  @@index([workflowId])
+  @@index([order])
+  @@index([approverUserId])
+  @@index([approverType])
+}
+
+model WorkflowRole {
+  id          String        @id @default(cuid())
+  slug        String        @unique // e.g., "stage_manager", "department_head", "ceo"
+  nameAr      String
+  nameEn      String
+  level       WorkflowLevel
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  steps WorkflowStep[]
+
+  @@index([level])
+}
+
+model WorkflowApprovalLog {
+  id             String                 @id @default(cuid())
+  workflowStepId String
+  requestType    String // HR_REQUEST, PURCHASE_REQUEST
+  requestId      String
+  approverId     String
+  status         WorkflowApprovalStatus @default(PENDING)
+  comments       String?
+  metadata       String? // JSON metadata
+  createdAt      DateTime               @default(now())
+  reviewedAt     DateTime?
+
+  step          WorkflowStep           @relation(fields: [workflowStepId], references: [id])
+  approver      User                   @relation("WorkflowApprovals", fields: [approverId], references: [id])
+  referrals     WorkflowReferral[]
+
+  @@index([requestType, requestId])
+  @@index([approverId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model WorkflowReferral {
+  id             String   @id @default(cuid())
+  approvalId     String   // الموافقة الأصلية
+  referredToId   String   // الشخص المُحال إليه
+  referredById   String   // من قام بالإحالة
+  status         String   @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  comments       String?  // تعليقات الإحالة
+  response       String?  // رد الشخص المُحال إليه
+  priority       String?  // URGENT, NORMAL
+  createdAt      DateTime @default(now())
+  respondedAt    DateTime?
+  
+  approval    WorkflowApprovalLog @relation(fields: [approvalId], references: [id])
+  referredTo  User                @relation("WorkflowReferredTo", fields: [referredToId], references: [id])
+  referredBy  User                @relation("WorkflowReferredBy", fields: [referredById], references: [id])
+
+  @@index([approvalId])
+  @@index([referredToId])
+  @@index([status])
+  @@index([createdAt])
+}
+

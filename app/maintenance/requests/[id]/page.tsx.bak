@@ -1,0 +1,475 @@
+import Link from 'next/link'
+import { cookies } from 'next/headers'
+import { getSession } from '@/lib/session'
+import { prisma } from '@/lib/db'
+import { canAccessRequest, canAssign, canUpdateStatus, getMaintenanceAccess, isMaintenanceManager, isMaintenanceTechnician } from '@/lib/maintenance/auth'
+import { maintenancePriorityLabel, maintenanceStatusLabel, maintenanceTypeLabel, statusColor } from '@/lib/maintenance/utils'
+import RequestActions from './requestActions'
+
+export default async function MaintenanceRequestDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession(await cookies())
+  if (!session.user) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: 32 }}>
+        <div style={{ 
+          maxWidth: 600, 
+          margin: '80px auto',
+          background: 'white',
+          padding: 40,
+          borderRadius: 16,
+          boxShadow: '0 4px 6px rgba(0,0,0,0.07)'
+        }}>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: '#1F2937', margin: 0 }}>غير مصرح</h1>
+          <p style={{ color: '#6B7280', marginTop: 12 }}>ليس لديك صلاحية للوصول إلى هذه الصفحة</p>
+        </div>
+      </div>
+    )
+  }
+
+  const { id } = await params
+  const access = await getMaintenanceAccess()
+
+  const req = await prisma.maintenanceRequest.findUnique({
+    where: { id },
+    include: {
+      branch: { select: { id: true, name: true } },
+      stage: { select: { id: true, name: true } },
+      asset: true,
+      requestedBy: { select: { id: true, fullNameAr: true, employeeNumber: true, userId: true } },
+      assignedTo: { select: { id: true, fullNameAr: true, employeeNumber: true, userId: true, maintenanceRole: true, maintenanceTeam: true } },
+      assignedBy: { select: { id: true, fullNameAr: true, employeeNumber: true } },
+      completedBy: { select: { id: true, fullNameAr: true, employeeNumber: true } },
+      parts: { orderBy: { createdAt: 'asc' } },
+      comments: {
+        include: { user: { select: { id: true, fullNameAr: true, employeeNumber: true, maintenanceRole: true, maintenanceTeam: true } } },
+        orderBy: { createdAt: 'asc' }
+      },
+      history: {
+        include: { user: { select: { id: true, fullNameAr: true, employeeNumber: true } } },
+        orderBy: { createdAt: 'asc' }
+      }
+    }
+  })
+
+  if (!req) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: 32 }}>
+        <div style={{ 
+          maxWidth: 600, 
+          margin: '80px auto',
+          background: 'white',
+          padding: 40,
+          borderRadius: 16,
+          boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: 64, marginBottom: 16 }}>❌</div>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: '#1F2937', margin: 0 }}>الطلب غير موجود</h1>
+          <Link href="/maintenance/requests" style={{
+            display: 'inline-block',
+            marginTop: 20,
+            padding: '12px 24px',
+            background: '#3B82F6',
+            color: 'white',
+            borderRadius: 12,
+            textDecoration: 'none',
+            fontWeight: 700
+          }}>رجوع للقائمة</Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (!canAccessRequest(access, req)) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: 32 }}>
+        <div style={{ 
+          maxWidth: 600, 
+          margin: '80px auto',
+          background: 'white',
+          padding: 40,
+          borderRadius: 16,
+          boxShadow: '0 4px 6px rgba(0,0,0,0.07)'
+        }}>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: '#1F2937', margin: 0 }}>غير مصرح</h1>
+          <p style={{ color: '#6B7280', marginTop: 12 }}>ليس لديك صلاحية للوصول إلى هذا الطلب</p>
+        </div>
+      </div>
+    )
+  }
+
+  const actorEmployeeId = access.employee?.id || null
+
+  const isRequester = !!actorEmployeeId && req.requestedById === actorEmployeeId
+  const isAssignedTech = !!actorEmployeeId && req.assignedToId === actorEmployeeId
+
+  const allowAssign = canAssign(access, req.type)
+  const allowStatus = canUpdateStatus(access, req)
+
+  const canSeeInternal = access.isAdmin || isMaintenanceManager(access) || isMaintenanceTechnician(access)
+
+  let technicians: Array<{ id: string; fullNameAr: string; employeeNumber: string }> = []
+  if (allowAssign) {
+    const team = access.maintenanceTeam
+    technicians = await prisma.employee.findMany({
+      where: {
+        maintenanceRole: { in: ['BUILDING_TECH', 'IT_TECH'] },
+        ...(team ? { maintenanceTeam: team } : {})
+      },
+      orderBy: { fullNameAr: 'asc' },
+      select: { id: true, fullNameAr: true, employeeNumber: true }
+    })
+  }
+
+  const badge = statusColor(req.status)
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#F9FAFB' }}>
+      <div style={{ padding: '24px 20px', maxWidth: 1280, margin: '0 auto' }}>
+        {/* Professional Header */}
+        <div style={{ 
+          background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+          borderRadius: 20,
+          padding: '32px 28px',
+          marginBottom: 24,
+          boxShadow: '0 10px 25px rgba(59,130,246,0.15)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
+            <div>
+              <h1 style={{ 
+                fontSize: 36, 
+                fontWeight: 900, 
+                color: 'white', 
+                margin: 0,
+                textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}>{req.requestNumber}</h1>
+              <p style={{ 
+                color: 'rgba(255,255,255,0.95)', 
+                marginTop: 8,
+                fontSize: 16,
+                fontWeight: 500
+              }}>
+                {maintenanceTypeLabel(req.type)} • {req.category} • {req.branch?.name}{req.stage?.name ? ` • ${req.stage.name}` : ''}
+              </p>
+            </div>
+            <Link href="/maintenance/requests" style={{
+              padding: '12px 24px',
+              borderRadius: 12,
+              background: 'white',
+              color: '#3B82F6',
+              textDecoration: 'none',
+              fontWeight: 800,
+              fontSize: 15,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              transition: 'all 0.3s ease',
+              display: 'inline-block'
+            }}>⬅️ رجوع للقائمة</Link>
+          </div>
+          
+          {/* Status Badges */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 20, flexWrap: 'wrap' }}>
+            <div style={{
+              padding: '10px 18px',
+              borderRadius: 10,
+              background: badge.bg,
+              border: `2px solid ${badge.border}`,
+              color: badge.text,
+              fontWeight: 900,
+              fontSize: 14
+            }}>{maintenanceStatusLabel(req.status)}</div>
+
+            <div style={{
+              padding: '10px 18px',
+              borderRadius: 10,
+              background: req.priority === 'EMERGENCY' ? '#FEE2E2' :
+                         req.priority === 'HIGH' ? '#FEF3C7' : 'rgba(255,255,255,0.3)',
+              border: `2px solid ${req.priority === 'EMERGENCY' ? '#EF4444' :
+                                   req.priority === 'HIGH' ? '#F59E0B' : 'rgba(255,255,255,0.5)'}`,
+              color: req.priority === 'EMERGENCY' || req.priority === 'HIGH' ? 
+                     (req.priority === 'EMERGENCY' ? '#B91C1C' : '#D97706') : 'white',
+              fontWeight: 900,
+              fontSize: 14
+            }}>{maintenancePriorityLabel(req.priority)}</div>
+
+            {req.asset && (
+              <Link href={`/maintenance/assets/${req.asset.id}`} style={{
+                padding: '10px 18px',
+                borderRadius: 10,
+                background: 'rgba(255,255,255,0.2)',
+                backdropFilter: 'blur(10px)',
+                border: '2px solid rgba(255,255,255,0.4)',
+                color: 'white',
+                fontWeight: 900,
+                fontSize: 14,
+                textDecoration: 'none',
+                transition: 'all 0.3s ease'
+              }}>🏢 الأصل: {req.asset.assetNumber}</Link>
+            )}
+          </div>
+        </div>
+
+        {/* Main Details Grid */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', 
+          gap: 24,
+          marginBottom: 24
+        }}>
+          {/* Request Details Card */}
+          <div style={{
+            background: 'white',
+            borderRadius: 16,
+            padding: 28,
+            boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+            border: '1px solid #E5E7EB'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <span style={{ fontSize: 32 }}>📝</span>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1F2937', margin: 0 }}>تفاصيل الطلب</h2>
+            </div>
+            <div style={{ 
+              fontSize: 15, 
+              color: '#374151', 
+              lineHeight: 1.8,
+              marginBottom: 20,
+              padding: 16,
+              background: '#F9FAFB',
+              borderRadius: 12,
+              border: '1px solid #E5E7EB'
+            }}>
+              {req.description}
+            </div>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ fontSize: 18 }}>📍</span>
+                <div>
+                  <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 4 }}>الموقع التفصيلي</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1F2937' }}>{req.locationDetails}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ fontSize: 18 }}>👤</span>
+                <div>
+                  <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 4 }}>مقدم الطلب</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1F2937' }}>
+                    {req.requestedBy?.fullNameAr} ({req.requestedBy?.employeeNumber})
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ fontSize: 18 }}>📅</span>
+                <div>
+                  <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 4 }}>تاريخ التقديم</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1F2937' }}>
+                    {new Date(req.requestedAt).toLocaleString('ar-SA')}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Assignment & Completion Card */}
+          <div style={{
+            background: 'white',
+            borderRadius: 16,
+            padding: 28,
+            boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+            border: '1px solid #E5E7EB'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <span style={{ fontSize: 32 }}>⚙️</span>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1F2937', margin: 0 }}>التعيين والإنجاز</h2>
+            </div>
+            <div style={{ display: 'grid', gap: 16 }}>
+              <div style={{ 
+                padding: 16, 
+                background: '#EFF6FF', 
+                borderRadius: 12,
+                border: '1px solid #DBEAFE'
+              }}>
+                <div style={{ fontSize: 13, color: '#1E40AF', marginBottom: 6, fontWeight: 600 }}>الفني المسؤول</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: '#1E3A8A' }}>
+                  {req.assignedTo?.fullNameAr || 'لم يتم التعيين بعد'}
+                </div>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 4 }}>تاريخ التعيين</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1F2937' }}>
+                    {req.assignedAt ? new Date(req.assignedAt).toLocaleDateString('ar-SA') : '-'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 4 }}>المُعيّن بواسطة</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1F2937' }}>
+                    {req.assignedBy?.fullNameAr || '-'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ 
+                padding: 16, 
+                background: req.completedAt ? '#D1FAE5' : '#F9FAFB',
+                borderRadius: 12,
+                border: `1px solid ${req.completedAt ? '#A7F3D0' : '#E5E7EB'}`
+              }}>
+                <div style={{ fontSize: 13, color: req.completedAt ? '#065F46' : '#6B7280', marginBottom: 6, fontWeight: 600 }}>
+                  تاريخ الإنجاز
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: req.completedAt ? '#047857' : '#9CA3AF' }}>
+                  {req.completedAt ? new Date(req.completedAt).toLocaleString('ar-SA') : 'لم يكتمل بعد'}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                <div style={{ textAlign: 'center', padding: 12, background: '#FEF3C7', borderRadius: 10, border: '1px solid #FDE68A' }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: '#D97706' }}>
+                    {req.laborHours ?? '-'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#92400E', marginTop: 4, fontWeight: 600 }}>ساعات</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: 12, background: '#DBEAFE', borderRadius: 10, border: '1px solid #BFDBFE' }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: '#2563EB' }}>
+                    {req.partsCost ?? '-'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#1E40AF', marginTop: 4, fontWeight: 600 }}>قطع</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: 12, background: '#D1FAE5', borderRadius: 10, border: '1px solid #A7F3D0' }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: '#059669' }}>
+                    {req.totalCost ?? '-'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#065F46', marginTop: 4, fontWeight: 600 }}>إجمالي</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions Component */}
+        <RequestActions
+          requestId={req.id}
+          requestNumber={req.requestNumber}
+          status={req.status}
+          type={req.type}
+          canAssign={allowAssign}
+          canUpdateStatus={allowStatus}
+          canSeeInternal={canSeeInternal}
+          isRequester={isRequester}
+          hasRating={!!req.rating}
+          technicians={technicians}
+        />
+
+        {/* Comments Section */}
+        <div style={{
+          background: 'white',
+          borderRadius: 16,
+          padding: 28,
+          marginTop: 24,
+          boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+          border: '1px solid #E5E7EB'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <span style={{ fontSize: 32 }}>💬</span>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1F2937', margin: 0 }}>التعليقات</h2>
+          </div>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {req.comments.filter((c) => (canSeeInternal ? true : !c.isInternal)).length === 0 ? (
+              <div style={{ padding: 32, textAlign: 'center', color: '#9CA3AF' }}>
+                لا توجد تعليقات بعد
+              </div>
+            ) : (
+              req.comments
+                .filter((c) => (canSeeInternal ? true : !c.isInternal))
+                .map((c) => (
+                  <div key={c.id} style={{
+                    padding: 16,
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 12,
+                    background: c.isInternal ? '#FEF3C7' : '#F9FAFB'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                      <div style={{ fontWeight: 800, color: '#1F2937', fontSize: 15 }}>
+                        {c.user.fullNameAr} • {c.isInternal ? '🔒 ملاحظة داخلية' : '💬 تعليق'}
+                      </div>
+                      <div style={{ fontSize: 13, color: '#6B7280' }}>
+                        {new Date(c.createdAt).toLocaleString('ar-SA')}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 15, color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                      {c.comment}
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <div style={{
+          background: 'white',
+          borderRadius: 16,
+          padding: 28,
+          marginTop: 24,
+          boxShadow: '0 4px 6px rgba(0,0,0,0.07)',
+          border: '1px solid #E5E7EB'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <span style={{ fontSize: 32 }}>📊</span>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1F2937', margin: 0 }}>السجل الزمني</h2>
+          </div>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {req.history.map((h, idx) => (
+              <div key={h.id} style={{
+                padding: 16,
+                border: '1px solid #E5E7EB',
+                borderRadius: 12,
+                background: idx === 0 ? '#EFF6FF' : '#F9FAFB',
+                position: 'relative',
+                paddingRight: 48
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  right: 16,
+                  top: 16,
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 800,
+                  fontSize: 12
+                }}>
+                  {req.history.length - idx}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                  <div style={{ fontWeight: 800, color: '#1F2937', fontSize: 15 }}>
+                    {h.user?.fullNameAr || 'مستخدم'} • {h.action}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#6B7280' }}>
+                    {new Date(h.createdAt).toLocaleString('ar-SA')}
+                  </div>
+                </div>
+                {(h.oldValue || h.newValue) && (
+                  <div style={{ fontSize: 14, color: '#6B7280', marginBottom: 6 }}>
+                    من: <span style={{ fontWeight: 700 }}>{h.oldValue || '-'}</span> → 
+                    إلى: <span style={{ fontWeight: 700 }}>{h.newValue || '-'}</span>
+                  </div>
+                )}
+                {h.notes && (
+                  <div style={{ fontSize: 14, color: '#374151', marginTop: 8, whiteSpace: 'pre-wrap' }}>
+                    {h.notes}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  )
+}

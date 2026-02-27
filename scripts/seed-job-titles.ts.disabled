@@ -1,0 +1,154 @@
+/**
+ * Seed Job Titles and Positions
+ * Adds sample job titles and positions to the database
+ */
+
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🎯 Seeding Job Titles and Positions...');
+
+  // Job Titles (المسميات الوظيفية)
+  const jobTitles = [
+    { nameAr: 'معلم', nameEn: 'Teacher', category: 'تعليمي' },
+    { nameAr: 'معلم أول', nameEn: 'Senior Teacher', category: 'تعليمي' },
+    { nameAr: 'رئيس قسم', nameEn: 'Department Head', category: 'إداري' },
+    { nameAr: 'وكيل', nameEn: 'Vice Principal', category: 'إداري' },
+    { nameAr: 'مدير', nameEn: 'Principal', category: 'إداري' },
+    { nameAr: 'مدير عام', nameEn: 'General Manager', category: 'إداري' },
+    { nameAr: 'محاسب', nameEn: 'Accountant', category: 'مالي' },
+    { nameAr: 'موظف إداري', nameEn: 'Administrative Staff', category: 'إداري' },
+    { nameAr: 'موظف موارد بشرية', nameEn: 'HR Staff', category: 'إداري' },
+    { nameAr: 'مشرف', nameEn: 'Supervisor', category: 'إداري' },
+    { nameAr: 'منسق', nameEn: 'Coordinator', category: 'إداري' },
+    { nameAr: 'سكرتير', nameEn: 'Secretary', category: 'إداري' },
+    { nameAr: 'عامل نظافة', nameEn: 'Cleaner', category: 'خدمات' },
+    { nameAr: 'سائق', nameEn: 'Driver', category: 'خدمات' },
+    { nameAr: 'حارس أمن', nameEn: 'Security Guard', category: 'خدمات' },
+  ];
+
+  console.log('📝 Creating Job Titles...');
+  for (const title of jobTitles) {
+    await prisma.jobTitle.upsert({
+      where: { nameAr: title.nameAr },
+      update: {},
+      create: title,
+    });
+  }
+  console.log(`✅ Created ${jobTitles.length} job titles`);
+
+  // Positions (الوظائف) - Sample positions
+  const positions = [
+    {
+      code: 'MATH_TEACHER_01',
+      nameAr: 'معلم رياضيات - المرحلة الابتدائية',
+      nameEn: 'Math Teacher - Primary',
+      jobTitleCode: 'TEACHER',
+      departmentCode: 'EDUCATION',
+    },
+    {
+      code: 'ARABIC_TEACHER_01',
+      nameAr: 'معلم لغة عربية - المرحلة الابتدائية',
+      nameEn: 'Arabic Teacher - Primary',
+      jobTitleCode: 'TEACHER',
+      departmentCode: 'EDUCATION',
+    },
+    {
+      code: 'ENGLISH_TEACHER_01',
+      nameAr: 'معلم لغة إنجليزية - المرحلة المتوسطة',
+      nameEn: 'English Teacher - Middle School',
+      jobTitleCode: 'TEACHER',
+      departmentCode: 'EDUCATION',
+    },
+    {
+      code: 'SCIENCE_DEPT_HEAD',
+      nameAr: 'رئيس قسم العلوم',
+      nameEn: 'Science Department Head',
+      jobTitleCode: 'DEPT_HEAD',
+      departmentCode: 'EDUCATION',
+    },
+    {
+      code: 'HR_MANAGER',
+      nameAr: 'مدير الموارد البشرية',
+      nameEn: 'HR Manager',
+      jobTitleCode: 'SUPERVISOR',
+      departmentCode: 'HR',
+    },
+    {
+      code: 'ACCOUNTANT_01',
+      nameAr: 'محاسب رئيسي',
+      nameEn: 'Senior Accountant',
+      jobTitleCode: 'ACCOUNTANT',
+      departmentCode: 'FINANCE',
+    },
+    {
+      code: 'ADMIN_ASST',
+      nameAr: 'مساعد إداري',
+      nameEn: 'Administrative Assistant',
+      jobTitleCode: 'ADMIN_STAFF',
+      departmentCode: 'ADMIN',
+    },
+    {
+      code: 'IT_COORDINATOR',
+      nameAr: 'منسق تقنية معلومات',
+      nameEn: 'IT Coordinator',
+      jobTitleCode: 'COORDINATOR',
+      departmentCode: 'IT',
+    },
+  ];
+
+  console.log('💼 Creating Positions...');
+
+  // Get departments first
+  const departments = await prisma.department.findMany({
+    select: { id: true, nameAr: true },
+  });
+  
+  const deptMap = new Map(departments.map(d => [d.nameAr, d.id]));
+
+  // Get job titles
+  const titles = await prisma.jobTitle.findMany({
+    select: { id: true, code: true },
+  });
+
+  const titleMap = new Map(titles.map(t => [t.code, t.id]));
+
+  for (const pos of positions) {
+    const jobTitleId = titleMap.get(pos.jobTitleCode);
+    const departmentId = deptMap.get(pos.departmentCode);
+
+    if (!jobTitleId) {
+      console.log(`⚠️  Skipping position ${pos.code} - job title not found`);
+      continue;
+    }
+
+    await prisma.position.upsert({
+      where: { code: pos.code },
+      update: {},
+      create: {
+        code: pos.code,
+        nameAr: pos.nameAr,
+        nameEn: pos.nameEn,
+        jobTitleId,
+        departmentId,
+        headcount: 1,
+        filledCount: 0,
+      },
+    });
+  }
+
+  console.log(`✅ Created ${positions.length} positions`);
+
+  console.log('🎉 Job Titles and Positions seeded successfully!');
+}
+
+main()
+  .catch((e) => {
+    console.error('❌ Error seeding:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

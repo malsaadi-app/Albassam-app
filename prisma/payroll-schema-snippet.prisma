@@ -1,0 +1,46 @@
+// Payroll (مسير الرواتب)
+model PayrollRun {
+  id        String           @id @default(cuid())
+  year      Int
+  month     Int
+  status    PayrollRunStatus @default(DRAFT)
+  notes     String?
+  createdBy String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  lines     PayrollLine[]
+
+  @@unique([year, month])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  LOCKED
+}
+
+model PayrollLine {
+  id               String    @id @default(cuid())
+  payrollRunId     String
+  employeeId       String
+
+  // amounts (SAR)
+  basicSalary      Float
+  transportAllowance Float
+  housingAllowance Float
+  otherAllowances  Float
+  deductions       Float     @default(0)
+  totalSalary      Float     // computed: basic+allowances-deductions
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  payrollRun       PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employee         Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([payrollRunId, employeeId])
+  @@index([employeeId])
+  @@index([payrollRunId])
+}

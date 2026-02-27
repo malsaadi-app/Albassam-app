@@ -1,0 +1,74 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - complementary [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: القائمة الرئيسية
+      - button [ref=e5] [cursor=pointer]:
+        - img [ref=e6]
+    - generic [ref=e9]:
+      - img
+      - textbox "بحث... (Ctrl+K)" [ref=e10]
+    - navigation [ref=e11]:
+      - link "الرئيسية" [ref=e12] [cursor=pointer]:
+        - /url: /dashboard
+        - img [ref=e14]
+        - generic [ref=e16]: الرئيسية
+      - link "المهام" [ref=e17] [cursor=pointer]:
+        - /url: /tasks
+        - img [ref=e19]
+        - generic [ref=e21]: المهام
+      - link "الفروع" [ref=e22] [cursor=pointer]:
+        - /url: /branches
+        - img [ref=e24]
+        - generic [ref=e26]: الفروع
+      - button "الحضور والانصراف" [ref=e28] [cursor=pointer]:
+        - img [ref=e30]
+        - generic [ref=e32]: الحضور والانصراف
+        - img [ref=e33]
+      - button "الموارد البشرية" [ref=e36] [cursor=pointer]:
+        - img [ref=e38]
+        - generic [ref=e40]: الموارد البشرية
+        - img [ref=e41]
+      - button "المشتريات" [ref=e44] [cursor=pointer]:
+        - img [ref=e46]
+        - generic [ref=e48]: المشتريات
+        - img [ref=e49]
+      - button "الصيانة" [ref=e52] [cursor=pointer]:
+        - img [ref=e54]
+        - generic [ref=e56]: الصيانة
+        - img [ref=e57]
+      - generic [ref=e59]:
+        - link "الإشعارات" [ref=e60] [cursor=pointer]:
+          - /url: /notifications
+          - img [ref=e62]
+          - generic [ref=e64]: الإشعارات
+        - link "التقارير" [ref=e65] [cursor=pointer]:
+          - /url: /reports
+          - img [ref=e67]
+          - generic [ref=e69]: التقارير
+    - button "تسجيل الخروج" [ref=e72] [cursor=pointer]:
+      - img [ref=e73]
+      - generic [ref=e75]: تسجيل الخروج
+  - button [ref=e76] [cursor=pointer]:
+    - img [ref=e77]
+  - main [ref=e78]:
+    - generic [ref=e82]:
+      - generic [ref=e83]:
+        - img "Albassam Schools" [ref=e86]
+        - heading "مدارس الباسم" [level=1] [ref=e87]
+        - paragraph [ref=e88]: نظام إدارة المهام
+      - generic [ref=e91]:
+        - generic [ref=e92]:
+          - generic [ref=e93]: اسم المستخدم
+          - textbox "اسم المستخدم" [active] [ref=e94]:
+            - /placeholder: أدخل اسم المستخدم
+        - generic [ref=e95]:
+          - generic [ref=e96]: كلمة المرور
+          - textbox "كلمة المرور" [ref=e97]:
+            - /placeholder: أدخل كلمة المرور
+        - button "تسجيل الدخول" [ref=e98] [cursor=pointer]
+      - paragraph [ref=e100]: © 2026 مدارس الباسم - جميع الحقوق محفوظة
+  - alert [ref=e101]
+```

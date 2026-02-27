@@ -1,0 +1,67 @@
+// ==================== RBAC (Role-Based Access Control) ====================
+// نظام إدارة الصلاحيات المتقدم
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique  // "employees.view", "hr_requests.approve"
+  nameAr      String              // "عرض الموظفين", "الموافقة على الطلبات"
+  nameEn      String              // "View Employees", "Approve Requests"
+  module      String              // "employees", "hr", "attendance", "procurement"
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  roles       RolePermission[]
+
+  @@index([module])
+  @@index([name])
+}
+
+model SystemRole {
+  id          String   @id @default(cuid())
+  name        String   @unique  // "SUPER_ADMIN", "HR_MANAGER", "BRANCH_MANAGER"
+  nameAr      String              // "مدير النظام", "مدير الموارد البشرية"
+  nameEn      String              // "Super Admin", "HR Manager"
+  description String?
+  isSystem    Boolean  @default(false)  // الأدوار الأساسية (لا تُحذف/تُعدّل)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  users       User[]
+  permissions RolePermission[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  grantedAt    DateTime @default(now())
+  grantedBy    String?  // User ID who granted this permission
+  
+  role         SystemRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@id([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+model PermissionAuditLog {
+  id           String   @id @default(cuid())
+  userId       String      // المستخدم الذي قام بالتعديل
+  action       String      // "GRANT", "REVOKE", "CREATE_ROLE", "DELETE_ROLE"
+  roleId       String?
+  roleName     String?
+  permissionId String?
+  permissionName String?
+  details      String?     // JSON details
+  createdAt    DateTime @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}

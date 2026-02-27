@@ -1,0 +1,8 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { PageHeader } from '@/components/ui/PageHeader';
+export default function SystemHealthPage() {
+  const [health, setHealth] = useState<any>(null);
+  useEffect(() => { fetch('/api/health').then(r => r.json()).then(setHealth); }, []);
+  return (<div style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}><div style={{ maxWidth: '1200px', margin: '0 auto' }}><PageHeader title="🏥 صحة النظام" breadcrumbs={['الرئيسية', 'الإدارة', 'الصحة']} /><div style={{ display: 'grid', gap: '16px' }}><div style={{ background: 'white', borderRadius: '12px', padding: '24px' }}><h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>حالة النظام</h3><div style={{ display: 'grid', gap: '12px' }}><div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#F9FAFB', borderRadius: '6px' }}><span>حالة التطبيق</span><span style={{ color: '#10B981', fontWeight: '600' }}>✓ يعمل</span></div><div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#F9FAFB', borderRadius: '6px' }}><span>قاعدة البيانات</span><span style={{ color: health?.database ? '#10B981' : '#EF4444', fontWeight: '600' }}>{health?.database ? '✓ متصلة' : '✗ غير متصلة'}</span></div><div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#F9FAFB', borderRadius: '6px' }}><span>وقت التشغيل</span><span style={{ fontWeight: '600' }}>{health?.uptime ? Math.floor(health.uptime / 60) + ' دقيقة' : '-'}</span></div></div></div></div></div></div>);
+}

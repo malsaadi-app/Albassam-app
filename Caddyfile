@@ -1,0 +1,5 @@
+app.albassam-app.com {
+    tls /data/.openclaw/workspace/albassam-tasks/cloudflare-origin.crt /data/.openclaw/workspace/albassam-tasks/cloudflare-origin.key
+    reverse_proxy localhost:3000
+    encode gzip
+}

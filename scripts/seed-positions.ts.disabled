@@ -1,0 +1,153 @@
+/**
+ * Seed Organizational Positions
+ * Adds sample positions to the database
+ */
+
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🎯 Seeding Organizational Positions...');
+
+  // Positions (الوظائف)
+  const positions = [
+    {
+      code: 'POS-2026-001',
+      title: 'معلم رياضيات - الابتدائية',
+      titleEn: 'Math Teacher - Primary',
+      department: 'التعليم',
+      level: 'Mid',
+      status: 'VACANT',
+      salaryMin: 8000,
+      salaryMax: 12000,
+    },
+    {
+      code: 'POS-2026-002',
+      title: 'معلم لغة عربية - المتوسطة',
+      titleEn: 'Arabic Teacher - Middle School',
+      department: 'التعليم',
+      level: 'Mid',
+      status: 'VACANT',
+      salaryMin: 8000,
+      salaryMax: 12000,
+    },
+    {
+      code: 'POS-2026-003',
+      title: 'معلم لغة إنجليزية - الثانوية',
+      titleEn: 'English Teacher - High School',
+      department: 'التعليم',
+      level: 'Senior',
+      status: 'VACANT',
+      salaryMin: 10000,
+      salaryMax: 15000,
+    },
+    {
+      code: 'POS-2026-004',
+      title: 'رئيس قسم العلوم',
+      titleEn: 'Science Department Head',
+      department: 'التعليم',
+      level: 'Manager',
+      status: 'VACANT',
+      salaryMin: 15000,
+      salaryMax: 20000,
+    },
+    {
+      code: 'POS-2026-005',
+      title: 'محاسب رئيسي',
+      titleEn: 'Senior Accountant',
+      department: 'المالية',
+      level: 'Senior',
+      status: 'VACANT',
+      salaryMin: 12000,
+      salaryMax: 18000,
+    },
+    {
+      code: 'POS-2026-006',
+      title: 'موظف موارد بشرية',
+      titleEn: 'HR Staff',
+      department: 'الموارد البشرية',
+      level: 'Mid',
+      status: 'VACANT',
+      salaryMin: 7000,
+      salaryMax: 10000,
+    },
+    {
+      code: 'POS-2026-007',
+      title: 'مشرف تربوي',
+      titleEn: 'Educational Supervisor',
+      department: 'التعليم',
+      level: 'Senior',
+      status: 'VACANT',
+      salaryMin: 12000,
+      salaryMax: 17000,
+    },
+    {
+      code: 'POS-2026-008',
+      title: 'منسق تقنية معلومات',
+      titleEn: 'IT Coordinator',
+      department: 'تقنية المعلومات',
+      level: 'Mid',
+      status: 'VACANT',
+      salaryMin: 9000,
+      salaryMax: 14000,
+    },
+    {
+      code: 'POS-2026-009',
+      title: 'مدير مدرسة - الابتدائية',
+      titleEn: 'Principal - Primary School',
+      department: 'الإدارة',
+      level: 'Manager',
+      status: 'VACANT',
+      salaryMin: 18000,
+      salaryMax: 25000,
+    },
+    {
+      code: 'POS-2026-010',
+      title: 'سكرتير تنفيذي',
+      titleEn: 'Executive Secretary',
+      department: 'الإدارة',
+      level: 'Mid',
+      status: 'VACANT',
+      salaryMin: 6000,
+      salaryMax: 9000,
+    },
+  ];
+
+  console.log(`📝 Creating ${positions.length} Positions...`);
+  
+  let created = 0;
+  let existing = 0;
+  
+  for (const pos of positions) {
+    try {
+      await prisma.organizationalPosition.upsert({
+        where: { code: pos.code },
+        update: {},
+        create: pos,
+      });
+      created++;
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        existing++;
+      } else {
+        console.error(`❌ Error creating ${pos.code}:`, error.message);
+      }
+    }
+  }
+
+  console.log(`✅ Created ${created} new positions`);
+  if (existing > 0) {
+    console.log(`ℹ️  ${existing} positions already existed`);
+  }
+  console.log('🎉 Positions seeded successfully!');
+}
+
+main()
+  .catch((e) => {
+    console.error('❌ Error seeding:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

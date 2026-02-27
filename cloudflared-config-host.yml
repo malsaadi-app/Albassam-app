@@ -1,0 +1,7 @@
+tunnel: 1bf45762-4a49-4326-869f-d7f1c69abebe
+credentials-file: /root/tunnel-credentials.json
+
+ingress:
+  - hostname: app.albassam-app.com
+    service: http://172.19.0.2:3000
+  - service: http_status:404
