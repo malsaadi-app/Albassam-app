@@ -1,5 +1,3 @@
-import { Role } from '@prisma/client'
-
-export function isAdmin(role: Role | 'ADMIN' | 'EMPLOYEE') {
+export function isAdmin(role: string) {
   return role === 'ADMIN'
 }

@@ -5,7 +5,7 @@ export type SessionUser = {
   id: string
   username: string
   displayName: string
-  role: 'ADMIN' | 'HR_EMPLOYEE' | 'USER'
+  role: string
   systemRole?: {
     id: string
     name: string

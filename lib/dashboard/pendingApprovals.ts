@@ -5,7 +5,7 @@ import { getBranchForwarderUserId, getMaintenanceManagerUserId } from '@/lib/mai
 
 export type PendingApprovalItem = {
   id: string
-  type: 'hr_request' | 'purchase_request' | 'purchase_order'
+  type: 'hr_request' | 'purchase_request' | 'purchase_order' | 'supplier_request' | 'maintenance_request'
   title: string
   submittedBy: string
   submittedAt: Date
