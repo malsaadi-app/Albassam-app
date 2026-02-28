@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
+import { getInitialLocale } from '@/lib/i18n';
 
 // Dynamic import for heavy modal (578 lines - only load when needed)
 const AddQuotationModal = dynamic(() => import('./AddQuotationModal'), {
@@ -441,6 +442,20 @@ export default function QuotationsComparisonPage() {
                   </div>
 
                   {/* Actions */}
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: quotation.status === 'PENDING' ? '12px' : '0' }}>
+                    <Button
+                      variant="outline"
+                      size="md"
+                      onClick={() => {
+                        const locale = getInitialLocale();
+                        window.open(`/print/procurement/quotations/${quotation.id}?locale=${locale}`, '_blank');
+                      }}
+                      style={{ flex: 1 }}
+                    >
+                      🖨️ طباعة
+                    </Button>
+                  </div>
+
                   {quotation.status === 'PENDING' && (
                     <div style={{ display: 'flex', gap: '12px' }}>
                       <Button

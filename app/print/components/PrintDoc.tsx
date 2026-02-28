@@ -105,7 +105,7 @@ export function PrintDoc({
         {metaRows.map((r, idx) => (
           <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 12 }}>
             <div style={{ fontSize: 12, color: '#6b7280' }}>{r.label}</div>
-            <div style={{ fontWeight: 700, marginTop: 4 }}>{r.value || '-'}</div>
+            <div style={{ fontWeight: 700, marginTop: 4, whiteSpace: 'pre-wrap' }}>{r.value || '-'}</div>
           </div>
         ))}
       </div>
@@ -134,7 +134,7 @@ export function PrintDoc({
                 <td style={{ padding: 10, verticalAlign: 'top', fontSize: 12, color: '#6b7280' }}>
                   {t.at ? new Date(t.at).toLocaleString() : '-'}
                 </td>
-                <td style={{ padding: 10, verticalAlign: 'top' }}>{t.comment || '-'}</td>
+                <td style={{ padding: 10, verticalAlign: 'top', whiteSpace: 'pre-wrap' }}>{t.comment || '-'}</td>
               </tr>
             ))}
           </tbody>
