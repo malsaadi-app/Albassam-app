@@ -10,6 +10,8 @@ export default function PurchaseOrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [order, setOrder] = useState<any>(null);
+  const [receipts, setReceipts] = useState<any[]>([]);
+  const [receiptsLoading, setReceiptsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,11 +26,28 @@ export default function PurchaseOrderDetailPage() {
       if (res.ok) {
         const data = await res.json();
         setOrder(data);
+        // Load goods receipts for this order
+        fetchReceipts();
       }
     } catch (error) {
       console.error('Error fetching order:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReceipts = async () => {
+    try {
+      setReceiptsLoading(true);
+      const res = await fetch(`/api/procurement/goods-receipts?purchaseOrderId=${params.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setReceipts(data.receipts || []);
+      }
+    } catch (error) {
+      console.error('Error fetching goods receipts:', error);
+    } finally {
+      setReceiptsLoading(false);
     }
   };
 
@@ -268,6 +287,87 @@ export default function PurchaseOrderDetailPage() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Goods Receipts */}
+        <div style={{
+          background: 'rgba(255,255,255,0.15)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '16px',
+          padding: '24px',
+          marginBottom: '24px',
+          border: '1px solid rgba(255,255,255,0.25)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: '20px' }}>
+            <h2 style={{ color: COLORS.white, fontSize: '20px', fontWeight: 'bold', margin: 0 }}>
+              📥 سندات الاستلام
+            </h2>
+            <button
+              onClick={fetchReceipts}
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                color: COLORS.white,
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer'
+              }}
+            >
+              🔄 تحديث
+            </button>
+          </div>
+
+          {receiptsLoading ? (
+            <div style={{ color: 'rgba(255,255,255,0.85)' }}>جاري التحميل...</div>
+          ) : receipts.length === 0 ? (
+            <div style={{ color: 'rgba(255,255,255,0.75)' }}>لا توجد سندات استلام لهذا الأمر</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {receipts.map((r) => (
+                <div
+                  key={r.id}
+                  style={{
+                    background: 'rgba(255,255,255,0.10)',
+                    border: '1px solid rgba(255,255,255,0.20)',
+                    borderRadius: 12,
+                    padding: 14,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 12,
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <div>
+                    <div style={{ color: COLORS.white, fontWeight: '800' }}>{r.receiptNumber}</div>
+                    <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>
+                      {new Date(r.receiptDate).toLocaleDateString('ar-SA')} • الحالة: {r.status}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const locale = getInitialLocale();
+                      window.open(`/print/procurement/goods-receipts/${r.id}?locale=${locale}`, '_blank');
+                    }}
+                    style={{
+                      background: 'rgba(255,255,255,0.2)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      padding: '10px 16px',
+                      borderRadius: '10px',
+                      color: COLORS.white,
+                      fontSize: '13px',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🖨️ طباعة السند
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Summary */}
