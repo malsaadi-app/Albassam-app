@@ -23,7 +23,13 @@ export default function FinanceRequestDetailsPage() {
   // Petty cash settlement
   const [settlement, setSettlement] = useState<any>(null)
   const [settlementItems, setSettlementItems] = useState<any[]>([])
+  const [settlementTopUps, setSettlementTopUps] = useState<any[]>([])
   const [settlementLoading, setSettlementLoading] = useState(false)
+
+  const [topUpAmount, setTopUpAmount] = useState('')
+  const [topUpReason, setTopUpReason] = useState('')
+  const [topUpComment, setTopUpComment] = useState('')
+  const [topUpActing, setTopUpActing] = useState(false)
 
   const [itemVendor, setItemVendor] = useState('')
   const [itemDesc, setItemDesc] = useState('')
@@ -45,6 +51,7 @@ export default function FinanceRequestDetailsPage() {
       if (res.ok) {
         setSettlement(d.settlement)
         setSettlementItems(d.items || [])
+        setSettlementTopUps(d.topUps || [])
       }
     } finally {
       setSettlementLoading(false)
@@ -174,6 +181,52 @@ export default function FinanceRequestDetailsPage() {
     await fetchSettlement('PETTY_CASH')
   }
 
+  const createTopUp = async () => {
+    if (!topUpAmount || Number(topUpAmount) <= 0 || !topUpReason.trim()) {
+      alert('المبلغ والسبب مطلوبين')
+      return
+    }
+
+    setTopUpActing(true)
+    try {
+      const res = await fetch(`/api/finance/petty-cash/${id}/topups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: Number(topUpAmount), reason: topUpReason })
+      })
+      const d = await res.json()
+      if (!res.ok) {
+        alert(d.error || 'خطأ')
+        return
+      }
+      setTopUpAmount('')
+      setTopUpReason('')
+      await fetchSettlement('PETTY_CASH')
+    } finally {
+      setTopUpActing(false)
+    }
+  }
+
+  const actTopUp = async (topUpId: string, action: 'approve' | 'reject' | 'mark-paid') => {
+    setTopUpActing(true)
+    try {
+      const res = await fetch(`/api/finance/petty-cash/topups/${topUpId}/process-step`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, comment: topUpComment })
+      })
+      const d = await res.json()
+      if (!res.ok) {
+        alert(d.error || 'خطأ')
+        return
+      }
+      setTopUpComment('')
+      await fetchSettlement('PETTY_CASH')
+    } finally {
+      setTopUpActing(false)
+    }
+  }
+
   const submitSettlement = async () => {
     const res = await fetch(`/api/finance/petty-cash/${id}/settlement/submit`, { method: 'POST' })
     const d = await res.json()
@@ -243,7 +296,11 @@ export default function FinanceRequestDetailsPage() {
   const isFinanceMgr = me?.id && data.financeManagerUserId ? me.id === data.financeManagerUserId : false
 
   const totalExpenses = settlementItems.reduce((sum, it) => sum + Number(it.amount || 0), 0)
-  const available = Number(data.amount || 0)
+  const totalTopUpsPaid = settlementTopUps
+    .filter((t) => t.status === 'PAID')
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0)
+
+  const available = Number(data.amount || 0) + totalTopUpsPaid
   const remaining = available - totalExpenses
 
   return (
@@ -342,6 +399,7 @@ export default function FinanceRequestDetailsPage() {
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 12 }}>
                   <div style={{ fontWeight: 800 }}>المتاح: {available.toFixed(2)}</div>
                   <div style={{ fontWeight: 800 }}>المصروف: {totalExpenses.toFixed(2)}</div>
+                  <div style={{ fontWeight: 800 }}>زيادات (مدفوعة): {totalTopUpsPaid.toFixed(2)}</div>
                   <div style={{ fontWeight: 900, color: remaining < 0 ? '#991B1B' : '#065F46' }}>
                     المتبقي: {remaining.toFixed(2)}
                   </div>
@@ -371,6 +429,84 @@ export default function FinanceRequestDetailsPage() {
                         </ul>
                       )}
                     </div>
+
+                    {(isRequester || isAdmin) && remaining < 0 && (
+                      <div style={{ marginTop: 12, borderTop: '1px solid #E5E7EB', paddingTop: 12 }}>
+                        <div style={{ fontWeight: 900, marginBottom: 10 }}>طلب زيادة عهدة</div>
+                        <div style={{ display: 'grid', gap: 10 }}>
+                          <input
+                            value={topUpAmount}
+                            onChange={(e) => setTopUpAmount(e.target.value)}
+                            placeholder="مبلغ الزيادة"
+                            type="number"
+                            style={{ width: '100%', padding: 10 }}
+                          />
+                          <textarea
+                            value={topUpReason}
+                            onChange={(e) => setTopUpReason(e.target.value)}
+                            rows={2}
+                            placeholder="سبب الزيادة"
+                            style={{ width: '100%', padding: 10 }}
+                          />
+                          <Button variant="primary" onClick={createTopUp} disabled={topUpActing}>
+                            إرسال طلب زيادة
+                          </Button>
+                          <div style={{ fontSize: 12, color: '#6B7280' }}>
+                            ملاحظة: طلب الزيادة يمر على المحاسب ثم المدير المالي ثم يُصرف.
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {settlementTopUps.length > 0 && (
+                      <div style={{ marginTop: 12, borderTop: '1px solid #E5E7EB', paddingTop: 12 }}>
+                        <div style={{ fontWeight: 900, marginBottom: 10 }}>طلبات زيادة العهدة</div>
+                        <ul>
+                          {settlementTopUps.map((t) => (
+                            <li key={t.id} style={{ marginBottom: 10 }}>
+                              <div style={{ fontWeight: 800 }}>
+                                {Number(t.amount).toFixed(2)} — {t.status}
+                              </div>
+                              <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{t.reason}</div>
+                              {t.status === 'REJECTED' && t.rejectionReason && (
+                                <div style={{ marginTop: 6, padding: 10, borderRadius: 10, background: '#FEE2E2', color: '#991B1B' }}>
+                                  سبب الرفض: {t.rejectionReason}
+                                </div>
+                              )}
+
+                              {(isAccountant || isFinanceMgr || isAdmin) && (t.status === 'PENDING' || t.status === 'APPROVED') && (
+                                <div style={{ marginTop: 8 }}>
+                                  <textarea
+                                    value={topUpComment}
+                                    onChange={(e) => setTopUpComment(e.target.value)}
+                                    rows={2}
+                                    placeholder="تعليق (مطلوب عند الرفض)"
+                                    style={{ width: '100%', padding: 10 }}
+                                  />
+                                  <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                                    {t.status === 'PENDING' && (
+                                      <>
+                                        <Button variant="success" onClick={() => actTopUp(t.id, 'approve')} disabled={topUpActing}>
+                                          موافقة
+                                        </Button>
+                                        <Button variant="danger" onClick={() => actTopUp(t.id, 'reject')} disabled={topUpActing}>
+                                          رفض
+                                        </Button>
+                                      </>
+                                    )}
+                                    {t.status === 'APPROVED' && (isAccountant || isAdmin) && (
+                                      <Button variant="primary" onClick={() => actTopUp(t.id, 'mark-paid')} disabled={topUpActing}>
+                                        تم صرف الزيادة
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
                     {(isRequester || isAdmin) && (settlement?.status === 'DRAFT' || settlement?.status === 'REJECTED' || !settlement) && (
                       <div style={{ marginTop: 12, borderTop: '1px solid #E5E7EB', paddingTop: 12 }}>
