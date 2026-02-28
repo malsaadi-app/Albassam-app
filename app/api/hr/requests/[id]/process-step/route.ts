@@ -11,8 +11,12 @@ const processStepSchema = z.object({
   action: z.enum(['approve', 'reject']),
   comment: z.string().optional()
 }).superRefine((val, ctx) => {
-  if (val.action === 'reject' && (!val.comment || val.comment.trim().length === 0)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'سبب الرفض مطلوب', path: ['comment'] });
+  if (!val.comment || val.comment.trim().length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: val.action === 'reject' ? 'سبب الرفض مطلوب' : 'تعليق الموافقة مطلوب',
+      path: ['comment']
+    });
   }
 });
 

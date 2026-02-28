@@ -139,10 +139,13 @@ export default function HRRequestDetailPage() {
                   onClick={async () => {
                     try {
                       setProcessing(true)
+                      const comment = prompt('تعليق الموافقة (مطلوب)')
+                      if (!comment || comment.trim().length === 0) return
+
                       const res = await fetch(`/api/hr/requests/${params.id}/process-step`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'approve' })
+                        body: JSON.stringify({ action: 'approve', comment })
                       })
                       const data = await res.json().catch(() => ({}))
                       if (!res.ok) throw new Error(data?.error || 'فشل')
