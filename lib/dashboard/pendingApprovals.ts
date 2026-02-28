@@ -5,7 +5,15 @@ import { getBranchForwarderUserId, getMaintenanceManagerUserId } from '@/lib/mai
 
 export type PendingApprovalItem = {
   id: string
-  type: 'hr_request' | 'purchase_request' | 'purchase_order' | 'supplier_request' | 'maintenance_request'
+  type:
+    | 'hr_request'
+    | 'purchase_request'
+    | 'purchase_order'
+    | 'supplier_request'
+    | 'maintenance_request'
+    | 'finance_request'
+    | 'petty_cash_settlement'
+    | 'petty_cash_topup'
   title: string
   submittedBy: string
   submittedAt: Date
@@ -171,7 +179,106 @@ export async function getPendingApprovals(params: {
     }
   }
 
-  // 5) Maintenance Requests (branch review or global maintenance manager)
+  // 5) Finance Requests (department manager / accountant / finance manager)
+  {
+    const financeQueue = await prisma.financeRequest.findMany({
+      where: {
+        status: 'PENDING',
+        OR: [
+          { departmentManagerUserId: userId, currentStep: 'DEPARTMENT_MANAGER' },
+          { accountantUserId: userId, currentStep: 'ACCOUNTANT_REVIEW' },
+          { financeManagerUserId: userId, currentStep: 'FINANCE_MANAGER_APPROVAL' },
+          { accountantUserId: userId, currentStep: 'ACCOUNTANT_EXECUTION' }
+        ]
+      },
+      include: { requester: true },
+      orderBy: { createdAt: 'desc' },
+      take: 30
+    })
+
+    for (const fr of financeQueue) {
+      pendingApprovals.push({
+        id: fr.id,
+        type: 'finance_request',
+        title: `طلب مالي ${fr.requestNumber} - ${fr.title}`,
+        submittedBy: fr.requester.displayName,
+        submittedAt: fr.createdAt,
+        status: fr.currentStep,
+        action: fr.currentStep,
+        url: `/finance/requests/${fr.id}`
+      })
+    }
+
+    // Petty cash settlement approvals
+    const settlements = await prisma.pettyCashSettlement.findMany({
+      where: {
+        OR: [{ status: 'SUBMITTED' }, { status: 'ACCOUNTANT_APPROVED' }]
+      },
+      include: { financeRequest: { include: { requester: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 30
+    })
+
+    for (const s of settlements) {
+      const fr = s.financeRequest
+      const isAccountant = fr.accountantUserId === userId
+      const isFinanceMgr = fr.financeManagerUserId === userId
+      if ((s.status === 'SUBMITTED' && isAccountant) || (s.status === 'ACCOUNTANT_APPROVED' && isFinanceMgr)) {
+        pendingApprovals.push({
+          id: fr.id,
+          type: 'petty_cash_settlement',
+          title: `تسوية عهدة ${fr.requestNumber} - ${fr.title}`,
+          submittedBy: fr.requester.displayName,
+          submittedAt: s.submittedAt ?? s.createdAt,
+          status: s.status,
+          action: 'اعتماد تسوية العهدة',
+          url: `/finance/requests/${fr.id}`
+        })
+      }
+    }
+
+    // Petty cash top-up approvals
+    const topups = await prisma.pettyCashTopUpRequest.findMany({
+      where: { status: { in: ['PENDING', 'APPROVED'] } },
+      include: { settlement: { include: { financeRequest: { include: { requester: true } } } } },
+      orderBy: { createdAt: 'desc' },
+      take: 30
+    })
+
+    for (const t of topups) {
+      const fr = t.settlement.financeRequest
+      const isAccountant = fr.accountantUserId === userId
+      const isFinanceMgr = fr.financeManagerUserId === userId
+
+      if (t.status === 'PENDING' && (isAccountant || isFinanceMgr)) {
+        pendingApprovals.push({
+          id: t.id,
+          type: 'petty_cash_topup',
+          title: `زيادة عهدة ${fr.requestNumber} - ${Number(t.amount).toFixed(2)}`,
+          submittedBy: fr.requester.displayName,
+          submittedAt: t.createdAt,
+          status: t.status,
+          action: 'اعتماد زيادة عهدة',
+          url: `/finance/requests/${fr.id}`
+        })
+      }
+
+      if (t.status === 'APPROVED' && isAccountant) {
+        pendingApprovals.push({
+          id: t.id,
+          type: 'petty_cash_topup',
+          title: `صرف زيادة عهدة ${fr.requestNumber} - ${Number(t.amount).toFixed(2)}`,
+          submittedBy: fr.requester.displayName,
+          submittedAt: t.approvedAt ?? t.createdAt,
+          status: t.status,
+          action: 'صرف الزيادة',
+          url: `/finance/requests/${fr.id}`
+        })
+      }
+    }
+  }
+
+  // 6) Maintenance Requests (branch review or global maintenance manager)
   {
     const managerUserId = await getMaintenanceManagerUserId()
 
