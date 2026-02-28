@@ -97,8 +97,13 @@ export async function PUT(
 
     // Map fields from form
     if (body.employeeNumber) updateData.employeeNumber = body.employeeNumber;
-    if (body.arabicName) updateData.arabicName = body.arabicName;
-    if (body.englishName !== undefined) updateData.englishName = body.englishName;
+
+    // Backward-compatible field names from older forms
+    const fullNameAr = body.fullNameAr ?? body.arabicName;
+    const fullNameEn = body.fullNameEn ?? body.englishName;
+
+    if (fullNameAr) updateData.fullNameAr = fullNameAr;
+    if (fullNameEn !== undefined) updateData.fullNameEn = fullNameEn;
     if (body.nationalId !== undefined) updateData.nationalId = body.nationalId;
     if (body.email !== undefined) updateData.email = body.email;
     if (body.phone !== undefined) updateData.phone = body.phone;

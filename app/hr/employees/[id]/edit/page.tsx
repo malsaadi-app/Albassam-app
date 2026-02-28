@@ -184,8 +184,8 @@ export default function EditEmployeePage() {
         
         setFormData({
           employeeNumber: data.employeeNumber || '',
-          arabicName: data.arabicName || '',
-          englishName: data.englishName || '',
+          arabicName: data.fullNameAr || data.arabicName || '',
+          englishName: data.fullNameEn || data.englishName || '',
           nationalId: data.nationalId || '',
           email: data.email || '',
           phone: data.phone || '',
