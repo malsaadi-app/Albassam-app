@@ -1,6 +1,6 @@
 import prisma from '@/lib/prisma'
 
-export type HRWorkflowActorKind = 'BRANCH_MANAGER' | 'HR_MANAGER' | 'HR_EMPLOYEE'
+export type HRWorkflowActorKind = 'DIRECT_MANAGER' | 'HR_REVIEWER' | 'ADMIN'
 
 // Which request types require branch manager as first step
 const BRANCH_MANAGER_FIRST_STEP_TYPES = new Set<string>([
@@ -35,6 +35,37 @@ export async function getStageManagerUserIdForRequester(requesterUserId: string)
   return employee?.stage?.manager?.userId || employee?.stage?.deputy?.userId || null
 }
 
+async function getRequesterBranchId(requesterUserId: string): Promise<string | null> {
+  const emp = await prisma.employee.findUnique({
+    where: { userId: requesterUserId },
+    select: { branchId: true }
+  })
+  return emp?.branchId || null
+}
+
+async function getHrReviewerUserIdsForBranch(branchId: string): Promise<string[]> {
+  const cov = await prisma.employeeBranchCoverage.findMany({
+    where: { branchId, module: 'HR', active: true },
+    select: { employee: { select: { userId: true } } }
+  })
+
+  const ids = cov.map((c) => c.employee.userId).filter((x): x is string => !!x)
+
+  // Fallback: any HR_EMPLOYEE if no coverage configured
+  if (ids.length === 0) {
+    const legacy = await prisma.user.findMany({ where: { role: 'HR_EMPLOYEE' }, select: { id: true } })
+    return legacy.map((u) => u.id)
+  }
+
+  // de-dupe
+  return [...new Set(ids)]
+}
+
+async function getAdminUserIds(): Promise<string[]> {
+  const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
+  return admins.map((u) => u.id)
+}
+
 export async function getUserIdsBySystemRoleName(roleName: string): Promise<string[]> {
   const users = await prisma.user.findMany({
     where: {
@@ -55,62 +86,65 @@ export async function getApproverUserIdsForHRRequestStep(params: {
 }): Promise<{ userIds: string[]; actor: HRWorkflowActorKind; labelAr: string }> {
   const { requestType, requesterUserId, stepOrder } = params
 
+  const branchId = await getRequesterBranchId(requesterUserId)
+
   // Step 0
   if (stepOrder === 0) {
     if (BRANCH_MANAGER_FIRST_STEP_TYPES.has(requestType)) {
       const managerId = await getStageManagerUserIdForRequester(requesterUserId)
       return {
         userIds: managerId ? [managerId] : [],
-        actor: 'BRANCH_MANAGER',
-        labelAr: 'اعتماد مدير الفرع'
+        actor: 'DIRECT_MANAGER',
+        labelAr: 'اعتماد المدير المباشر'
       }
     }
 
-    if (HR_EMPLOYEE_FIRST_STEP_TYPES.has(requestType)) {
-      const hrEmployees = await getUserIdsBySystemRoleName('HR_EMPLOYEE')
-
-      // Fallback to legacy role if RBAC not assigned
-      if (hrEmployees.length === 0) {
-        const legacy = await prisma.user.findMany({ where: { role: 'HR_EMPLOYEE' }, select: { id: true } })
-        return {
-          userIds: legacy.map((u) => u.id),
-          actor: 'HR_EMPLOYEE',
-          labelAr: requestType === 'SALARY_CERTIFICATE' ? 'إعداد التعريف' : 'مراجعة الموارد البشرية'
-        }
-      }
-
+    // HR starts first
+    if (branchId) {
+      const hrIds = await getHrReviewerUserIdsForBranch(branchId)
       return {
-        userIds: hrEmployees,
-        actor: 'HR_EMPLOYEE',
+        userIds: hrIds,
+        actor: 'HR_REVIEWER',
         labelAr: requestType === 'SALARY_CERTIFICATE' ? 'إعداد التعريف' : 'مراجعة الموارد البشرية'
       }
     }
+
+    const fallback = await prisma.user.findMany({ where: { role: 'HR_EMPLOYEE' }, select: { id: true } })
+    return { userIds: fallback.map((u) => u.id), actor: 'HR_REVIEWER', labelAr: 'مراجعة الموارد البشرية' }
   }
 
-  // Step 1 (final HR manager approval for all covered types)
+  // Step 1
   if (stepOrder === 1) {
-    const hrManagers = await getUserIdsBySystemRoleName('HR_MANAGER')
-
-    // Fallback: ADMIN legacy role if HR_MANAGER not assigned yet
-    if (hrManagers.length === 0) {
-      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
-      return { userIds: admins.map((u) => u.id), actor: 'HR_MANAGER', labelAr: 'اعتماد مدير الموارد البشرية' }
+    if (BRANCH_MANAGER_FIRST_STEP_TYPES.has(requestType)) {
+      // After manager approval, HR reviewers (by branch coverage)
+      if (branchId) {
+        const hrIds = await getHrReviewerUserIdsForBranch(branchId)
+        return { userIds: hrIds, actor: 'HR_REVIEWER', labelAr: 'مراجعة الموارد البشرية' }
+      }
+      const fallback = await prisma.user.findMany({ where: { role: 'HR_EMPLOYEE' }, select: { id: true } })
+      return { userIds: fallback.map((u) => u.id), actor: 'HR_REVIEWER', labelAr: 'مراجعة الموارد البشرية' }
     }
 
-    return { userIds: hrManagers, actor: 'HR_MANAGER', labelAr: 'اعتماد مدير الموارد البشرية' }
+    // HR-first flows: step 1 is final admin approval
+    const admins = await getAdminUserIds()
+    return { userIds: admins, actor: 'ADMIN', labelAr: 'اعتماد نهائي' }
   }
 
-  // Any further steps are not defined in the new routing
-  return { userIds: [], actor: 'HR_MANAGER', labelAr: 'غير محدد' }
+  // Step 2 (admin final) for manager-first flows
+  if (stepOrder === 2) {
+    const admins = await getAdminUserIds()
+    return { userIds: admins, actor: 'ADMIN', labelAr: 'اعتماد نهائي' }
+  }
+
+  return { userIds: [], actor: 'ADMIN', labelAr: 'غير محدد' }
 }
 
 export function getExpectedHRWorkflowStepCount(requestType: string): number {
-  // For now, all supported HR request types are 2-step flows
-  // (Step 0 varies by type; Step 1 = HR manager)
-  if (BRANCH_MANAGER_FIRST_STEP_TYPES.has(requestType) || HR_EMPLOYEE_FIRST_STEP_TYPES.has(requestType)) {
-    return 2
-  }
+  // Manager-first flows: manager -> HR -> admin
+  if (BRANCH_MANAGER_FIRST_STEP_TYPES.has(requestType)) return 3
 
-  // Default to DB workflow length if unknown
+  // HR-first flows: HR -> admin
+  if (HR_EMPLOYEE_FIRST_STEP_TYPES.has(requestType)) return 2
+
   return 2
 }
