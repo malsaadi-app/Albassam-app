@@ -6,9 +6,11 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Input, Textarea, Select } from '@/components/ui/Input';
+import { useI18n } from '@/lib/useI18n';
 
 export default function NewHRRequestPage() {
   const router = useRouter();
+  const { dir, t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     requestType: '',
@@ -22,7 +24,7 @@ export default function NewHRRequestPage() {
     e.preventDefault();
 
     if (!formData.requestType || !formData.description) {
-      alert('يرجى تعبئة الحقول المطلوبة');
+      alert(t('requiredFields'));
       return;
     }
 
@@ -35,29 +37,29 @@ export default function NewHRRequestPage() {
       });
 
       if (res.ok) {
-        alert('تم إنشاء الطلب بنجاح');
+        alert(t('requestCreated')); 
         router.push('/hr/requests');
       } else {
         const data = await res.json();
-        alert(data.error || 'حدث خطأ');
+        alert(data.error || t('errorOccurred'));
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('حدث خطأ أثناء إرسال الطلب');
+      alert(t('requestSendError'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
+    <div dir={dir} style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         <PageHeader
-          title="➕ طلب HR جديد"
-          breadcrumbs={['الرئيسية', 'الموارد البشرية', 'الطلبات', 'جديد']}
+          title={`➕ ${t('newRequest')}`}
+          breadcrumbs={[t('home'), t('hr'), t('hrRequests'), t('new')]}
           actions={
             <Button variant="outline" onClick={() => router.push('/hr/requests')}>
-              ← رجوع
+              ← {t('back')}
             </Button>
           }
         />
@@ -66,12 +68,12 @@ export default function NewHRRequestPage() {
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'grid', gap: '24px' }}>
               <Select
-                label="نوع الطلب *"
+                label={`${t('requestType')} *`}
                 value={formData.requestType}
                 onChange={(e) => setFormData({ ...formData, requestType: e.target.value })}
                 required
               >
-                <option value="">اختر نوع الطلب...</option>
+                <option value="">{t('selectRequestType')}</option>
                 <option value="LEAVE">طلب إجازة</option>
                 <option value="TRANSFER">طلب نقل</option>
                 <option value="PROMOTION">طلب ترقية</option>
@@ -85,19 +87,19 @@ export default function NewHRRequestPage() {
               </Select>
 
               <Select
-                label="الأولوية *"
+                label={`${t('priority')} *`}
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                 required
               >
-                <option value="LOW">منخفضة</option>
-                <option value="MEDIUM">متوسطة</option>
-                <option value="HIGH">عالية</option>
-                <option value="URGENT">عاجلة</option>
+                <option value="LOW">{t('low')}</option>
+                <option value="MEDIUM">{t('medium')}</option>
+                <option value="HIGH">{t('high')}</option>
+                <option value="URGENT">{t('urgent')}</option>
               </Select>
 
               <Input
-                label="التاريخ المطلوب *"
+                label={`${t('requestedDate')} *`}
                 type="date"
                 value={formData.requestedDate}
                 onChange={(e) => setFormData({ ...formData, requestedDate: e.target.value })}
@@ -105,20 +107,20 @@ export default function NewHRRequestPage() {
               />
 
               <Textarea
-                label="الوصف التفصيلي *"
+                label={`${t('description')} *`}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={6}
-                placeholder="اكتب تفاصيل الطلب هنا..."
+                placeholder={t('writeDetailsHere')}
                 required
               />
 
               <Textarea
-                label="ملاحظات إضافية"
+                label={t('notes')}
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                placeholder="أي ملاحظات أخرى (اختياري)"
+                placeholder={t('notesOptional')}
               />
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #E5E7EB' }}>
@@ -128,14 +130,14 @@ export default function NewHRRequestPage() {
                   onClick={() => router.push('/hr/requests')}
                   disabled={loading}
                 >
-                  إلغاء
+                  {t('cancel')}
                 </Button>
                 <Button
                   type="submit"
                   variant="success"
                   loading={loading}
                 >
-                  📝 إرسال الطلب
+                  📝 {t('submit')}
                 </Button>
               </div>
             </div>

@@ -155,7 +155,7 @@ export default function HRRequestsPage() {
                     </div>
                     
                     <p style={{ fontSize: '14px', color: '#6B7280', fontWeight: '600', marginBottom: '8px' }}>
-                      👤 {request.employee?.displayName || 'موظف'}
+                      👤 {request.employee?.displayName || t('employee')}
                     </p>
                     
                     {request.description && (
@@ -175,9 +175,9 @@ export default function HRRequestsPage() {
                       request.status === 'APPROVED' ? 'green' : 
                       'red'
                     }>
-                      {request.status === 'PENDING_REVIEW' ? 'قيد المراجعة' : 
-                       request.status === 'APPROVED' ? 'موافق' : 
-                       'مرفوض'}
+                      {request.status === 'PENDING_REVIEW' ? t('pendingReview') : 
+                       request.status === 'APPROVED' ? t('approved') : 
+                       t('rejected')}
                     </Badge>
                   </div>
                 </div>
