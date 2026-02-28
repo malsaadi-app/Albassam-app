@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import Sidebar from './components/Sidebar'
+import TopBar from './components/TopBar'
 import DesignSystemStyles from './components/ui/DesignSystemStyles'
 import ServiceWorkerRegistration from './components/pwa/ServiceWorkerRegistration'
 import InstallPrompt from './components/pwa/InstallPrompt'
@@ -79,6 +80,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           position: 'relative',
           zIndex: 1
         }}>
+          <TopBar />
           {children}
         </main>
         
