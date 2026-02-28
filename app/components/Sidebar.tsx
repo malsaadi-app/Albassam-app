@@ -138,6 +138,14 @@ export default function Sidebar() {
       ]
     },
     {
+      id: 'finance',
+      icon: <HiOutlineCurrencyDollar size={18} />,
+      label: t('finance'),
+      items: [
+        { href: '/finance/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('financeRequests') },
+      ]
+    },
+    {
       id: 'reports',
       icon: <HiOutlineChartBar size={18} />,
       label: t('reports'),

@@ -70,10 +70,13 @@ model User {
   replacementTimelineEvents     ReplacementTimeline[]          @relation("ReplacementTimelineUser")
 
   // Finance Module
-  financeRequestsCreated  FinanceRequest[]      @relation("FinanceRequester")
-  financeRequestsReviewed FinanceRequest[]      @relation("FinanceReviewer")
-  financeRequestsApproved FinanceRequest[]      @relation("FinanceApprover")
-  workflowApprovals       WorkflowApprovalLog[] @relation("WorkflowApprovals")
+  financeRequestsCreated     FinanceRequest[]      @relation("FinanceRequester")
+  financeRequestsReviewed    FinanceRequest[]      @relation("FinanceReviewer")
+  financeRequestsApproved    FinanceRequest[]      @relation("FinanceApprover")
+  financeRequestsDeptManaged FinanceRequest[]      @relation("FinanceDeptManager")
+  financeRequestsAccountant  FinanceRequest[]      @relation("FinanceAccountant")
+  financeRequestsFinanceMgr  FinanceRequest[]      @relation("FinanceManager")
+  workflowApprovals          WorkflowApprovalLog[] @relation("WorkflowApprovals")
 
   // Maintenance routing
   maintenanceManagerSettings   MaintenanceRoutingSettings[] @relation("MaintenanceManagerUser")
@@ -1990,34 +1993,65 @@ model PermissionAuditLog {
 // ==================== FINANCE MODULE ====================
 
 model FinanceRequest {
-  id              String    @id @default(cuid())
-  requestNumber   String    @unique
-  type            String // EMPLOYEE_EXPENSE, PROCUREMENT, UTILITIES, MAINTENANCE, OTHER
+  id            String @id @default(cuid())
+  requestNumber String @unique
+
+  // Business type
+  type            String // GOV_FEE, BILL_PAYMENT, REIMBURSEMENT, PETTY_CASH
   title           String
   description     String?
   amount          Float
   beneficiaryName String?
-  status          String    @default("DRAFT") // DRAFT, PENDING, APPROVED, REJECTED, PAID
-  requesterId     String
-  reviewedBy      String?
-  approvedBy      String?
-  rejectionReason String?
-  sourceType      String? // HR, PROCUREMENT
-  sourceId        String? // Link to HRRequest or PurchaseRequest
-  createdAt       DateTime  @default(now())
-  reviewedAt      DateTime?
-  approvedAt      DateTime?
-  paidAt          DateTime?
-  updatedAt       DateTime  @updatedAt
+
+  // Attachments JSON: [{name,url}] or file paths
+  attachments String?
+
+  // Routing
+  department              String? // e.g. HR, PROCUREMENT
+  departmentManagerUserId String?
+  accountantUserId        String?
+  financeManagerUserId    String?
+
+  // Workflow
+  currentStep String @default("DEPARTMENT_MANAGER") // DEPARTMENT_MANAGER, ACCOUNTANT_REVIEW, FINANCE_MANAGER_APPROVAL, ACCOUNTANT_EXECUTION, PAID, REJECTED
+  status      String @default("PENDING")
+
+  // Comments (hidden from requester; rejection reason visible)
+  departmentManagerComment String?
+  accountantComment        String?
+  financeManagerComment    String?
+  rejectionReason          String?
+
+  requesterId String
+
+  reviewedBy String?
+  approvedBy String?
+
+  sourceType String? // HR, PROCUREMENT
+  sourceId   String? // Link to HRRequest or PurchaseRequest
+
+  createdAt  DateTime  @default(now())
+  reviewedAt DateTime?
+  approvedAt DateTime?
+  paidAt     DateTime?
+  updatedAt  DateTime  @updatedAt
 
   requester User  @relation("FinanceRequester", fields: [requesterId], references: [id])
   reviewer  User? @relation("FinanceReviewer", fields: [reviewedBy], references: [id])
   approver  User? @relation("FinanceApprover", fields: [approvedBy], references: [id])
 
+  departmentManager User? @relation("FinanceDeptManager", fields: [departmentManagerUserId], references: [id])
+  accountant        User? @relation("FinanceAccountant", fields: [accountantUserId], references: [id])
+  financeManager    User? @relation("FinanceManager", fields: [financeManagerUserId], references: [id])
+
   @@index([requesterId])
   @@index([status])
+  @@index([currentStep])
   @@index([createdAt])
   @@index([sourceType, sourceId])
+  @@index([departmentManagerUserId])
+  @@index([accountantUserId])
+  @@index([financeManagerUserId])
 }
 
 // ==================== WORKFLOW SYSTEM ====================
