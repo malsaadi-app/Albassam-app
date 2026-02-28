@@ -70,4 +70,51 @@ class ApprovalsService {
       if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
     });
   }
+
+  Future<void> approveFinance(String id, {String? comment}) async {
+    await _api.post('/finance/requests/$id/process-step', data: {
+      'action': 'approve',
+      if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
+    });
+  }
+
+  Future<void> rejectFinance(String id, {required String comment}) async {
+    await _api.post('/finance/requests/$id/process-step', data: {
+      'action': 'reject',
+      'comment': comment,
+    });
+  }
+
+  Future<void> approveSettlement(String financeRequestId, {String? comment}) async {
+    await _api.post('/finance/petty-cash/$financeRequestId/settlement/process-step', data: {
+      'action': 'approve',
+      if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
+    });
+  }
+
+  Future<void> rejectSettlement(String financeRequestId, {required String comment}) async {
+    await _api.post('/finance/petty-cash/$financeRequestId/settlement/process-step', data: {
+      'action': 'reject',
+      'comment': comment,
+    });
+  }
+
+  Future<void> approveTopUp(String topUpId) async {
+    await _api.post('/finance/petty-cash/topups/$topUpId/process-step', data: {
+      'action': 'approve',
+    });
+  }
+
+  Future<void> rejectTopUp(String topUpId, {required String comment}) async {
+    await _api.post('/finance/petty-cash/topups/$topUpId/process-step', data: {
+      'action': 'reject',
+      'comment': comment,
+    });
+  }
+
+  Future<void> markTopUpPaid(String topUpId) async {
+    await _api.post('/finance/petty-cash/topups/$topUpId/process-step', data: {
+      'action': 'mark-paid',
+    });
+  }
 }

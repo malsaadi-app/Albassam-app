@@ -1,6 +1,6 @@
 class PendingApprovalItem {
   final String id;
-  final String type; // hr_request | purchase_request | purchase_order | supplier_request | maintenance_request
+  final String type; // hr_request | purchase_request | purchase_order | supplier_request | maintenance_request | finance_request | petty_cash_settlement | petty_cash_topup
   final String title;
   final String submittedBy;
   final DateTime submittedAt;

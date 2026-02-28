@@ -252,6 +252,114 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       ];
     }
 
+    if (item.type == 'finance_request') {
+      return [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => run((n) => svc.rejectFinance(item.id, comment: n), approve: false),
+            icon: const Icon(Icons.close),
+            label: Text(isAr ? 'رفض' : 'Reject'),
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => run((n) => svc.approveFinance(item.id, comment: n), approve: true),
+            icon: const Icon(Icons.check),
+            label: Text(isAr ? 'موافقة' : 'Approve'),
+          ),
+        ),
+      ];
+    }
+
+    if (item.type == 'petty_cash_settlement') {
+      return [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => run((n) => svc.rejectSettlement(item.id, comment: n), approve: false),
+            icon: const Icon(Icons.close),
+            label: Text(isAr ? 'رفض' : 'Reject'),
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => run((n) => svc.approveSettlement(item.id, comment: n), approve: true),
+            icon: const Icon(Icons.check),
+            label: Text(isAr ? 'موافقة' : 'Approve'),
+          ),
+        ),
+      ];
+    }
+
+    if (item.type == 'petty_cash_topup') {
+      final isPayAction = item.action.contains('صرف');
+      if (isPayAction) {
+        return [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                try {
+                  await svc.markTopUpPaid(item.id);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.success), backgroundColor: Colors.green),
+                    );
+                  }
+                  await _load();
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('${l10n.error}: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
+              icon: const Icon(Icons.payments),
+              label: Text(isAr ? 'تم صرف الزيادة' : 'Mark paid'),
+            ),
+          ),
+        ];
+      }
+
+      return [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => run((n) => svc.rejectTopUp(item.id, comment: n), approve: false),
+            icon: const Icon(Icons.close),
+            label: Text(isAr ? 'رفض' : 'Reject'),
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () async {
+              try {
+                await svc.approveTopUp(item.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.success), backgroundColor: Colors.green),
+                  );
+                }
+                await _load();
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${l10n.error}: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.check),
+            label: Text(isAr ? 'موافقة' : 'Approve'),
+          ),
+        ),
+      ];
+    }
+
     // purchase_order not yet implemented
     return [
       Expanded(
@@ -288,165 +396,3 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 }
 
-  
-  Widget _buildPendingApprovals(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 3,
-      itemBuilder: (context, index) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.orange[100],
-                      child: const Icon(
-                        Icons.pending_actions,
-                        color: Colors.orange,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'طلب إجازة - أحمد محمد',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'من 2026-03-01 إلى 2026-03-05',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Divider(),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          _showApprovalDialog(context, false);
-                        },
-                        icon: const Icon(Icons.close),
-                        label: const Text('رفض'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          _showApprovalDialog(context, true);
-                        },
-                        icon: const Icon(Icons.check),
-                        label: const Text('موافقة'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-  
-  Widget _buildApprovedList() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 8,
-      itemBuilder: (context, index) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.green[100],
-              child: const Icon(Icons.check, color: Colors.green),
-            ),
-            title: Text('طلب شراء #${3000 + index}'),
-            subtitle: const Text('تمت الموافقة بتاريخ 2026-02-20'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-        );
-      },
-    );
-  }
-  
-  Widget _buildRejectedList() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 2,
-      itemBuilder: (context, index) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.red[100],
-              child: const Icon(Icons.close, color: Colors.red),
-            ),
-            title: Text('طلب صيانة #${4000 + index}'),
-            subtitle: const Text('تم الرفض بتاريخ 2026-02-18'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-        );
-      },
-    );
-  }
-  
-  void _showApprovalDialog(BuildContext context, bool isApprove) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isApprove ? 'تأكيد الموافقة' : 'تأكيد الرفض'),
-        content: Text(
-          isApprove
-              ? 'هل تريد الموافقة على هذا الطلب؟'
-              : 'هل تريد رفض هذا الطلب؟',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    isApprove ? 'تمت الموافقة بنجاح' : 'تم الرفض بنجاح',
-                  ),
-                  backgroundColor: isApprove ? Colors.green : Colors.red,
-                ),
-              );
-            },
-            child: Text(isApprove ? 'موافقة' : 'رفض'),
-          ),
-        ],
-      ),
-    );
-  }
-}
