@@ -15,6 +15,9 @@ export default function HRRequestDetailPage() {
   const { dir, t, locale } = useI18n();
   const [request, setRequest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionCtx, setActionCtx] = useState<any>(null);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     if (params.id) fetchRequest();
@@ -22,14 +25,31 @@ export default function HRRequestDetailPage() {
 
   const fetchRequest = async () => {
     try {
+      setLoadError(null);
+
       const res = await fetch(`/api/hr/requests/${params.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        // API returns the request object directly
-        setRequest(data);
+      if (!res.ok) {
+        if (res.status === 403) {
+          setLoadError(locale === 'ar' ? 'غير مصرح لك بعرض هذا الطلب' : 'Forbidden');
+        } else if (res.status === 404) {
+          setLoadError(locale === 'ar' ? 'الطلب غير موجود' : 'Not found');
+        } else {
+          setLoadError(locale === 'ar' ? 'حدث خطأ' : 'Error');
+        }
+        setRequest(null);
+        return;
+      }
+
+      const data = await res.json();
+      setRequest(data);
+
+      const ctxRes = await fetch(`/api/hr/requests/${params.id}/action-context`);
+      if (ctxRes.ok) {
+        setActionCtx(await ctxRes.json());
       }
     } catch (error) {
       console.error('Error:', error);
+      setLoadError(locale === 'ar' ? 'حدث خطأ' : 'Error');
     } finally {
       setLoading(false);
     }
@@ -58,7 +78,7 @@ export default function HRRequestDetailPage() {
           <div style={{ padding: '60px 40px', textAlign: 'center' }}>
             <div style={{ fontSize: '80px', marginBottom: '24px' }}>❌</div>
             <h3 style={{ fontSize: '24px', color: '#111827', fontWeight: '800' }}>
-              {t('requestNotFound')}
+              {loadError || t('requestNotFound')}
             </h3>
           </div>
         </Card>
@@ -93,11 +113,77 @@ export default function HRRequestDetailPage() {
         <Card variant="default">
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginBottom: '12px' }}>
-              {request.requestType}
+              {request.type}
             </h3>
-            <Badge variant={request.status === 'PENDING_REVIEW' ? 'yellow' : request.status === 'APPROVED' ? 'green' : 'red'}>
-              {request.status === 'PENDING_REVIEW' ? t('pendingReview') : request.status === 'APPROVED' ? t('approved') : t('rejected')}
-            </Badge>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Badge variant={request.status === 'PENDING_REVIEW' || request.status === 'PENDING_APPROVAL' ? 'yellow' : request.status === 'APPROVED' ? 'green' : 'red'}>
+                {request.status === 'PENDING_REVIEW' || request.status === 'PENDING_APPROVAL'
+                  ? t('pendingReview')
+                  : request.status === 'APPROVED'
+                    ? t('approved')
+                    : t('rejected')}
+              </Badge>
+
+              {actionCtx?.stepName && (
+                <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 700 }}>
+                  {actionCtx.stepName}
+                </span>
+              )}
+            </div>
+
+            {actionCtx?.canProcess && (
+              <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <Button
+                  variant="primary"
+                  disabled={processing}
+                  onClick={async () => {
+                    try {
+                      setProcessing(true)
+                      const res = await fetch(`/api/hr/requests/${params.id}/process-step`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'approve' })
+                      })
+                      const data = await res.json().catch(() => ({}))
+                      if (!res.ok) throw new Error(data?.error || 'فشل')
+                      await fetchRequest()
+                    } catch (e: any) {
+                      alert(e?.message || 'حدث خطأ')
+                    } finally {
+                      setProcessing(false)
+                    }
+                  }}
+                >
+                  ✅ اعتماد
+                </Button>
+
+                <Button
+                  variant="outline"
+                  disabled={processing}
+                  onClick={async () => {
+                    const reason = prompt('سبب الرفض (مطلوب)')
+                    if (!reason || reason.trim().length === 0) return
+                    try {
+                      setProcessing(true)
+                      const res = await fetch(`/api/hr/requests/${params.id}/process-step`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'reject', comment: reason })
+                      })
+                      const data = await res.json().catch(() => ({}))
+                      if (!res.ok) throw new Error(data?.error || 'فشل')
+                      await fetchRequest()
+                    } catch (e: any) {
+                      alert(e?.message || 'حدث خطأ')
+                    } finally {
+                      setProcessing(false)
+                    }
+                  }}
+                >
+                  ❌ رفض
+                </Button>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'grid', gap: '16px' }}>
