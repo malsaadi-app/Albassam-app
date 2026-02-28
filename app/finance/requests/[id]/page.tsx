@@ -319,6 +319,18 @@ export default function FinanceRequestDetailsPage() {
             >
               🖨️ طباعة
             </Button>
+
+            {data.type === 'PETTY_CASH' && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const locale = getInitialLocale()
+                  window.open(`/print/finance/petty-cash/settlements/${id}?locale=${locale}`, '_blank')
+                }}
+              >
+                🧾 طباعة التسوية
+              </Button>
+            )}
             <Button variant="outline" onClick={() => router.push('/finance/requests')}>
               ← رجوع
             </Button>
