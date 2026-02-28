@@ -25,7 +25,8 @@ export default function HRRequestDetailPage() {
       const res = await fetch(`/api/hr/requests/${params.id}`);
       if (res.ok) {
         const data = await res.json();
-        setRequest(data.request);
+        // API returns the request object directly
+        setRequest(data);
       }
     } catch (error) {
       console.error('Error:', error);
