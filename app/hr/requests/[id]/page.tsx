@@ -136,29 +136,121 @@ export default function HRRequestDetailPage() {
               )}
             </div>
 
-            {actionCtx?.canProcess && (
+            {(actionCtx?.canProcess || actionCtx?.canResubmit) && (
               <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <Button
-                  variant="primary"
-                  disabled={processing}
-                  onClick={() => {
-                    setActionComment('')
-                    setActionModal({ open: true, action: 'approve' })
-                  }}
-                >
-                  ✅ اعتماد
-                </Button>
+                {actionCtx?.canProcess && (
+                  <>
+                    <Button
+                      variant="primary"
+                      disabled={processing}
+                      onClick={() => {
+                        setActionComment('')
+                        setActionModal({ open: true, action: 'approve' })
+                      }}
+                    >
+                      ✅ اعتماد
+                    </Button>
 
-                <Button
-                  variant="outline"
-                  disabled={processing}
-                  onClick={() => {
-                    setActionComment('')
-                    setActionModal({ open: true, action: 'reject' })
-                  }}
-                >
-                  ❌ رفض
-                </Button>
+                    <Button
+                      variant="outline"
+                      disabled={processing}
+                      onClick={() => {
+                        setActionComment('')
+                        setActionModal({ open: true, action: 'reject' })
+                      }}
+                    >
+                      ❌ رفض
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      disabled={processing}
+                      onClick={async () => {
+                        const target = window.confirm('إرجاع لمقدم الطلب؟\nOK = مقدم الطلب\nCancel = الخطوة السابقة')
+                        const comment = prompt('سبب الإرجاع (مطلوب)')
+                        if (!comment || comment.trim().length === 0) return
+                        try {
+                          setProcessing(true)
+                          const res = await fetch(`/api/hr/requests/${params.id}/send-back`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ target: target ? 'REQUESTER' : 'PREVIOUS_STEP', comment })
+                          })
+                          const data = await res.json().catch(() => ({}))
+                          if (!res.ok) throw new Error(data?.error || 'فشل')
+                          await fetchRequest()
+                        } catch (e: any) {
+                          alert(e?.message || 'حدث خطأ')
+                        } finally {
+                          setProcessing(false)
+                        }
+                      }}
+                    >
+                      ↩️ إرجاع
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      disabled={processing}
+                      onClick={async () => {
+                        const username = prompt('اكتب يوزر الشخص اللي تبي تحيل له الطلب (مطلوب)')
+                        if (!username || username.trim().length === 0) return
+                        const comment = prompt('سبب الإحالة (مطلوب)')
+                        if (!comment || comment.trim().length === 0) return
+                        try {
+                          setProcessing(true)
+                          const usersRes = await fetch('/api/users')
+                          const users = usersRes.ok ? await usersRes.json() : []
+                          const u = (users || []).find((x: any) => (x.username || '').toLowerCase() === username.trim().toLowerCase())
+                          if (!u) throw new Error('المستخدم غير موجود')
+
+                          const res = await fetch(`/api/hr/requests/${params.id}/delegate`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ delegatedToUserId: u.id, comment })
+                          })
+                          const data = await res.json().catch(() => ({}))
+                          if (!res.ok) throw new Error(data?.error || 'فشل')
+                          await fetchRequest()
+                        } catch (e: any) {
+                          alert(e?.message || 'حدث خطأ')
+                        } finally {
+                          setProcessing(false)
+                        }
+                      }}
+                    >
+                      👤 إحالة
+                    </Button>
+                  </>
+                )}
+
+                {actionCtx?.canResubmit && (
+                  <Button
+                    variant="primary"
+                    disabled={processing}
+                    onClick={async () => {
+                      const comment = prompt('تعليق إعادة الإرسال (مطلوب)')
+                      if (!comment || comment.trim().length === 0) return
+                      try {
+                        setProcessing(true)
+                        const res = await fetch(`/api/hr/requests/${params.id}/resubmit`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ comment })
+                        })
+                        const data = await res.json().catch(() => ({}))
+                        if (!res.ok) throw new Error(data?.error || 'فشل')
+                        await fetchRequest()
+                      } catch (e: any) {
+                        alert(e?.message || 'حدث خطأ')
+                      } finally {
+                        setProcessing(false)
+                      }
+                    }}
+                  >
+                    🔁 إعادة إرسال
+                  </Button>
+                )}
               </div>
             )}
 
