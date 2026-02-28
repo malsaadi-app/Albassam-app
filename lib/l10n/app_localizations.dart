@@ -107,6 +107,46 @@ abstract class AppLocalizations {
   String get newRequest;
   String get maintenance;
   String get approvals;
+
+  // Maintenance
+  String get maintenanceRequestsTitle;
+  String get openMaintenanceRequests;
+  String get newMaintenanceRequest;
+  String get maintenanceRequest;
+  String get maintenanceType;
+  String get maintenanceTypeBuilding;
+  String get maintenanceTypeElectronics;
+  String get maintenanceStatusSubmitted;
+  String get maintenanceStatusUnderReview;
+  String get maintenanceStatusAssigned;
+  String get maintenanceStatusCompleted;
+  String get maintenanceStatusRejected;
+  String get branch;
+  String get stage;
+  String get stageOptional;
+  String get locationDetails;
+  String get approve;
+  String get reject;
+  String get assignTechnician;
+  String get noTechnicians;
+  String get markCompleted;
+  String get completionNotes;
+  String get writeCompletionNotes;
+  String get comments;
+  String get noComments;
+  String get comment;
+  String get internalComment;
+  String get writeComment;
+  String get rejectionReason;
+  String get writeRejectionReason;
+  String get saved;
+  String get low;
+  String get medium;
+  String get high;
+  String get urgent;
+  String get requiredFields;
+  String get requestCreated;
+  String get details;
   
   // Common
   String get today;

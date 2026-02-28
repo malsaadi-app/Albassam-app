@@ -258,6 +258,84 @@ class AppLocalizationsAr extends AppLocalizations {
   
   @override
   String get approvals => 'الموافقات';
+
+  // Maintenance
+  @override
+  String get maintenanceRequestsTitle => 'طلبات الصيانة';
+  @override
+  String get openMaintenanceRequests => 'عرض وإدارة طلبات الصيانة';
+  @override
+  String get newMaintenanceRequest => 'طلب صيانة جديد';
+  @override
+  String get maintenanceRequest => 'طلب صيانة';
+  @override
+  String get maintenanceType => 'نوع الصيانة';
+  @override
+  String get maintenanceTypeBuilding => 'مباني';
+  @override
+  String get maintenanceTypeElectronics => 'إلكترونيات';
+  @override
+  String get maintenanceStatusSubmitted => 'مرفوع للفرع';
+  @override
+  String get maintenanceStatusUnderReview => 'تحت المراجعة';
+  @override
+  String get maintenanceStatusAssigned => 'تم التعيين';
+  @override
+  String get maintenanceStatusCompleted => 'مكتمل';
+  @override
+  String get maintenanceStatusRejected => 'مرفوض';
+  @override
+  String get branch => 'الفرع';
+  @override
+  String get stage => 'المرحلة';
+  @override
+  String get stageOptional => 'المرحلة (اختياري)';
+  @override
+  String get locationDetails => 'تفاصيل الموقع';
+  @override
+  String get approve => 'اعتماد';
+  @override
+  String get reject => 'رفض';
+  @override
+  String get assignTechnician => 'تعيين فني';
+  @override
+  String get noTechnicians => 'لا يوجد فنيين متاحين';
+  @override
+  String get markCompleted => 'وضع كمكتمل';
+  @override
+  String get completionNotes => 'ملاحظات الإنهاء';
+  @override
+  String get writeCompletionNotes => 'اكتب ملاحظات الإنهاء هنا...';
+  @override
+  String get comments => 'التعليقات';
+  @override
+  String get noComments => 'لا توجد تعليقات';
+  @override
+  String get comment => 'تعليق';
+  @override
+  String get internalComment => 'تعليق داخلي';
+  @override
+  String get writeComment => 'اكتب تعليقك هنا...';
+  @override
+  String get rejectionReason => 'سبب الرفض';
+  @override
+  String get writeRejectionReason => 'اكتب سبب الرفض هنا...';
+  @override
+  String get saved => 'تم الحفظ';
+  @override
+  String get low => 'منخفض';
+  @override
+  String get medium => 'متوسط';
+  @override
+  String get high => 'عالي';
+  @override
+  String get urgent => 'عاجل';
+  @override
+  String get requiredFields => 'يرجى تعبئة الحقول المطلوبة';
+  @override
+  String get requestCreated => 'تم إنشاء الطلب بنجاح';
+  @override
+  String get details => 'التفاصيل';
   
   // Common
   @override

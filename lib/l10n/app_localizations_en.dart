@@ -258,6 +258,84 @@ class AppLocalizationsEn extends AppLocalizations {
   
   @override
   String get approvals => 'Approvals';
+
+  // Maintenance
+  @override
+  String get maintenanceRequestsTitle => 'Maintenance Requests';
+  @override
+  String get openMaintenanceRequests => 'View and manage maintenance requests';
+  @override
+  String get newMaintenanceRequest => 'New Maintenance Request';
+  @override
+  String get maintenanceRequest => 'Maintenance Request';
+  @override
+  String get maintenanceType => 'Maintenance type';
+  @override
+  String get maintenanceTypeBuilding => 'Building';
+  @override
+  String get maintenanceTypeElectronics => 'Electronics';
+  @override
+  String get maintenanceStatusSubmitted => 'Submitted';
+  @override
+  String get maintenanceStatusUnderReview => 'Under review';
+  @override
+  String get maintenanceStatusAssigned => 'Assigned';
+  @override
+  String get maintenanceStatusCompleted => 'Completed';
+  @override
+  String get maintenanceStatusRejected => 'Rejected';
+  @override
+  String get branch => 'Branch';
+  @override
+  String get stage => 'Stage';
+  @override
+  String get stageOptional => 'Stage (optional)';
+  @override
+  String get locationDetails => 'Location details';
+  @override
+  String get approve => 'Approve';
+  @override
+  String get reject => 'Reject';
+  @override
+  String get assignTechnician => 'Assign technician';
+  @override
+  String get noTechnicians => 'No technicians available';
+  @override
+  String get markCompleted => 'Mark as completed';
+  @override
+  String get completionNotes => 'Completion notes';
+  @override
+  String get writeCompletionNotes => 'Write completion notes here...';
+  @override
+  String get comments => 'Comments';
+  @override
+  String get noComments => 'No comments';
+  @override
+  String get comment => 'Comment';
+  @override
+  String get internalComment => 'Internal comment';
+  @override
+  String get writeComment => 'Write your comment here...';
+  @override
+  String get rejectionReason => 'Rejection reason';
+  @override
+  String get writeRejectionReason => 'Write the rejection reason here...';
+  @override
+  String get saved => 'Saved';
+  @override
+  String get low => 'Low';
+  @override
+  String get medium => 'Medium';
+  @override
+  String get high => 'High';
+  @override
+  String get urgent => 'Urgent';
+  @override
+  String get requiredFields => 'Please fill the required fields';
+  @override
+  String get requestCreated => 'Request created successfully';
+  @override
+  String get details => 'Details';
   
   // Common
   @override
