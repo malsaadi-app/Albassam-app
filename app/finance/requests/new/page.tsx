@@ -16,17 +16,48 @@ export default function NewFinanceRequestPage() {
   const [amount, setAmount] = useState('')
   const [beneficiaryName, setBeneficiaryName] = useState('')
 
-  // attachments: store links or names for now (upload integration later)
-  const [attachmentText, setAttachmentText] = useState('')
+  const [attachments, setAttachments] = useState<Array<{ name: string; url: string }>>([])
+  const [uploading, setUploading] = useState(false)
+
+  const uploadFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    try {
+      for (const file of Array.from(files)) {
+        const fd = new FormData()
+        fd.append('file', file)
+
+        // Use the stricter upload endpoint (PDF/JPG/PNG, 10MB)
+        const res = await fetch('/api/upload/approvals', {
+          method: 'POST',
+          body: fd
+        })
+
+        const data = await res.json()
+        if (!res.ok) {
+          alert(data.error || 'فشل رفع الملف')
+          continue
+        }
+
+        setAttachments((prev) => [...prev, { name: data.filename, url: data.path }])
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeAttachment = (idx: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== idx))
+  }
 
   const submit = async () => {
     setLoading(true)
     try {
-      const attachments = attachmentText
-        .split('\n')
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map((s) => ({ name: s, url: s }))
+      if (!attachments.length) {
+        alert('المرفقات مطلوبة')
+        return
+      }
 
       const res = await fetch('/api/finance/requests', {
         method: 'POST',
@@ -104,8 +135,36 @@ export default function NewFinanceRequestPage() {
           </label>
 
           <label>
-            مرفقات (سطر لكل ملف/رابط) — مؤقتاً
-            <textarea value={attachmentText} onChange={(e) => setAttachmentText(e.target.value)} rows={3} style={{ width: '100%', marginTop: 6, padding: 10 }} />
+            المرفقات (PDF / JPG / PNG)
+            <input
+              type="file"
+              multiple
+              accept="application/pdf,image/png,image/jpeg"
+              onChange={(e) => uploadFiles(e.target.files)}
+              disabled={uploading}
+              style={{ width: '100%', marginTop: 6 }}
+            />
+            <div style={{ marginTop: 8, fontSize: 12, color: '#6B7280' }}>
+              {uploading ? 'جاري رفع الملفات...' : 'حد أقصى 10MB لكل ملف.'}
+            </div>
+            {attachments.length > 0 && (
+              <ul style={{ marginTop: 10 }}>
+                {attachments.map((a, idx) => (
+                  <li key={idx} style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 6 }}>
+                    <a href={a.url} target="_blank" rel="noreferrer">
+                      {a.name}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(idx)}
+                      style={{ border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer' }}
+                    >
+                      حذف
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </label>
         </div>
       </Card>
