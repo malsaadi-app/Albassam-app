@@ -108,7 +108,31 @@ export async function POST(
       stepOrder: currentStep.order
     });
 
-    if (!allowedUserIds.includes(session.user.id)) {
+    let allowed = allowedUserIds.includes(session.user.id)
+
+    // Also allow delegated approver for this step
+    if (!allowed) {
+      const delegation = await prisma.hRRequestDelegation.findFirst({
+        where: {
+          requestId: id,
+          stepIndex: currentStepIndex,
+          status: 'ACTIVE',
+          delegatedToUserId: session.user.id
+        },
+        select: { id: true }
+      })
+
+      if (delegation) {
+        allowed = true
+        // Mark used (best-effort)
+        await prisma.hRRequestDelegation.update({
+          where: { id: delegation.id },
+          data: { status: 'USED', usedAt: new Date() }
+        })
+      }
+    }
+
+    if (!allowed) {
       return NextResponse.json(
         { error: 'غير مصرح لك بمعالجة هذه الخطوة', expected: labelAr },
         { status: 403 }

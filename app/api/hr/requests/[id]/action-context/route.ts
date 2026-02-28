@@ -16,7 +16,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     const hrRequest = await prisma.hRRequest.findUnique({
       where: { id },
-      select: { id: true, type: true, employeeId: true, currentWorkflowStep: true }
+      select: { id: true, type: true, status: true, employeeId: true, currentWorkflowStep: true }
     })
 
     if (!hrRequest) {
@@ -46,8 +46,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       stepOrder: currentStep.order
     })
 
+    const delegated = await prisma.hRRequestDelegation.findFirst({
+      where: {
+        requestId: id,
+        stepIndex: currentStepIndex,
+        status: 'ACTIVE',
+        delegatedToUserId: session.user.id
+      },
+      select: { id: true }
+    })
+
+    const isOwner = hrRequest.employeeId === session.user.id
+
     return NextResponse.json({
-      canProcess: routed.userIds.includes(session.user.id),
+      canProcess: routed.userIds.includes(session.user.id) || !!delegated,
+      canResubmit: isOwner && (hrRequest as any).status === 'PENDING_REVIEW',
       stepIndex: currentStepIndex,
       stepName: currentStep.statusName,
       expectedLabel: routed.labelAr

@@ -78,6 +78,11 @@ export async function GET(
 
       const isOwner = hrRequest.employeeId === session.user.id
       const isActor = hrRequest.reviewedBy === session.user.id || hrRequest.approvedBy === session.user.id
+      const delegatedForThis = await prisma.hRRequestDelegation.findFirst({
+        where: { requestId: hrRequest.id, status: 'ACTIVE', delegatedToUserId: session.user.id },
+        select: { id: true }
+      })
+      const isDelegated = !!delegatedForThis
 
       // Also allow current-step approvers (e.g., stage managers / VP) to view details.
       let isApprover = false
@@ -100,7 +105,7 @@ export async function GET(
         console.warn('HR request approver check failed', e)
       }
 
-      if (!delegated && !isOwner && !isApprover && !isActor) {
+      if (!delegated && !isOwner && !isApprover && !isActor && !isDelegated) {
         return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
       }
     }
