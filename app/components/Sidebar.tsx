@@ -49,7 +49,7 @@ interface MenuSection {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { t } = useI18n();
+  const { t, locale, setLocale, dir } = useI18n();
 
   const [isOpen, setIsOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -466,6 +466,44 @@ export default function Sidebar() {
               ⚠️ وضع المحاكاة نشط
             </div>
           )}
+
+          {/* Language quick switch */}
+          <div dir={dir} style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+            <button
+              type="button"
+              onClick={() => setLocale('ar')}
+              style={{
+                flex: 1,
+                padding: '8px 10px',
+                borderRadius: '10px',
+                border: locale === 'ar' ? '1px solid #2563EB' : '1px solid #CBD5E1',
+                background: locale === 'ar' ? 'rgba(37, 99, 235, 0.08)' : '#FFFFFF',
+                color: '#0F172A',
+                fontSize: '12px',
+                fontWeight: '800',
+                cursor: 'pointer'
+              }}
+            >
+              العربية
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocale('en')}
+              style={{
+                flex: 1,
+                padding: '8px 10px',
+                borderRadius: '10px',
+                border: locale === 'en' ? '1px solid #2563EB' : '1px solid #CBD5E1',
+                background: locale === 'en' ? 'rgba(37, 99, 235, 0.08)' : '#FFFFFF',
+                color: '#0F172A',
+                fontSize: '12px',
+                fontWeight: '800',
+                cursor: 'pointer'
+              }}
+            >
+              English
+            </button>
+          </div>
           
           <Link
             href="/profile"
