@@ -3,33 +3,26 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  HiOutlineCheck,
-  HiOutlineX,
   HiOutlineClock,
   HiOutlineClipboardList,
   HiOutlineUserGroup,
-  HiOutlineCheckCircle
 } from 'react-icons/hi';
 
-interface PendingApproval {
+type PendingApproval = {
   id: string;
-  requestType: string;
-  requestId: string;
-  requestTitle: string;
-  requesterName: string;
-  stepName: string;
-  workflowName: string;
-  stepOrder: number;
-  totalSteps: number;
-  createdAt: string;
-  daysWaiting: number;
-}
+  type: string;
+  title: string;
+  submittedBy: string;
+  submittedAt: string;
+  status: string;
+  action: string;
+  url: string;
+};
 
 export default function WorkflowApprovalsPage() {
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('ALL');
-  const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPendingApprovals();
@@ -37,7 +30,7 @@ export default function WorkflowApprovalsPage() {
 
   const fetchPendingApprovals = async () => {
     try {
-      const res = await fetch('/api/workflows/my-approvals');
+      const res = await fetch('/api/dashboard/pending-approvals');
       if (res.ok) {
         const data = await res.json();
         setApprovals(data.approvals || []);
@@ -49,99 +42,44 @@ export default function WorkflowApprovalsPage() {
     }
   };
 
-  const handleApprove = async (approvalId: string) => {
-    if (!confirm('هل أنت متأكد من الموافقة على هذا الطلب؟')) return;
-
-    setProcessingId(approvalId);
-    try {
-      const res = await fetch('/api/workflows/approvals/approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          approvalId,
-          approverId: 'CURRENT_USER_ID', // TODO: Get from session
-          comments: 'موافق'
-        })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        alert(data.message);
-        fetchPendingApprovals(); // Refresh list
-      } else {
-        const error = await res.json();
-        alert(`خطأ: ${error.error}`);
-      }
-    } catch (error) {
-      console.error('Error approving:', error);
-      alert('حدث خطأ أثناء الموافقة');
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  const handleReject = async (approvalId: string) => {
-    const reason = prompt('يرجى إدخال سبب الرفض:');
-    if (!reason) return;
-
-    setProcessingId(approvalId);
-    try {
-      const res = await fetch('/api/workflows/approvals/reject', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          approvalId,
-          approverId: 'CURRENT_USER_ID', // TODO: Get from session
-          comments: reason
-        })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        alert(data.message);
-        fetchPendingApprovals(); // Refresh list
-      } else {
-        const error = await res.json();
-        alert(`خطأ: ${error.error}`);
-      }
-    } catch (error) {
-      console.error('Error rejecting:', error);
-      alert('حدث خطأ أثناء الرفض');
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  const getRequestTypeLabel = (type: string) => {
+  const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      HR_REQUEST: 'طلب موارد بشرية',
-      PURCHASE_REQUEST: 'طلب شراء',
-      MAINTENANCE_REQUEST: 'طلب صيانة',
-      TASK: 'مهمة'
+      hr_request: 'طلب موارد بشرية',
+      purchase_request: 'طلب شراء',
+      purchase_order: 'أمر شراء',
+      supplier_request: 'طلب مورد',
+      maintenance_request: 'طلب صيانة',
+      finance_request: 'طلب مالي',
+      petty_cash_settlement: 'تسوية عهدة',
+      petty_cash_topup: 'زيادة عهدة'
     };
     return labels[type] || type;
   };
 
-  const getRequestTypeColor = (type: string) => {
+  const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
-      HR_REQUEST: '#10B981',
-      PURCHASE_REQUEST: '#3B82F6',
-      MAINTENANCE_REQUEST: '#F59E0B',
-      TASK: '#6366F1'
+      hr_request: '#10B981',
+      purchase_request: '#3B82F6',
+      purchase_order: '#2563EB',
+      supplier_request: '#0EA5E9',
+      maintenance_request: '#F59E0B',
+      finance_request: '#111827',
+      petty_cash_settlement: '#7C3AED',
+      petty_cash_topup: '#DB2777'
     };
     return colors[type] || '#6B7280';
   };
 
-  const filteredApprovals = filter === 'ALL' 
-    ? approvals 
-    : approvals.filter(a => a.requestType === filter);
+  const filteredApprovals = filter === 'ALL'
+    ? approvals
+    : approvals.filter(a => a.type === filter);
 
   const stats = {
     total: approvals.length,
-    hr: approvals.filter(a => a.requestType === 'HR_REQUEST').length,
-    procurement: approvals.filter(a => a.requestType === 'PURCHASE_REQUEST').length,
-    maintenance: approvals.filter(a => a.requestType === 'MAINTENANCE_REQUEST').length,
-    urgent: approvals.filter(a => a.daysWaiting > 3).length
+    hr: approvals.filter(a => a.type === 'hr_request').length,
+    procurement: approvals.filter(a => a.type === 'purchase_request' || a.type === 'purchase_order' || a.type === 'supplier_request').length,
+    maintenance: approvals.filter(a => a.type === 'maintenance_request').length,
+    urgent: 0
   };
 
   if (loading) {
@@ -302,9 +240,10 @@ export default function WorkflowApprovalsPage() {
           </span>
           {[
             { value: 'ALL', label: 'الكل' },
-            { value: 'HR_REQUEST', label: 'موارد بشرية' },
-            { value: 'PURCHASE_REQUEST', label: 'مشتريات' },
-            { value: 'MAINTENANCE_REQUEST', label: 'صيانة' }
+            { value: 'hr_request', label: 'موارد بشرية' },
+            { value: 'purchase_request', label: 'مشتريات' },
+            { value: 'maintenance_request', label: 'صيانة' },
+            { value: 'finance_request', label: 'مالية' }
           ].map(f => (
             <button
               key={f.value}
@@ -371,16 +310,16 @@ export default function WorkflowApprovalsPage() {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                         <span style={{
-                          background: getRequestTypeColor(approval.requestType),
+                          background: getTypeColor(approval.type),
                           color: 'white',
                           fontSize: '11px',
                           fontWeight: '600',
                           padding: '4px 10px',
                           borderRadius: '12px'
                         }}>
-                          {getRequestTypeLabel(approval.requestType)}
+                          {getTypeLabel(approval.type)}
                         </span>
-                        {approval.daysWaiting > 3 && (
+                        {false && (
                           <span style={{
                             background: '#FEE2E2',
                             color: '#DC2626',
@@ -400,7 +339,9 @@ export default function WorkflowApprovalsPage() {
                         color: '#111827',
                         marginBottom: '8px'
                       }}>
-                        {approval.requestTitle}
+                        <Link href={approval.url} style={{ color: '#111827', textDecoration: 'none' }}>
+                          {approval.title}
+                        </Link>
                       </h3>
 
                       <div style={{
@@ -410,11 +351,9 @@ export default function WorkflowApprovalsPage() {
                         color: '#6B7280',
                         marginBottom: '12px'
                       }}>
-                        <span>👤 {approval.requesterName}</span>
+                        <span>👤 {approval.submittedBy}</span>
                         <span>•</span>
-                        <span>📋 {approval.workflowName}</span>
-                        <span>•</span>
-                        <span>⏱️ {approval.daysWaiting} يوم</span>
+                        <span>📋 {approval.action}</span>
                       </div>
 
                       {/* Progress */}
@@ -426,8 +365,8 @@ export default function WorkflowApprovalsPage() {
                           color: '#6B7280',
                           marginBottom: '6px'
                         }}>
-                          <span>{approval.stepName}</span>
-                          <span>المرحلة {approval.stepOrder} من {approval.totalSteps}</span>
+                          <span>{approval.action}</span>
+                          <span>{new Date(approval.submittedAt).toLocaleDateString('ar-SA')}</span>
                         </div>
                         <div style={{
                           width: '100%',
@@ -437,7 +376,7 @@ export default function WorkflowApprovalsPage() {
                           overflow: 'hidden'
                         }}>
                           <div style={{
-                            width: `${(approval.stepOrder / approval.totalSteps) * 100}%`,
+                            width: `70%`,
                             height: '100%',
                             background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
                             transition: 'width 0.3s'
@@ -446,74 +385,27 @@ export default function WorkflowApprovalsPage() {
                       </div>
                     </div>
 
-                    {/* Right: Actions */}
-                    <div style={{
-                      display: 'flex',
-                      gap: '8px',
-                      flexShrink: 0
-                    }}>
-                      <button
-                        onClick={() => handleApprove(approval.id)}
-                        disabled={processingId === approval.id}
+                    {/* Right: Open */}
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                      <Link
+                        href={approval.url}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
                           gap: '8px',
-                          padding: '10px 20px',
-                          background: processingId === approval.id ? '#9CA3AF' : '#10B981',
+                          padding: '10px 16px',
+                          background: '#111827',
                           color: 'white',
                           border: 'none',
                           borderRadius: '8px',
                           fontSize: '14px',
-                          fontWeight: '600',
-                          cursor: processingId === approval.id ? 'not-allowed' : 'pointer',
-                          transition: 'background 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (processingId !== approval.id) {
-                            e.currentTarget.style.background = '#059669';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (processingId !== approval.id) {
-                            e.currentTarget.style.background = '#10B981';
-                          }
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          textDecoration: 'none'
                         }}
                       >
-                        <HiOutlineCheck size={18} />
-                        موافق
-                      </button>
-                      <button
-                        onClick={() => handleReject(approval.id)}
-                        disabled={processingId === approval.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '10px 20px',
-                          background: processingId === approval.id ? '#9CA3AF' : '#EF4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          cursor: processingId === approval.id ? 'not-allowed' : 'pointer',
-                          transition: 'background 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (processingId !== approval.id) {
-                            e.currentTarget.style.background = '#DC2626';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (processingId !== approval.id) {
-                            e.currentTarget.style.background = '#EF4444';
-                          }
-                        }}
-                      >
-                        <HiOutlineX size={18} />
-                        رفض
-                      </button>
+                        فتح
+                      </Link>
                     </div>
                   </div>
                 </div>
