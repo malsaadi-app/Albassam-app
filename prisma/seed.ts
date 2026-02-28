@@ -1383,7 +1383,7 @@ async function ensurePositionsAndHeadcount() {
         salaryMax: null,
         description: null,
         requirements: null,
-        openedAt: emp.hireDate,
+        openedAt: emp.hireDate ?? new Date(),
         openedBy: opener.id,
         approvalDocument: null,
         approvalNotes: 'Seed: auto-created for existing employee',

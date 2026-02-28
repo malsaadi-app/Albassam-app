@@ -164,10 +164,11 @@ model Employee {
   fullNameAr         String
   fullNameEn         String?
   nationalId         String              @unique
+  nationalIdExpiry   DateTime?
   nationality        String
-  dateOfBirth        DateTime
-  gender             Gender
-  maritalStatus      MaritalStatus
+  dateOfBirth        DateTime?
+  gender             Gender?
+  maritalStatus      MaritalStatus?
   phone              String
   email              String?
   address            String?
@@ -180,9 +181,9 @@ model Employee {
   departmentRef      Department?         @relation("EmployeeDepartment", fields: [departmentId], references: [id])
   jobTitleRef        JobTitle?           @relation("EmployeeJobTitle", fields: [jobTitleId], references: [id])
   directManager      String?
-  hireDate           DateTime
+  hireDate           DateTime?
   deductionAuditLogs DeductionAuditLog[] @relation("EmployeeDeductionAudits")
-  employmentType     EmploymentType
+  employmentType     EmploymentType?
   contractEndDate    DateTime?
   status             EmployeeStatus      @default(ACTIVE)
   basicSalary        Float
@@ -194,6 +195,9 @@ model Employee {
   iban               String?
   education          String?
   specialization     String?
+  passportNumber     String?
+  passportExpiry     DateTime?
+  schoolName         String?
   certifications     String?
   photoUrl           String?
   userId             String?             @unique
