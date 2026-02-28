@@ -1,10 +1,10 @@
 import { cookies } from 'next/headers'
-import { getSession } from '@/lib/session'
 import { redirect } from 'next/navigation'
+import { getSession } from '@/lib/session'
 import { PrintDoc } from '@/app/print/components/PrintDoc'
-import { getSupplierRequestPrintDoc } from '@/lib/print/supplierRequest'
+import { getPurchaseOrderPrintDoc } from '@/lib/print/purchaseOrder'
 
-export default async function PrintSupplierRequestPage({
+export default async function PrintPurchaseOrderPage({
   params,
   searchParams
 }: {
@@ -19,7 +19,7 @@ export default async function PrintSupplierRequestPage({
   const locale = (sp.locale === 'en' ? 'en' : 'ar') as 'ar' | 'en'
   const autoPrint = sp.autop === '0' ? false : true
 
-  const doc = await getSupplierRequestPrintDoc(id, locale, session.user.id)
+  const doc = await getPurchaseOrderPrintDoc(id, locale, session.user.id)
   if (!doc) {
     return <div style={{ padding: 24 }}>{locale === 'ar' ? 'الطلب غير موجود' : 'Not found'}</div>
   }

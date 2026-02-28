@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
+import { getInitialLocale } from '@/lib/i18n';
 
 export default function HRRequestDetailPage() {
   const router = useRouter();
@@ -69,9 +70,20 @@ export default function HRRequestDetailPage() {
           title={`📋 ${request.requestNumber || 'طلب HR'}`}
           breadcrumbs={['الرئيسية', 'الموارد البشرية', 'الطلبات', 'التفاصيل']}
           actions={
-            <Button variant="outline" onClick={() => router.push('/hr/requests')}>
-              ← رجوع
-            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const locale = getInitialLocale();
+                  window.open(`/print/hr/requests/${params.id}?locale=${locale}`, '_blank');
+                }}
+              >
+                🖨️ طباعة
+              </Button>
+              <Button variant="outline" onClick={() => router.push('/hr/requests')}>
+                ← رجوع
+              </Button>
+            </div>
           }
         />
 

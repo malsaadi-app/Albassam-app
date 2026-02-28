@@ -22,6 +22,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'إجراء غير صحيح' }, { status: 400 })
     }
 
+    if (action === 'reject' && (!comment || comment.trim().length === 0)) {
+      return NextResponse.json({ error: 'سبب الرفض مطلوب' }, { status: 400 })
+    }
+
     const access = await getMaintenanceAccess()
 
     const req = await prisma.maintenanceRequest.findUnique({

@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
+import { getInitialLocale } from '@/lib/i18n';
 
 export default function MaintenanceRequestDetailPage() {
   const router = useRouter();
@@ -69,9 +70,20 @@ export default function MaintenanceRequestDetailPage() {
           title={`🔧 ${request.title || 'طلب صيانة'}`}
           breadcrumbs={['الرئيسية', 'الصيانة', 'الطلبات', 'التفاصيل']}
           actions={
-            <Button variant="outline" onClick={() => router.push('/maintenance/requests')}>
-              ← رجوع
-            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const locale = getInitialLocale();
+                  window.open(`/print/maintenance/requests/${params.id}?locale=${locale}`, '_blank');
+                }}
+              >
+                🖨️ طباعة
+              </Button>
+              <Button variant="outline" onClick={() => router.push('/maintenance/requests')}>
+                ← رجوع
+              </Button>
+            </div>
           }
         />
 

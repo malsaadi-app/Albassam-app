@@ -19,7 +19,7 @@ export default async function PrintMaintenanceRequestPage({
   const locale = (sp.locale === 'en' ? 'en' : 'ar') as 'ar' | 'en'
   const autoPrint = sp.autop === '0' ? false : true
 
-  const doc = await getMaintenancePrintDoc(id, locale)
+  const doc = await getMaintenancePrintDoc(id, locale, session.user.id)
   if (!doc) {
     return <div style={{ padding: 24 }}>{locale === 'ar' ? 'الطلب غير موجود' : 'Not found'}</div>
   }

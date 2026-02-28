@@ -11,7 +11,7 @@ function titleForEmployee(e: any) {
   return e?.position ?? e?.department ?? ''
 }
 
-export async function getMaintenancePrintDoc(id: string, locale: 'ar' | 'en'): Promise<NormalizedPrintDoc | null> {
+export async function getMaintenancePrintDoc(id: string, locale: 'ar' | 'en', viewerUserId: string): Promise<NormalizedPrintDoc | null> {
   const req = await prisma.maintenanceRequest.findUnique({
     where: { id },
     include: {
@@ -26,6 +26,7 @@ export async function getMaintenancePrintDoc(id: string, locale: 'ar' | 'en'): P
   if (!req) return null
 
   const statusLabel = req.status
+  const isRequester = req.requestedBy?.userId ? req.requestedBy.userId === viewerUserId : false
 
   // Determine where it is stopped.
   let currentStepLabel = locale === 'ar' ? 'غير محدد' : 'Unknown'
@@ -90,13 +91,16 @@ export async function getMaintenancePrintDoc(id: string, locale: 'ar' | 'en'): P
   // Add any status change notes from history
   for (const h of req.history || []) {
     if (h.action === 'STATUS_CHANGED') {
+      const isRejection = h.newValue === 'REJECTED'
+      const comment = isRequester && !isRejection ? '' : (h.notes ?? '')
+
       timeline.push({
         stepName: locale === 'ar' ? 'تغيير حالة' : 'Status changed',
         actorName: nameForEmployee(h.user, locale),
         actorTitle: titleForEmployee(h.user),
-        status: h.newValue === 'REJECTED' ? 'REJECTED' : 'INFO',
+        status: isRejection ? 'REJECTED' : 'INFO',
         at: h.createdAt,
-        comment: h.notes ?? ''
+        comment
       })
     }
   }

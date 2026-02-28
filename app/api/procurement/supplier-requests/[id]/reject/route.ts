@@ -27,6 +27,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const body = await request.json().catch(() => ({}))
     const reason = body?.reason ? String(body.reason) : null
+    if (!reason || reason.trim().length === 0) {
+      return NextResponse.json({ error: 'سبب الرفض مطلوب' }, { status: 400 })
+    }
 
     const updated = await prisma.supplierRequest.update({
       where: { id },

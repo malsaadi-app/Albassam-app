@@ -4,6 +4,7 @@ import { COLORS } from '@/lib/colors';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getInitialLocale } from '@/lib/i18n';
 
 export default function PurchaseOrderDetailPage() {
   const params = useParams();
@@ -142,18 +143,40 @@ export default function PurchaseOrderDetailPage() {
               {statusLabels[order.status] || order.status}
             </span>
           </div>
-          <Link href="/procurement/purchase-orders" style={{
-            background: 'rgba(255,255,255,0.2)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.3)',
-            padding: '12px 24px',
-            borderRadius: '12px',
-            color: COLORS.white,
-            textDecoration: 'none',
-            fontWeight: '600'
-          }}>
-            ← رجوع
-          </Link>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => {
+                const locale = getInitialLocale();
+                window.open(`/print/procurement/purchase-orders/${params.id}?locale=${locale}`, '_blank');
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                padding: '12px 24px',
+                borderRadius: '12px',
+                color: COLORS.white,
+                textDecoration: 'none',
+                fontWeight: '700',
+                cursor: 'pointer'
+              }}
+            >
+              🖨️ طباعة
+            </button>
+
+            <Link href="/procurement/purchase-orders" style={{
+              background: 'rgba(255,255,255,0.2)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              padding: '12px 24px',
+              borderRadius: '12px',
+              color: COLORS.white,
+              textDecoration: 'none',
+              fontWeight: '600'
+            }}>
+              ← رجوع
+            </Link>
+          </div>
         </div>
 
         {/* Basic Info */}

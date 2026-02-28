@@ -1,7 +1,7 @@
 import prisma from '@/lib/prisma'
 import type { NormalizedPrintDoc, NormalizedTimelineItem } from '@/lib/print/normalize'
 
-export async function getSupplierRequestPrintDoc(id: string, locale: 'ar' | 'en'): Promise<NormalizedPrintDoc | null> {
+export async function getSupplierRequestPrintDoc(id: string, locale: 'ar' | 'en', viewerUserId: string): Promise<NormalizedPrintDoc | null> {
   const req = await prisma.supplierRequest.findUnique({
     where: { id },
     include: {
@@ -22,6 +22,8 @@ export async function getSupplierRequestPrintDoc(id: string, locale: 'ar' | 'en'
     { label: locale === 'ar' ? 'التصنيف' : 'Category', value: req.category ?? '-' },
     { label: locale === 'ar' ? 'الرقم الضريبي' : 'Tax number', value: req.taxNumber ?? '-' }
   ]
+
+  const _isRequester = req.requestedById === viewerUserId
 
   const timeline: NormalizedTimelineItem[] = []
 
