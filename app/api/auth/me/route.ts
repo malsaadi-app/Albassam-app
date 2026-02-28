@@ -16,8 +16,11 @@ export async function GET() {
     // Opportunistically deliver delegation start/end notifications.
     await syncDelegationNotifications(prisma, session.user.id);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       user: session.user,
+      // Backward-compatible fields (some UI code expects them at top-level)
+      role: session.user.role,
+      displayName: session.user.displayName,
       isImpersonating: (session as any).isImpersonating || false
     });
   } catch (error) {

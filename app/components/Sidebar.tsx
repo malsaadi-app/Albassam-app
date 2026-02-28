@@ -84,7 +84,7 @@ export default function Sidebar() {
       const res = await fetch('/api/auth/me');
       if (res.ok) {
         const data = await res.json();
-        setUserRole(data.role || '');
+        setUserRole(data.user?.role || data.role || '');
         setIsImpersonating(data.isImpersonating || false);
       }
     } catch (error) {
@@ -92,7 +92,7 @@ export default function Sidebar() {
     }
   };
 
-  const menuSections: MenuSection[] = [
+  const fullMenuSections: MenuSection[] = [
     {
       id: 'main',
       icon: <HiOutlineHome size={18} />,
@@ -193,6 +193,50 @@ export default function Sidebar() {
     }
     setExpandedSections(newExpanded);
   };
+
+  const menuSections: MenuSection[] = (() => {
+    // Restrict what normal employees see
+    if (userRole === 'USER') {
+      return [
+        {
+          id: 'main',
+          icon: <HiOutlineHome size={18} />,
+          label: t('mainMenu'),
+          items: [
+            { href: '/dashboard', icon: <HiOutlineViewGrid size={18} />, label: t('home') },
+            { href: '/attendance', icon: <HiOutlineClock size={18} />, label: t('attendance') },
+            { href: '/notifications', icon: <HiOutlineBell size={18} />, label: t('notifications'), badge: unreadNotificationsCount },
+          ]
+        },
+        {
+          id: 'hr',
+          icon: <HiOutlineUserGroup size={18} />,
+          label: t('hr'),
+          items: [
+            { href: '/hr/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('hrRequests'), badge: pendingRequestsCount },
+          ]
+        },
+        {
+          id: 'procurement',
+          icon: <HiOutlineShoppingCart size={18} />,
+          label: t('procurement'),
+          items: [
+            { href: '/procurement/requests', icon: <HiOutlineClipboardList size={18} />, label: t('procurementRequests') },
+          ]
+        },
+        {
+          id: 'maintenance',
+          icon: <HiOutlineCube size={18} />,
+          label: t('maintenance'),
+          items: [
+            { href: '/maintenance/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('maintenanceRequests') },
+          ]
+        },
+      ];
+    }
+
+    return fullMenuSections;
+  })();
 
   const filteredSections = menuSections.map(section => ({
     ...section,
