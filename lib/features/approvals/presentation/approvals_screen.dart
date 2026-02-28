@@ -295,8 +295,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     }
 
     if (item.type == 'petty_cash_topup') {
-      final isPayAction = item.action.contains('صرف');
-      if (isPayAction) {
+      final isExecution = item.status == 'EXECUTION';
+      if (isExecution) {
         return [
           Expanded(
             child: ElevatedButton.icon(
