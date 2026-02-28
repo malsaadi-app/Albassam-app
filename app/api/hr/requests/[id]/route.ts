@@ -74,9 +74,33 @@ export async function GET(
 
     // Check permissions
     if (session.user.role === 'USER') {
-      const delegated = await isDelegatedViewer(prisma, session.user.id);
-      if (!delegated && hrRequest.employeeId !== session.user.id) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
+      const delegated = await isDelegatedViewer(prisma, session.user.id)
+
+      const isOwner = hrRequest.employeeId === session.user.id
+
+      // Also allow current-step approvers (e.g., stage managers / VP) to view details.
+      let isApprover = false
+      try {
+        const workflow = await prisma.hRRequestTypeWorkflow.findUnique({
+          where: { requestType: hrRequest.type as any },
+          include: { steps: { orderBy: { order: 'asc' } } }
+        })
+        const currentIndex = hrRequest.currentWorkflowStep ?? 0
+        const currentStep = workflow?.steps?.[currentIndex]
+        if (currentStep) {
+          const routed = await (await import('@/lib/hrWorkflowRouting')).getApproverUserIdsForHRRequestStep({
+            requestType: hrRequest.type,
+            requesterUserId: hrRequest.employeeId,
+            stepOrder: currentStep.order,
+          })
+          isApprover = routed.userIds.includes(session.user.id)
+        }
+      } catch (e) {
+        console.warn('HR request approver check failed', e)
+      }
+
+      if (!delegated && !isOwner && !isApprover) {
+        return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
       }
     }
 
