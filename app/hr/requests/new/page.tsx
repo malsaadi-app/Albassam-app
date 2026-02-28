@@ -13,27 +13,55 @@ export default function NewHRRequestPage() {
   const { dir, t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    requestType: '',
-    priority: 'MEDIUM',
-    description: '',
-    requestedDate: new Date().toISOString().split('T')[0],
-    notes: ''
+    type: '' as string,
+    // Leave
+    startDate: '',
+    endDate: '',
+    leaveType: '',
+    // Common
+    destination: '',
+    travelDate: '',
+    departureDate: '',
+    returnDate: '',
+    amount: '' as any,
+    period: '',
+    purpose: '',
+    recipientOrganization: '',
+    reason: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.requestType || !formData.description) {
+    if (!formData.type) {
       alert(t('requiredFields'));
       return;
     }
 
     setLoading(true);
     try {
+      const payload: any = {
+        type: formData.type,
+        ...(formData.startDate ? { startDate: formData.startDate } : {}),
+        ...(formData.endDate ? { endDate: formData.endDate } : {}),
+        ...(formData.leaveType ? { leaveType: formData.leaveType } : {}),
+        ...(formData.destination ? { destination: formData.destination } : {}),
+        ...(formData.travelDate ? { travelDate: formData.travelDate } : {}),
+        ...(formData.departureDate ? { departureDate: formData.departureDate } : {}),
+        ...(formData.returnDate ? { returnDate: formData.returnDate } : {}),
+        ...(formData.amount !== '' && formData.amount !== null && formData.amount !== undefined
+          ? { amount: Number(formData.amount) }
+          : {}),
+        ...(formData.period ? { period: formData.period } : {}),
+        ...(formData.purpose ? { purpose: formData.purpose } : {}),
+        ...(formData.recipientOrganization ? { recipientOrganization: formData.recipientOrganization } : {}),
+        ...(formData.reason ? { reason: formData.reason } : {})
+      };
+
       const res = await fetch('/api/hr/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
@@ -69,57 +97,180 @@ export default function NewHRRequestPage() {
             <div style={{ display: 'grid', gap: '24px' }}>
               <Select
                 label={`${t('requestType')} *`}
-                value={formData.requestType}
-                onChange={(e) => setFormData({ ...formData, requestType: e.target.value })}
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 required
               >
                 <option value="">{t('selectRequestType')}</option>
-                <option value="LEAVE">طلب إجازة</option>
-                <option value="TRANSFER">طلب نقل</option>
-                <option value="PROMOTION">طلب ترقية</option>
-                <option value="SALARY_REVIEW">مراجعة راتب</option>
-                <option value="TRAINING">طلب تدريب</option>
-                <option value="RESIGNATION">استقالة</option>
-                <option value="COMPLAINT">شكوى</option>
-                <option value="CERTIFICATE">طلب شهادة</option>
-                <option value="DOCUMENT">طلب وثيقة</option>
-                <option value="OTHER">أخرى</option>
+                <option value="LEAVE">{t('hrTypeLeave')}</option>
+                <option value="TICKET_ALLOWANCE">{t('hrTypeTicketAllowance')}</option>
+                <option value="FLIGHT_BOOKING">{t('hrTypeFlightBooking')}</option>
+                <option value="SALARY_CERTIFICATE">{t('hrTypeSalaryCertificate')}</option>
+                <option value="HOUSING_ALLOWANCE">{t('hrTypeHousingAllowance')}</option>
+                <option value="VISA_EXIT_REENTRY_SINGLE">{t('hrTypeVisaSingle')}</option>
+                <option value="VISA_EXIT_REENTRY_MULTI">{t('hrTypeVisaMulti')}</option>
+                <option value="RESIGNATION">{t('hrTypeResignation')}</option>
               </Select>
 
-              <Select
-                label={`${t('priority')} *`}
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                required
-              >
-                <option value="LOW">{t('low')}</option>
-                <option value="MEDIUM">{t('medium')}</option>
-                <option value="HIGH">{t('high')}</option>
-                <option value="URGENT">{t('urgent')}</option>
-              </Select>
+              {formData.type === 'LEAVE' && (
+                <>
+                  <Input
+                    label={`${t('startDate')} *`}
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label={`${t('endDate')} *`}
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    required
+                  />
+                  <Select
+                    label={`${t('leaveType')} *`}
+                    value={formData.leaveType}
+                    onChange={(e) => setFormData({ ...formData, leaveType: e.target.value })}
+                    required
+                  >
+                    <option value="">—</option>
+                    <option value="annual">{t('leaveAnnual')}</option>
+                    <option value="sick">{t('leaveSick')}</option>
+                    <option value="emergency">{t('leaveEmergency')}</option>
+                  </Select>
+                </>
+              )}
 
-              <Input
-                label={`${t('requestedDate')} *`}
-                type="date"
-                value={formData.requestedDate}
-                onChange={(e) => setFormData({ ...formData, requestedDate: e.target.value })}
-                required
-              />
+              {(formData.type === 'TICKET_ALLOWANCE' || formData.type === 'FLIGHT_BOOKING') && (
+                <Input
+                  label={`${t('destination')} *`}
+                  value={formData.destination}
+                  onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                  required
+                />
+              )}
 
-              <Textarea
-                label={`${t('description')} *`}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={6}
-                placeholder={t('writeDetailsHere')}
-                required
-              />
+              {formData.type === 'TICKET_ALLOWANCE' && (
+                <>
+                  <Input
+                    label={`${t('travelDate')} *`}
+                    type="date"
+                    value={formData.travelDate}
+                    onChange={(e) => setFormData({ ...formData, travelDate: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label={`${t('amount')} *`}
+                    type="number"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    required
+                  />
+                </>
+              )}
 
+              {formData.type === 'FLIGHT_BOOKING' && (
+                <>
+                  <Input
+                    label={`${t('departureDate')} *`}
+                    type="date"
+                    value={formData.departureDate}
+                    onChange={(e) => setFormData({ ...formData, departureDate: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label={`${t('returnDate')} *`}
+                    type="date"
+                    value={formData.returnDate}
+                    onChange={(e) => setFormData({ ...formData, returnDate: e.target.value })}
+                    required
+                  />
+                </>
+              )}
+
+              {formData.type === 'SALARY_CERTIFICATE' && (
+                <Textarea
+                  label={`${t('purpose')} *`}
+                  value={formData.purpose}
+                  onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                  rows={3}
+                  placeholder={t('writeDetailsHere')}
+                  required
+                />
+              )}
+
+              {formData.type === 'HOUSING_ALLOWANCE' && (
+                <>
+                  <Input
+                    label={`${t('amount')} *`}
+                    type="number"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label={`${t('period')} *`}
+                    value={formData.period}
+                    onChange={(e) => setFormData({ ...formData, period: e.target.value })}
+                    required
+                  />
+                </>
+              )}
+
+              {(formData.type === 'VISA_EXIT_REENTRY_SINGLE' || formData.type === 'VISA_EXIT_REENTRY_MULTI') && (
+                <>
+                  <Input
+                    label={`${t('departureDate')} *`}
+                    type="date"
+                    value={formData.departureDate}
+                    onChange={(e) => setFormData({ ...formData, departureDate: e.target.value })}
+                    required
+                  />
+                  <Input
+                    label={`${t('returnDate')} *`}
+                    type="date"
+                    value={formData.returnDate}
+                    onChange={(e) => setFormData({ ...formData, returnDate: e.target.value })}
+                    required
+                  />
+                  <Textarea
+                    label={`${t('reason')} *`}
+                    value={formData.reason}
+                    onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                    rows={3}
+                    placeholder={t('writeDetailsHere')}
+                    required
+                  />
+                </>
+              )}
+
+              {formData.type === 'RESIGNATION' && (
+                <>
+                  <Input
+                    label={`${t('endDate')} *`}
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    required
+                  />
+                  <Textarea
+                    label={`${t('reason')} *`}
+                    value={formData.reason}
+                    onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                    rows={3}
+                    placeholder={t('writeDetailsHere')}
+                    required
+                  />
+                </>
+              )}
+
+              {/* Optional */}
               <Textarea
                 label={t('notes')}
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={3}
+                value={formData.recipientOrganization}
+                onChange={(e) => setFormData({ ...formData, recipientOrganization: e.target.value })}
+                rows={2}
                 placeholder={t('notesOptional')}
               />
 
