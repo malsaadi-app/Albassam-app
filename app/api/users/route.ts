@@ -32,10 +32,21 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    function sanitizeJobTitle(s: string): string {
+      if (!s) return ''
+      let x = String(s).trim()
+      // Remove any embedded national-id-like numbers that might have leaked into position
+      x = x.replace(/\b\d{10,}\b/g, '').replace(/\s+/g, ' ').trim()
+      // Remove leading separators
+      x = x.replace(/^[•:\-–]+\s*/g, '')
+      return x
+    }
+
     const shaped = users.map((u) => {
       const emp = u.employee as any
       const name = emp?.fullNameAr || u.displayName
-      const jobTitle = emp?.jobTitleRef?.nameAr || emp?.position || ''
+      const rawJobTitle = emp?.jobTitleRef?.nameAr || emp?.position || ''
+      const jobTitle = sanitizeJobTitle(rawJobTitle)
       return {
         id: u.id,
         username: u.username,
