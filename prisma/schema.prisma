@@ -215,6 +215,9 @@ model Employee {
   deputyForStages Stage[]      @relation("StageDeputy")
   employeeRole    EmployeeRole @default(EMPLOYEE)
 
+  // Cross-branch coverage (e.g., HR covering multiple branches)
+  branchCoverages EmployeeBranchCoverage[]
+
   // Attendance grace overrides (minutes)
   // If set, overrides global AttendanceSettings.lateThresholdMinutes for morning check-in lateness.
   morningGraceMinutes Int?
@@ -976,6 +979,8 @@ model Branch {
   employees         Employee[]
   attendanceRecords AttendanceRecord[]
 
+  coverages EmployeeBranchCoverage[]
+
   // Maintenance
   maintenanceRequests MaintenanceRequest[]
   assets              Asset[]
@@ -1053,6 +1058,12 @@ enum StageStatus {
 enum MaintenanceTeam {
   BUILDING
   IT
+}
+
+enum CoverageModule {
+  HR
+  PROCUREMENT
+  MAINTENANCE
 }
 
 enum MaintenanceRole {
@@ -2285,6 +2296,27 @@ model WorkflowApprovalLog {
   @@index([approverId])
   @@index([status])
   @@index([createdAt])
+}
+
+model EmployeeBranchCoverage {
+  id        String @id @default(cuid())
+  employeeId String
+  branchId   String
+
+  module CoverageModule
+  // Optional: free-text role within that module (e.g., HR_REP, GATEKEEPER)
+  role   String?
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branch   Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, branchId, module])
+  @@index([branchId, module])
+  @@index([employeeId, module])
 }
 
 model WorkflowReferral {
