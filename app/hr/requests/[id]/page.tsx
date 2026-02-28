@@ -24,9 +24,33 @@ export default function HRRequestDetailPage() {
   });
   const [actionComment, setActionComment] = useState('');
 
+  const [sendBackModal, setSendBackModal] = useState<{ open: boolean; target: 'REQUESTER' | 'PREVIOUS_STEP' }>(
+    { open: false, target: 'REQUESTER' }
+  );
+  const [sendBackComment, setSendBackComment] = useState('');
+
+  const [delegateModal, setDelegateModal] = useState<{ open: boolean; selectedUserId: string | null }>(() => ({ open: false, selectedUserId: null }));
+  const [delegateQuery, setDelegateQuery] = useState('');
+  const [delegateComment, setDelegateComment] = useState('');
+  const [users, setUsers] = useState<any[]>([]);
+  const [usersLoaded, setUsersLoaded] = useState(false);
+
   useEffect(() => {
     if (params.id) fetchRequest();
   }, [params.id]);
+
+  const ensureUsers = async () => {
+    if (usersLoaded) return;
+    try {
+      const res = await fetch('/api/users');
+      if (!res.ok) return;
+      const data = await res.json();
+      setUsers(Array.isArray(data) ? data : []);
+      setUsersLoaded(true);
+    } catch {
+      // ignore
+    }
+  };
 
   const fetchRequest = async () => {
     try {
@@ -165,25 +189,9 @@ export default function HRRequestDetailPage() {
                     <Button
                       variant="outline"
                       disabled={processing}
-                      onClick={async () => {
-                        const target = window.confirm('إرجاع لمقدم الطلب؟\nOK = مقدم الطلب\nCancel = الخطوة السابقة')
-                        const comment = prompt('سبب الإرجاع (مطلوب)')
-                        if (!comment || comment.trim().length === 0) return
-                        try {
-                          setProcessing(true)
-                          const res = await fetch(`/api/hr/requests/${params.id}/send-back`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ target: target ? 'REQUESTER' : 'PREVIOUS_STEP', comment })
-                          })
-                          const data = await res.json().catch(() => ({}))
-                          if (!res.ok) throw new Error(data?.error || 'فشل')
-                          await fetchRequest()
-                        } catch (e: any) {
-                          alert(e?.message || 'حدث خطأ')
-                        } finally {
-                          setProcessing(false)
-                        }
+                      onClick={() => {
+                        setSendBackComment('')
+                        setSendBackModal({ open: true, target: 'REQUESTER' })
                       }}
                     >
                       ↩️ إرجاع
@@ -193,30 +201,10 @@ export default function HRRequestDetailPage() {
                       variant="outline"
                       disabled={processing}
                       onClick={async () => {
-                        const username = prompt('اكتب يوزر الشخص اللي تبي تحيل له الطلب (مطلوب)')
-                        if (!username || username.trim().length === 0) return
-                        const comment = prompt('سبب الإحالة (مطلوب)')
-                        if (!comment || comment.trim().length === 0) return
-                        try {
-                          setProcessing(true)
-                          const usersRes = await fetch('/api/users')
-                          const users = usersRes.ok ? await usersRes.json() : []
-                          const u = (users || []).find((x: any) => (x.username || '').toLowerCase() === username.trim().toLowerCase())
-                          if (!u) throw new Error('المستخدم غير موجود')
-
-                          const res = await fetch(`/api/hr/requests/${params.id}/delegate`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ delegatedToUserId: u.id, comment })
-                          })
-                          const data = await res.json().catch(() => ({}))
-                          if (!res.ok) throw new Error(data?.error || 'فشل')
-                          await fetchRequest()
-                        } catch (e: any) {
-                          alert(e?.message || 'حدث خطأ')
-                        } finally {
-                          setProcessing(false)
-                        }
+                        await ensureUsers()
+                        setDelegateQuery('')
+                        setDelegateComment('')
+                        setDelegateModal({ open: true, selectedUserId: null })
                       }}
                     >
                       👤 إحالة
@@ -442,6 +430,289 @@ export default function HRRequestDetailPage() {
             </div>
           </div>
         </Card>
+
+        {/* Send-back modal */}
+        {sendBackModal.open && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.45)',
+              zIndex: 80,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16
+            }}
+            onClick={() => {
+              if (processing) return
+              setSendBackModal({ open: false, target: 'REQUESTER' })
+            }}
+          >
+            <div
+              dir={dir}
+              style={{
+                width: '100%',
+                maxWidth: 560,
+                background: '#FFFFFF',
+                borderRadius: 16,
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.15)',
+                padding: 16
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                <div style={{ fontWeight: 900, fontSize: 16, color: '#0F172A' }}>↩️ إرجاع الطلب</div>
+                <button
+                  type="button"
+                  onClick={() => setSendBackModal({ open: false, target: 'REQUESTER' })}
+                  disabled={processing}
+                  style={{ border: 'none', background: 'transparent', fontSize: 20, cursor: 'pointer', color: '#64748B' }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSendBackModal({ open: true, target: 'REQUESTER' })}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 10,
+                      border: sendBackModal.target === 'REQUESTER' ? '1px solid #2563EB' : '1px solid #CBD5E1',
+                      background: sendBackModal.target === 'REQUESTER' ? 'rgba(37, 99, 235, 0.08)' : '#FFFFFF',
+                      fontWeight: 900,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    مقدم الطلب
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSendBackModal({ open: true, target: 'PREVIOUS_STEP' })}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 10,
+                      border: sendBackModal.target === 'PREVIOUS_STEP' ? '1px solid #2563EB' : '1px solid #CBD5E1',
+                      background: sendBackModal.target === 'PREVIOUS_STEP' ? 'rgba(37, 99, 235, 0.08)' : '#FFFFFF',
+                      fontWeight: 900,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    الخطوة السابقة
+                  </button>
+                </div>
+
+                <textarea
+                  value={sendBackComment}
+                  onChange={(e) => setSendBackComment(e.target.value)}
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    borderRadius: 12,
+                    border: '1px solid #CBD5E1',
+                    padding: 12,
+                    fontSize: 14,
+                    outline: 'none'
+                  }}
+                  placeholder="سبب الإرجاع (مطلوب)"
+                />
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <Button variant="outline" disabled={processing} onClick={() => setSendBackModal({ open: false, target: 'REQUESTER' })}>
+                    {t('cancel')}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    disabled={processing}
+                    onClick={async () => {
+                      const comment = sendBackComment.trim()
+                      if (!comment) {
+                        alert('سبب الإرجاع مطلوب')
+                        return
+                      }
+                      try {
+                        setProcessing(true)
+                        const res = await fetch(`/api/hr/requests/${params.id}/send-back`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ target: sendBackModal.target, comment })
+                        })
+                        const data = await res.json().catch(() => ({}))
+                        if (!res.ok) throw new Error(data?.error || 'فشل')
+                        setSendBackModal({ open: false, target: 'REQUESTER' })
+                        await fetchRequest()
+                      } catch (e: any) {
+                        alert(e?.message || 'حدث خطأ')
+                      } finally {
+                        setProcessing(false)
+                      }
+                    }}
+                  >
+                    تأكيد الإرجاع
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delegate modal */}
+        {delegateModal.open && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.45)',
+              zIndex: 80,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16
+            }}
+            onClick={() => {
+              if (processing) return
+              setDelegateModal({ open: false, selectedUserId: null })
+            }}
+          >
+            <div
+              dir={dir}
+              style={{
+                width: '100%',
+                maxWidth: 560,
+                background: '#FFFFFF',
+                borderRadius: 16,
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.15)',
+                padding: 16
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                <div style={{ fontWeight: 900, fontSize: 16, color: '#0F172A' }}>👤 إحالة لشخص</div>
+                <button
+                  type="button"
+                  onClick={() => setDelegateModal({ open: false, selectedUserId: null })}
+                  disabled={processing}
+                  style={{ border: 'none', background: 'transparent', fontSize: 20, cursor: 'pointer', color: '#64748B' }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                <input
+                  value={delegateQuery}
+                  onChange={(e) => setDelegateQuery(e.target.value)}
+                  placeholder="ابحث بالاسم أو اليوزر"
+                  style={{
+                    width: '100%',
+                    borderRadius: 12,
+                    border: '1px solid #CBD5E1',
+                    padding: 12,
+                    fontSize: 14,
+                    outline: 'none'
+                  }}
+                />
+
+                <div style={{ border: '1px solid #E2E8F0', borderRadius: 12, overflow: 'hidden' }}>
+                  <div style={{ maxHeight: 280, overflow: 'auto' }}>
+                    {(users
+                      .filter((u: any) => {
+                        const q = delegateQuery.trim().toLowerCase()
+                        if (!q) return true
+                        return (
+                          (u.displayName || '').toLowerCase().includes(q) ||
+                          (u.username || '').toLowerCase().includes(q)
+                        )
+                      })
+                      .slice(0, 50)
+                      .map((u: any) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => {
+                            setDelegateQuery(`${u.displayName} (${u.username})`)
+                            setDelegateModal({ open: true, selectedUserId: u.id })
+                          }}
+                          style={{
+                            width: '100%',
+                            textAlign: 'start',
+                            padding: 12,
+                            border: 'none',
+                            borderTop: '1px solid #E2E8F0',
+                            background: '#FFFFFF',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <div style={{ fontWeight: 900, color: '#0F172A' }}>{u.displayName}</div>
+                          <div style={{ fontSize: 12, color: '#64748B' }}>{u.username} • {u.role}</div>
+                        </button>
+                      )))}
+                  </div>
+                </div>
+
+                <textarea
+                  value={delegateComment}
+                  onChange={(e) => setDelegateComment(e.target.value)}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    borderRadius: 12,
+                    border: '1px solid #CBD5E1',
+                    padding: 12,
+                    fontSize: 14,
+                    outline: 'none'
+                  }}
+                  placeholder="سبب الإحالة (مطلوب)"
+                />
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <Button variant="outline" disabled={processing} onClick={() => setDelegateModal({ open: false, selectedUserId: null })}>
+                    {t('cancel')}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    disabled={processing}
+                    onClick={async () => {
+                      const delegatedToUserId = delegateModal.selectedUserId
+                      const comment = delegateComment.trim()
+                      if (!delegatedToUserId) {
+                        alert('اختر موظف من القائمة')
+                        return
+                      }
+                      if (!comment) {
+                        alert('سبب الإحالة مطلوب')
+                        return
+                      }
+                      try {
+                        setProcessing(true)
+                        const res = await fetch(`/api/hr/requests/${params.id}/delegate`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ delegatedToUserId, comment })
+                        })
+                        const data = await res.json().catch(() => ({}))
+                        if (!res.ok) throw new Error(data?.error || 'فشل')
+                        setDelegateModal({ open: false, selectedUserId: null })
+                        await fetchRequest()
+                      } catch (e: any) {
+                        alert(e?.message || 'حدث خطأ')
+                      } finally {
+                        setProcessing(false)
+                      }
+                    }}
+                  >
+                    تأكيد الإحالة
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
