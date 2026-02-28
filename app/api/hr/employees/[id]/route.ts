@@ -53,6 +53,10 @@ export async function GET(
     const employee = await prisma.employee.findUnique({
       where: { id },
       include: {
+        branch: true,
+        stage: true,
+        departmentRef: true,
+        jobTitleRef: true,
         leaves: {
           orderBy: { createdAt: 'desc' },
           take: 10
