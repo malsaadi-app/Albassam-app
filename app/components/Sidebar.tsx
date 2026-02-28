@@ -71,7 +71,7 @@ export default function Sidebar() {
       const res = await fetch('/api/sidebar/counts');
       if (res.ok) {
         const data = await res.json();
-        setPendingRequestsCount(data.pendingRequests || 0);
+        setPendingRequestsCount(data.pendingApprovals || 0);
         setUnreadNotificationsCount(data.unreadNotifications || 0);
       }
     } catch (error) {
@@ -102,6 +102,7 @@ export default function Sidebar() {
         { href: '/tasks', icon: <HiOutlineClipboardList size={18} />, label: t('tasks') },
         { href: '/attendance', icon: <HiOutlineClock size={18} />, label: t('attendance') },
         { href: '/notifications', icon: <HiOutlineBell size={18} />, label: t('notifications'), badge: unreadNotificationsCount },
+        { href: '/workflows/approvals', icon: <HiOutlineClipboardCheck size={18} />, label: t('workflowApprovals'), badge: pendingRequestsCount },
       ]
     },
     {
@@ -111,7 +112,7 @@ export default function Sidebar() {
       items: [
         { href: '/hr/employees', icon: <HiOutlineUser size={18} />, label: t('employees') },
         { href: '/hr/leaves', icon: <HiOutlineDocumentText size={18} />, label: t('leaves') },
-        { href: '/hr/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('hrRequests'), badge: pendingRequestsCount },
+        { href: '/hr/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('hrRequests') },
         { href: '/hr/attendance', icon: <HiOutlineClock size={18} />, label: t('attendance') },
         { href: '/hr/attendance/correction', icon: <HiOutlinePencil size={18} />, label: t('attendanceRequests') },
         { href: '/hr/job-applications', icon: <HiOutlineUserAdd size={18} />, label: t('jobApplications') },
@@ -206,6 +207,7 @@ export default function Sidebar() {
             { href: '/dashboard', icon: <HiOutlineViewGrid size={18} />, label: t('home') },
             { href: '/attendance', icon: <HiOutlineClock size={18} />, label: t('attendance') },
             { href: '/notifications', icon: <HiOutlineBell size={18} />, label: t('notifications'), badge: unreadNotificationsCount },
+            { href: '/workflows/approvals', icon: <HiOutlineClipboardCheck size={18} />, label: t('workflowApprovals'), badge: pendingRequestsCount },
           ]
         },
         {
@@ -213,7 +215,7 @@ export default function Sidebar() {
           icon: <HiOutlineUserGroup size={18} />,
           label: t('hr'),
           items: [
-            { href: '/hr/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('hrRequests'), badge: pendingRequestsCount },
+            { href: '/hr/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('hrRequests') },
           ]
         },
         {
