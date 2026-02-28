@@ -193,10 +193,58 @@ export default function HRRequestDetailPage() {
                 {request.employee?.displayName || '-'}
               </p>
             </div>
-            {request.description && (
+            {/* Show key fields depending on request type */}
+            {request.type === 'LEAVE' && (
               <div>
-                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginBottom: '4px' }}>{t('description')}</p>
-                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600' }}>{request.description}</p>
+                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginBottom: '4px' }}>{t('leaveType')}</p>
+                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '800' }}>{request.leaveType || '-'}</p>
+                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginTop: 10, marginBottom: '4px' }}>{t('startDate')}</p>
+                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600' }}>{request.startDate ? new Date(request.startDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-'}</p>
+                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginTop: 10, marginBottom: '4px' }}>{t('endDate')}</p>
+                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600' }}>{request.endDate ? new Date(request.endDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-'}</p>
+              </div>
+            )}
+
+            {(request.type === 'VISA_EXIT_REENTRY_SINGLE' || request.type === 'VISA_EXIT_REENTRY_MULTI') && (
+              <div>
+                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginBottom: '4px' }}>{t('departureDate')}</p>
+                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600' }}>{request.departureDate ? new Date(request.departureDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-'}</p>
+                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginTop: 10, marginBottom: '4px' }}>{t('returnDate')}</p>
+                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600' }}>{request.returnDate ? new Date(request.returnDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-'}</p>
+                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginTop: 10, marginBottom: '4px' }}>{t('reason')}</p>
+                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600', whiteSpace: 'pre-wrap' }}>{request.reason || '-'}</p>
+              </div>
+            )}
+
+            {(request.type === 'TICKET_ALLOWANCE' || request.type === 'FLIGHT_BOOKING') && (
+              <div>
+                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginBottom: '4px' }}>{t('destination')}</p>
+                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600' }}>{request.destination || '-'}</p>
+              </div>
+            )}
+
+            {request.type === 'SALARY_CERTIFICATE' && (
+              <div>
+                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginBottom: '4px' }}>{t('purpose')}</p>
+                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600', whiteSpace: 'pre-wrap' }}>{request.purpose || '-'}</p>
+              </div>
+            )}
+
+            {request.type === 'HOUSING_ALLOWANCE' && (
+              <div>
+                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginBottom: '4px' }}>{t('amount')}</p>
+                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '800' }}>{request.amount ?? '-'}</p>
+                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginTop: 10, marginBottom: '4px' }}>{t('period')}</p>
+                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600' }}>{request.period || '-'}</p>
+              </div>
+            )}
+
+            {request.type === 'RESIGNATION' && (
+              <div>
+                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginBottom: '4px' }}>{t('endDate')}</p>
+                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600' }}>{request.endDate ? new Date(request.endDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-'}</p>
+                <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginTop: 10, marginBottom: '4px' }}>{t('reason')}</p>
+                <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600', whiteSpace: 'pre-wrap' }}>{request.reason || '-'}</p>
               </div>
             )}
             <div>
