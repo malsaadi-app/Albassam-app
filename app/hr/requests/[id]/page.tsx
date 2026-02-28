@@ -18,6 +18,11 @@ export default function HRRequestDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionCtx, setActionCtx] = useState<any>(null);
   const [processing, setProcessing] = useState(false);
+  const [actionModal, setActionModal] = useState<{ open: boolean; action: 'approve' | 'reject' | null }>({
+    open: false,
+    action: null
+  });
+  const [actionComment, setActionComment] = useState('');
 
   useEffect(() => {
     if (params.id) fetchRequest();
@@ -136,25 +141,9 @@ export default function HRRequestDetailPage() {
                 <Button
                   variant="primary"
                   disabled={processing}
-                  onClick={async () => {
-                    try {
-                      setProcessing(true)
-                      const comment = prompt('تعليق الموافقة (مطلوب)')
-                      if (!comment || comment.trim().length === 0) return
-
-                      const res = await fetch(`/api/hr/requests/${params.id}/process-step`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'approve', comment })
-                      })
-                      const data = await res.json().catch(() => ({}))
-                      if (!res.ok) throw new Error(data?.error || 'فشل')
-                      await fetchRequest()
-                    } catch (e: any) {
-                      alert(e?.message || 'حدث خطأ')
-                    } finally {
-                      setProcessing(false)
-                    }
+                  onClick={() => {
+                    setActionComment('')
+                    setActionModal({ open: true, action: 'approve' })
                   }}
                 >
                   ✅ اعتماد
@@ -163,28 +152,124 @@ export default function HRRequestDetailPage() {
                 <Button
                   variant="outline"
                   disabled={processing}
-                  onClick={async () => {
-                    const reason = prompt('سبب الرفض (مطلوب)')
-                    if (!reason || reason.trim().length === 0) return
-                    try {
-                      setProcessing(true)
-                      const res = await fetch(`/api/hr/requests/${params.id}/process-step`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'reject', comment: reason })
-                      })
-                      const data = await res.json().catch(() => ({}))
-                      if (!res.ok) throw new Error(data?.error || 'فشل')
-                      await fetchRequest()
-                    } catch (e: any) {
-                      alert(e?.message || 'حدث خطأ')
-                    } finally {
-                      setProcessing(false)
-                    }
+                  onClick={() => {
+                    setActionComment('')
+                    setActionModal({ open: true, action: 'reject' })
                   }}
                 >
                   ❌ رفض
                 </Button>
+              </div>
+            )}
+
+            {actionModal.open && actionModal.action && (
+              <div
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  background: 'rgba(15, 23, 42, 0.45)',
+                  zIndex: 80,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 16
+                }}
+                onClick={() => {
+                  if (processing) return
+                  setActionModal({ open: false, action: null })
+                }}
+              >
+                <div
+                  dir={dir}
+                  style={{
+                    width: '100%',
+                    maxWidth: 520,
+                    background: '#FFFFFF',
+                    borderRadius: 16,
+                    border: '1px solid #E2E8F0',
+                    boxShadow: '0 12px 30px rgba(0,0,0,0.15)',
+                    padding: 16
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                    <div style={{ fontWeight: 900, fontSize: 16, color: '#0F172A' }}>
+                      {actionModal.action === 'approve' ? 'تعليق الموافقة (مطلوب)' : 'سبب الرفض (مطلوب)'}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActionModal({ open: false, action: null })}
+                      disabled={processing}
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        fontSize: 20,
+                        cursor: 'pointer',
+                        color: '#64748B'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div style={{ marginTop: 12 }}>
+                    <textarea
+                      value={actionComment}
+                      onChange={(e) => setActionComment(e.target.value)}
+                      rows={4}
+                      style={{
+                        width: '100%',
+                        borderRadius: 12,
+                        border: '1px solid #CBD5E1',
+                        padding: 12,
+                        fontSize: 14,
+                        outline: 'none'
+                      }}
+                      placeholder={actionModal.action === 'approve' ? 'اكتب تعليق الموافقة...' : 'اكتب سبب الرفض...'}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+                    <Button
+                      variant="outline"
+                      disabled={processing}
+                      onClick={() => setActionModal({ open: false, action: null })}
+                    >
+                      {t('cancel')}
+                    </Button>
+                    <Button
+                      variant={actionModal.action === 'approve' ? 'primary' : 'danger'}
+                      disabled={processing}
+                      onClick={async () => {
+                        const comment = actionComment.trim()
+                        if (!comment) {
+                          alert(actionModal.action === 'approve' ? 'تعليق الموافقة مطلوب' : 'سبب الرفض مطلوب')
+                          return
+                        }
+
+                        try {
+                          setProcessing(true)
+                          const res = await fetch(`/api/hr/requests/${params.id}/process-step`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: actionModal.action, comment })
+                          })
+                          const data = await res.json().catch(() => ({}))
+                          if (!res.ok) throw new Error(data?.error || 'فشل')
+
+                          setActionModal({ open: false, action: null })
+                          await fetchRequest()
+                        } catch (e: any) {
+                          alert(e?.message || 'حدث خطأ')
+                        } finally {
+                          setProcessing(false)
+                        }
+                      }}
+                    >
+                      {actionModal.action === 'approve' ? 'اعتماد' : 'رفض'}
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
