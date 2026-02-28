@@ -16,14 +16,37 @@ export async function GET(request: NextRequest) {
         id: true,
         username: true,
         displayName: true,
-        role: true
+        role: true,
+        employee: {
+          select: {
+            fullNameAr: true,
+            fullNameEn: true,
+            position: true,
+            department: true,
+            jobTitleRef: { select: { nameAr: true, nameEn: true } }
+          }
+        }
       },
       orderBy: {
         displayName: 'asc'
       }
     });
 
-    return NextResponse.json(users);
+    const shaped = users.map((u) => {
+      const emp = u.employee as any
+      const name = emp?.fullNameAr || u.displayName
+      const jobTitle = emp?.jobTitleRef?.nameAr || emp?.position || ''
+      return {
+        id: u.id,
+        username: u.username,
+        displayName: name,
+        jobTitle,
+        department: emp?.department || '',
+        role: u.role
+      }
+    })
+
+    return NextResponse.json(shaped);
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(

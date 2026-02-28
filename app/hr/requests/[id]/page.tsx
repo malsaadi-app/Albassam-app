@@ -649,7 +649,11 @@ export default function HRRequestDetailPage() {
                           }}
                         >
                           <div style={{ fontWeight: 900, color: '#0F172A' }}>{u.displayName}</div>
-                          <div style={{ fontSize: 12, color: '#64748B' }}>{u.username} • {u.role}</div>
+                          <div style={{ fontSize: 12, color: '#64748B' }}>
+                            {(u.jobTitle || '').trim() ? u.jobTitle : u.role}
+                            {' • '}
+                            {u.username}
+                          </div>
                         </button>
                       )))}
                   </div>
