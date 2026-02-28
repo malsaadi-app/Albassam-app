@@ -82,6 +82,10 @@ model User {
   maintenanceManagerSettings   MaintenanceRoutingSettings[] @relation("MaintenanceManagerUser")
   maintenanceBranchForwardings MaintenanceBranchForwarder[] @relation("MaintenanceBranchForwarderUser")
 
+  // Petty cash top-ups
+  pettyCashTopUpRequested PettyCashTopUpRequest[] @relation("PettyCashTopUpRequestedBy")
+  pettyCashTopUpApproved  PettyCashTopUpRequest[] @relation("PettyCashTopUpApprovedBy")
+
   @@index([role])
   @@index([roleId])
   @@index([telegramId])
@@ -1997,11 +2001,14 @@ model FinanceRequest {
   requestNumber String @unique
 
   // Business type
-  type            String // GOV_FEE, BILL_PAYMENT, REIMBURSEMENT, PETTY_CASH
-  title           String
-  description     String?
-  amount          Float
-  beneficiaryName String?
+  type String // GOV_FEE, BILL_PAYMENT, REIMBURSEMENT, PETTY_CASH
+
+  // Petty cash fields
+  pettyCashInitialAmount Float?
+  title                  String
+  description            String?
+  amount                 Float
+  beneficiaryName        String?
 
   // Attachments JSON: [{name,url}] or file paths
   attachments String?
@@ -2044,6 +2051,8 @@ model FinanceRequest {
   accountant        User? @relation("FinanceAccountant", fields: [accountantUserId], references: [id])
   financeManager    User? @relation("FinanceManager", fields: [financeManagerUserId], references: [id])
 
+  pettyCashSettlement PettyCashSettlement?
+
   @@index([requesterId])
   @@index([status])
   @@index([currentStep])
@@ -2052,6 +2061,89 @@ model FinanceRequest {
   @@index([departmentManagerUserId])
   @@index([accountantUserId])
   @@index([financeManagerUserId])
+}
+
+enum PettyCashSettlementStatus {
+  DRAFT
+  SUBMITTED
+  ACCOUNTANT_APPROVED
+  FINANCE_MANAGER_APPROVED
+  REJECTED
+  CLOSED
+}
+
+enum PettyCashTopUpStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+model PettyCashSettlement {
+  id               String         @id @default(cuid())
+  financeRequestId String         @unique
+  financeRequest   FinanceRequest @relation(fields: [financeRequestId], references: [id], onDelete: Cascade)
+
+  status      PettyCashSettlementStatus @default(DRAFT)
+  submittedAt DateTime?
+
+  accountantComment     String?
+  financeManagerComment String?
+  rejectionReason       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items  PettyCashExpenseItem[]
+  topUps PettyCashTopUpRequest[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PettyCashExpenseItem {
+  id           String              @id @default(cuid())
+  settlementId String
+  settlement   PettyCashSettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  date        DateTime?
+  vendor      String?
+  description String
+  amount      Float
+  attachments String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([settlementId])
+}
+
+model PettyCashTopUpRequest {
+  id           String              @id @default(cuid())
+  settlementId String
+  settlement   PettyCashSettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  amount Float
+  reason String
+  status PettyCashTopUpStatus @default(PENDING)
+
+  requestedById String
+  requestedBy   User   @relation("PettyCashTopUpRequestedBy", fields: [requestedById], references: [id])
+
+  approvedById String?
+  approvedBy   User?     @relation("PettyCashTopUpApprovedBy", fields: [approvedById], references: [id])
+  approvedAt   DateTime?
+
+  rejectionReason String?
+
+  paidAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([settlementId])
+  @@index([status])
+  @@index([requestedById])
 }
 
 // ==================== WORKFLOW SYSTEM ====================
