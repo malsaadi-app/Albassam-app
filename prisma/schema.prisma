@@ -75,6 +75,10 @@ model User {
   financeRequestsApproved FinanceRequest[]      @relation("FinanceApprover")
   workflowApprovals       WorkflowApprovalLog[] @relation("WorkflowApprovals")
 
+  // Maintenance routing
+  maintenanceManagerSettings   MaintenanceRoutingSettings[] @relation("MaintenanceManagerUser")
+  maintenanceBranchForwardings MaintenanceBranchForwarder[] @relation("MaintenanceBranchForwarderUser")
+
   @@index([role])
   @@index([roleId])
   @@index([telegramId])
@@ -966,7 +970,8 @@ model Branch {
   assets              Asset[]
 
   // Workflows
-  workflowBranches WorkflowBranch[]
+  workflowBranches           WorkflowBranch[]
+  maintenanceBranchForwarder MaintenanceBranchForwarder?
 
   @@index([name])
   @@index([type])
@@ -1044,6 +1049,29 @@ enum MaintenanceRole {
   IT_MANAGER
   BUILDING_TECH
   IT_TECH
+}
+
+// ==================== MAINTENANCE ROUTING (branch forwarder + global manager) ====================
+model MaintenanceRoutingSettings {
+  id                       String   @id @default(cuid())
+  maintenanceManagerUserId String?
+  maintenanceManager       User?    @relation("MaintenanceManagerUser", fields: [maintenanceManagerUserId], references: [id])
+  updatedAt                DateTime @updatedAt
+
+  @@index([maintenanceManagerUserId])
+}
+
+model MaintenanceBranchForwarder {
+  id        String   @id @default(cuid())
+  branchId  String
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("MaintenanceBranchForwarderUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([branchId])
+  @@index([userId])
 }
 
 enum MaintenanceType {

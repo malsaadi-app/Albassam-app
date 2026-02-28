@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { getApproverUserIdsForHRRequestStep } from '@/lib/hrWorkflowRouting'
 import { approvalAudienceForRole } from '@/lib/approvalsPolicy'
+import { getBranchForwarderUserId, getMaintenanceManagerUserId } from '@/lib/maintenance/routing'
 
 export type PendingApprovalItem = {
   id: string
@@ -167,6 +168,58 @@ export async function getPendingApprovals(params: {
         action: 'اعتماد إضافة مورد',
         url: `/procurement/suppliers/requests/${req.id}`
       })
+    }
+  }
+
+  // 5) Maintenance Requests (branch review or global maintenance manager)
+  {
+    const managerUserId = await getMaintenanceManagerUserId()
+
+    // Branch forwarder queue: status SUBMITTED
+    const branchForwarderRequests = await prisma.maintenanceRequest.findMany({
+      where: { status: 'SUBMITTED' },
+      include: { branch: true, requestedBy: true },
+      orderBy: { createdAt: 'desc' },
+      take: 30
+    })
+
+    for (const r of branchForwarderRequests) {
+      const forwarderUserId = await getBranchForwarderUserId(r.branchId)
+      if (forwarderUserId && forwarderUserId === userId) {
+        pendingApprovals.push({
+          id: r.id,
+          type: 'maintenance_request',
+          title: `طلب صيانة ${r.requestNumber} - ${r.branch.name}`,
+          submittedBy: r.requestedBy.fullNameAr,
+          submittedAt: r.createdAt,
+          status: r.status,
+          action: 'تدقيق الفرع',
+          url: `/maintenance/requests/${r.id}`
+        })
+      }
+    }
+
+    // Global maintenance manager queue: status UNDER_REVIEW
+    if (managerUserId && managerUserId === userId) {
+      const managerRequests = await prisma.maintenanceRequest.findMany({
+        where: { status: 'UNDER_REVIEW' },
+        include: { branch: true, requestedBy: true },
+        orderBy: { createdAt: 'desc' },
+        take: 30
+      })
+
+      for (const r of managerRequests) {
+        pendingApprovals.push({
+          id: r.id,
+          type: 'maintenance_request',
+          title: `طلب صيانة ${r.requestNumber} - ${r.branch.name}`,
+          submittedBy: r.requestedBy.fullNameAr,
+          submittedAt: r.createdAt,
+          status: r.status,
+          action: 'مراجعة مدير الصيانة',
+          url: `/maintenance/requests/${r.id}`
+        })
+      }
     }
   }
 

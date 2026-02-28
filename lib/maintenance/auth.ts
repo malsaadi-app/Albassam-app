@@ -8,6 +8,7 @@ import {
   type Employee,
   type MaintenanceRequest
 } from '@prisma/client'
+import { getMaintenanceManagerUserId } from '@/lib/maintenance/routing'
 
 export type MaintenanceAccess = {
   sessionUserId: string
@@ -15,6 +16,7 @@ export type MaintenanceAccess = {
   employee: Employee | null
   maintenanceRole: MaintenanceRole | null
   maintenanceTeam: MaintenanceTeam | null
+  isGlobalMaintenanceManager: boolean
 }
 
 export async function getMaintenanceAccess(): Promise<MaintenanceAccess> {
@@ -29,18 +31,23 @@ export async function getMaintenanceAccess(): Promise<MaintenanceAccess> {
     where: { userId: session.user.id }
   })
 
+  const managerUserId = await getMaintenanceManagerUserId()
+  const isGlobalMaintenanceManager = managerUserId ? session.user.id === managerUserId : false
+
   return {
     sessionUserId: session.user.id,
     isAdmin,
     employee,
     maintenanceRole: (employee?.maintenanceRole as MaintenanceRole | null) ?? null,
-    maintenanceTeam: (employee?.maintenanceTeam as MaintenanceTeam | null) ?? null
+    maintenanceTeam: (employee?.maintenanceTeam as MaintenanceTeam | null) ?? null,
+    isGlobalMaintenanceManager
   }
 }
 
 export function isMaintenanceManager(access: MaintenanceAccess) {
   return (
     access.isAdmin ||
+    access.isGlobalMaintenanceManager ||
     access.maintenanceRole === 'BUILDING_MANAGER' ||
     access.maintenanceRole === 'IT_MANAGER'
   )
