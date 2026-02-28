@@ -17,6 +17,7 @@ export default function FinanceRequestDetailsPage() {
   const [loading, setLoading] = useState(true)
 
   const [comment, setComment] = useState('')
+  const [uploading, setUploading] = useState(false)
 
   const fetchOne = async () => {
     setLoading(true)
@@ -33,6 +34,40 @@ export default function FinanceRequestDetailsPage() {
   useEffect(() => {
     fetchOne()
   }, [id])
+
+  const uploadFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    try {
+      for (const file of Array.from(files)) {
+        const fd = new FormData()
+        fd.append('file', file)
+        const res = await fetch('/api/upload/approvals', { method: 'POST', body: fd })
+        const u = await res.json()
+        if (!res.ok) {
+          alert(u.error || 'فشل رفع الملف')
+          continue
+        }
+
+        const addRes = await fetch(`/api/finance/requests/${id}/attachments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attachment: { name: u.filename, url: u.path } })
+        })
+
+        const addData = await addRes.json()
+        if (!addRes.ok) {
+          alert(addData.error || 'فشل حفظ المرفق')
+          continue
+        }
+
+        setData((prev: any) => ({ ...prev, attachments: addData.attachments }))
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const act = async (action: 'approve' | 'reject') => {
     const res = await fetch(`/api/finance/requests/${id}/process-step`, {
@@ -110,10 +145,23 @@ export default function FinanceRequestDetailsPage() {
           {data.description && <div style={{ marginTop: 12 }}>{data.description}</div>}
           {data.beneficiaryName && <div style={{ marginTop: 8, color: '#6B7280' }}>المستفيد: {data.beneficiaryName}</div>}
 
-          {data.attachments?.length ? (
-            <div style={{ marginTop: 12 }}>
-              <div style={{ fontWeight: 800, marginBottom: 6 }}>المرفقات</div>
-              <ul>
+          <div style={{ marginTop: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ fontWeight: 800 }}>المرفقات</div>
+              <label style={{ fontSize: 12, color: '#6B7280' }}>
+                <input
+                  type="file"
+                  multiple
+                  accept="application/pdf,image/png,image/jpeg"
+                  onChange={(e) => uploadFiles(e.target.files)}
+                  disabled={uploading}
+                />
+                <span style={{ marginRight: 8 }}>{uploading ? 'جاري الرفع...' : 'إضافة مرفقات'}</span>
+              </label>
+            </div>
+
+            {data.attachments?.length ? (
+              <ul style={{ marginTop: 8 }}>
                 {data.attachments.map((a: any, idx: number) => (
                   <li key={idx}>
                     <a href={a.url} target="_blank" rel="noreferrer">
@@ -122,8 +170,10 @@ export default function FinanceRequestDetailsPage() {
                   </li>
                 ))}
               </ul>
-            </div>
-          ) : null}
+            ) : (
+              <div style={{ marginTop: 8, fontSize: 12, color: '#6B7280' }}>لا توجد مرفقات</div>
+            )}
+          </div>
 
           {data.status === 'REJECTED' && data.rejectionReason ? (
             <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: '#FEE2E2', color: '#991B1B' }}>
