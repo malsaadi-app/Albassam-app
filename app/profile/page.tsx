@@ -17,9 +17,22 @@ type User = {
   notificationsEnabled: boolean;
 };
 
+type EmployeeSummary = {
+  id: string;
+  fullNameAr: string;
+  fullNameEn: string | null;
+  nationalId: string;
+  employeeNumber: string;
+  jobTitle: string | null;
+  department: string | null;
+  branch: { id: string; name: string } | null;
+  stage: { id: string; name: string } | null;
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [employee, setEmployee] = useState<EmployeeSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -36,13 +49,14 @@ export default function ProfilePage() {
 
   const fetchUser = async () => {
     try {
-      const res = await fetch('/api/tasks');
+      const res = await fetch('/api/auth/me');
       if (res.status === 401) {
         router.push('/');
         return;
       }
       const data = await res.json();
       setUser(data.user);
+      setEmployee(data.employee || null);
       setTelegramId(data.user.telegramId || '');
       setNotificationsEnabled(data.user.notificationsEnabled ?? true);
     } catch (error) {
@@ -279,6 +293,46 @@ export default function ProfilePage() {
             )}
           </div>
         </Card>
+
+        {/* Employee Info Card */}
+        {employee && (
+          <Card variant="default" className="mb-6">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <span style={{ fontSize: '28px' }}>🧾</span>
+              <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#111827', margin: 0 }}>بيانات الموظف</h3>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '16px',
+              padding: '16px',
+              background: '#F9FAFB',
+              borderRadius: '12px'
+            }}>
+              <div>
+                <p style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginBottom: '6px' }}>الاسم</p>
+                <p style={{ fontSize: '15px', fontWeight: '800', color: '#111827' }}>{employee.fullNameAr}</p>
+              </div>
+              {employee.jobTitle && (
+                <div>
+                  <p style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginBottom: '6px' }}>المسمى الوظيفي</p>
+                  <p style={{ fontSize: '15px', fontWeight: '700', color: '#111827' }}>{employee.jobTitle}</p>
+                </div>
+              )}
+              {employee.branch?.name && (
+                <div>
+                  <p style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginBottom: '6px' }}>المنشأة</p>
+                  <p style={{ fontSize: '15px', fontWeight: '700', color: '#111827' }}>{employee.branch.name}</p>
+                </div>
+              )}
+              <div>
+                <p style={{ fontSize: '13px', fontWeight: '600', color: '#6B7280', marginBottom: '6px' }}>رقم الهوية/الإقامة</p>
+                <p style={{ fontSize: '15px', fontWeight: '700', color: '#111827', fontFamily: 'monospace' }}>{employee.nationalId}</p>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Telegram Settings Card */}
         <Card variant="default" className="mb-6">
