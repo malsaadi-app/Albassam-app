@@ -31,6 +31,14 @@ const BRANCH_MANAGER_FIRST_STEP_TYPES = new Set([
   'RESIGNATION'
 ])
 
+// Educational chain (boys branch only for now)
+const EDUCATIONAL_CHAIN_TYPES = new Set([
+  'LEAVE',
+  'VISA_EXIT_REENTRY_SINGLE',
+  'VISA_EXIT_REENTRY_MULTI',
+  'RESIGNATION'
+])
+
 const HR_FIRST_STEP_TYPES = new Set([
   'TICKET_ALLOWANCE',
   'HOUSING_ALLOWANCE',
@@ -55,7 +63,14 @@ async function main() {
 
     let steps = []
 
-    if (BRANCH_MANAGER_FIRST_STEP_TYPES.has(rt)) {
+    if (EDUCATIONAL_CHAIN_TYPES.has(rt)) {
+      steps = [
+        { order: 0, statusName: 'اعتماد مدير المرحلة' },
+        { order: 1, statusName: 'اعتماد نائب الرئيس للشؤون التعليمية' },
+        { order: 2, statusName: 'مراجعة الموارد البشرية' },
+        { order: 3, statusName: 'اعتماد نهائي' },
+      ]
+    } else if (BRANCH_MANAGER_FIRST_STEP_TYPES.has(rt)) {
       steps = [
         { order: 0, statusName: 'اعتماد المدير المباشر' },
         { order: 1, statusName: 'مراجعة الموارد البشرية' },

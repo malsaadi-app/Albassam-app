@@ -2,7 +2,7 @@ import prisma from '@/lib/prisma'
 
 export type HRWorkflowActorKind = 'DIRECT_MANAGER' | 'HR_REVIEWER' | 'ADMIN'
 
-// Which request types require branch manager as first step
+// Which request types require direct manager as first step
 const BRANCH_MANAGER_FIRST_STEP_TYPES = new Set<string>([
   'LEAVE',
   'UNPAID_LEAVE',
@@ -11,6 +11,16 @@ const BRANCH_MANAGER_FIRST_STEP_TYPES = new Set<string>([
   'VISA_EXIT_REENTRY_MULTI',
   'RESIGNATION'
 ])
+
+// Educational chain (boys branch only for now)
+const EDUCATIONAL_CHAIN_TYPES = new Set<string>([
+  'LEAVE',
+  'VISA_EXIT_REENTRY_SINGLE',
+  'VISA_EXIT_REENTRY_MULTI',
+  'RESIGNATION'
+])
+
+const BOYS_BRANCH_NAME = 'مجمع البسام الأهلية بنين'
 
 // Which request types start in HR (HR employee prepares/reviews first)
 const HR_EMPLOYEE_FIRST_STEP_TYPES = new Set<string>([
@@ -41,6 +51,20 @@ async function getRequesterBranchId(requesterUserId: string): Promise<string | n
     select: { branchId: true }
   })
   return emp?.branchId || null
+}
+
+async function isBoysBranch(branchId: string | null): Promise<boolean> {
+  if (!branchId) return false
+  const b = await prisma.branch.findUnique({ where: { id: branchId }, select: { name: true } })
+  return b?.name === BOYS_BRANCH_NAME
+}
+
+async function getVpEducationalUserIdForBranch(branchId: string): Promise<string | null> {
+  const s = await prisma.educationalRoutingSettings.findUnique({
+    where: { branchId },
+    select: { vpEducationalUserId: true }
+  })
+  return s?.vpEducationalUserId || null
 }
 
 async function getHrReviewerUserIdsForBranch(branchId: string): Promise<string[]> {
@@ -115,6 +139,17 @@ export async function getApproverUserIdsForHRRequestStep(params: {
 
   // Step 1
   if (stepOrder === 1) {
+    if (EDUCATIONAL_CHAIN_TYPES.has(requestType)) {
+      // Boys branch: VP educational affairs step
+      if (await isBoysBranch(branchId)) {
+        const vpId = branchId ? await getVpEducationalUserIdForBranch(branchId) : null
+        return { userIds: vpId ? [vpId] : [], actor: 'DIRECT_MANAGER', labelAr: 'اعتماد نائب الرئيس للشؤون التعليمية' }
+      }
+
+      // Non-boys branches: skip VP step (handled by auto-skip in API)
+      return { userIds: [], actor: 'DIRECT_MANAGER', labelAr: 'اعتماد نائب الرئيس للشؤون التعليمية' }
+    }
+
     if (BRANCH_MANAGER_FIRST_STEP_TYPES.has(requestType)) {
       // After manager approval, HR reviewers (by branch coverage)
       if (branchId) {
@@ -130,8 +165,25 @@ export async function getApproverUserIdsForHRRequestStep(params: {
     return { userIds: admins, actor: 'ADMIN', labelAr: 'اعتماد نهائي' }
   }
 
-  // Step 2 (admin final) for manager-first flows
+  // Step 2
   if (stepOrder === 2) {
+    if (EDUCATIONAL_CHAIN_TYPES.has(requestType)) {
+      // HR review after VP (or after skip)
+      if (branchId) {
+        const hrIds = await getHrReviewerUserIdsForBranch(branchId)
+        return { userIds: hrIds, actor: 'HR_REVIEWER', labelAr: 'مراجعة الموارد البشرية' }
+      }
+      const fallback = await prisma.user.findMany({ where: { role: 'HR_EMPLOYEE' }, select: { id: true } })
+      return { userIds: fallback.map((u) => u.id), actor: 'HR_REVIEWER', labelAr: 'مراجعة الموارد البشرية' }
+    }
+
+    // admin final for manager-first flows
+    const admins = await getAdminUserIds()
+    return { userIds: admins, actor: 'ADMIN', labelAr: 'اعتماد نهائي' }
+  }
+
+  // Step 3 (admin final) for educational chain
+  if (stepOrder === 3) {
     const admins = await getAdminUserIds()
     return { userIds: admins, actor: 'ADMIN', labelAr: 'اعتماد نهائي' }
   }
@@ -140,6 +192,9 @@ export async function getApproverUserIdsForHRRequestStep(params: {
 }
 
 export function getExpectedHRWorkflowStepCount(requestType: string): number {
+  // Educational chain (boys branch): manager -> VP -> HR -> admin
+  if (EDUCATIONAL_CHAIN_TYPES.has(requestType)) return 4
+
   // Manager-first flows: manager -> HR -> admin
   if (BRANCH_MANAGER_FIRST_STEP_TYPES.has(requestType)) return 3
 

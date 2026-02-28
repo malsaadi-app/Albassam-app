@@ -220,58 +220,103 @@ export async function POST(
           }
         });
       } else {
-        // Move to next step
-        const nextStep = workflow.steps[nextStepIndex];
-        
-        updatedRequest = await prisma.hRRequest.update({
-          where: { id },
-          data: {
-            status: 'PENDING_APPROVAL', // Keep enum-compatible status
-            currentWorkflowStep: nextStepIndex,
-            reviewComment: validatedData.comment || null,
-            reviewedBy: session.user.id,
-            reviewedAt: new Date()
-          }
-        });
+        // Move to next actionable step (auto-skip empty routed steps)
+        let candidateIndex = nextStepIndex;
+        let nextStep = workflow.steps[candidateIndex];
+        let nextUserIds: string[] = [];
 
-        await createHRRequestAuditLog(prisma, {
-          requestId: id,
-          actorUserId: session.user.id,
-          action: 'STEP_APPROVED',
-          message: `تمت الموافقة في خطوة: ${currentStep.statusName}. تحول إلى: ${nextStep.statusName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
-        });
+        while (nextStep && candidateIndex < workflow.steps.length) {
+          const routed = await (await import('@/lib/hrWorkflowRouting')).getApproverUserIdsForHRRequestStep({
+            requestType: hrRequest.type,
+            requesterUserId: hrRequest.employeeId,
+            stepOrder: nextStep.order
+          });
 
-        // Notify next responsible person (dynamic)
-        const { userIds: nextUserIds } = await (await import('@/lib/hrWorkflowRouting')).getApproverUserIdsForHRRequestStep({
-          requestType: hrRequest.type,
-          requesterUserId: hrRequest.employeeId,
-          stepOrder: nextStep.order
-        });
+          nextUserIds = routed.userIds;
+          if (nextUserIds.length > 0) break;
 
-        for (const userId of nextUserIds) {
+          candidateIndex++;
+          nextStep = workflow.steps[candidateIndex];
+        }
+
+        const reachedEnd = !nextStep || candidateIndex >= workflow.steps.length;
+
+        if (reachedEnd) {
+          // No further approvers found; treat as final approval
+          updatedRequest = await prisma.hRRequest.update({
+            where: { id },
+            data: {
+              status: 'APPROVED',
+              approvalComment: validatedData.comment || null,
+              approvedBy: session.user.id,
+              approvedAt: new Date(),
+              currentWorkflowStep: workflow.steps.length
+            }
+          });
+
+          await createHRRequestAuditLog(prisma, {
+            requestId: id,
+            actorUserId: session.user.id,
+            action: 'APPROVED',
+            message: `موافقة نهائية (تخطي تلقائي للخطوات الفارغة): ${currentStep.statusName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
+          });
+
           await prisma.notification.create({
             data: {
-              userId,
-              title: 'طلب بانتظار موافقتك',
-              message: `طلب ${getRequestTypeArabic(hrRequest.type)} من ${hrRequest.employee.displayName} في مرحلة: ${nextStep.statusName}`,
-              type: 'request_pending',
+              userId: hrRequest.employeeId,
+              title: 'طلب موافق عليه',
+              message: `تمت الموافقة على طلب ${getRequestTypeArabic(hrRequest.type)} الخاص بك`,
+              type: 'request_approved',
+              relatedId: hrRequest.id,
+              isRead: false
+            }
+          });
+        } else {
+          updatedRequest = await prisma.hRRequest.update({
+            where: { id },
+            data: {
+              status: 'PENDING_APPROVAL',
+              currentWorkflowStep: candidateIndex,
+              reviewComment: validatedData.comment || null,
+              reviewedBy: session.user.id,
+              reviewedAt: new Date()
+            }
+          });
+
+          await createHRRequestAuditLog(prisma, {
+            requestId: id,
+            actorUserId: session.user.id,
+            action: 'STEP_APPROVED',
+            message: `تمت الموافقة في خطوة: ${currentStep.statusName}. تحول إلى: ${nextStep.statusName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
+          });
+
+          // Notify next responsible person(s)
+          for (const userId of nextUserIds) {
+            await prisma.notification.create({
+              data: {
+                userId,
+                title: 'طلب بانتظار موافقتك',
+                message: `طلب ${getRequestTypeArabic(hrRequest.type)} من ${hrRequest.employee.displayName} في مرحلة: ${nextStep.statusName}`,
+                type: 'request_pending',
+                relatedId: hrRequest.id,
+                isRead: false
+              }
+            });
+          }
+
+          // Notify employee of progress
+          await prisma.notification.create({
+            data: {
+              userId: hrRequest.employeeId,
+              title: 'تقدم في طلبك',
+              message: `طلب ${getRequestTypeArabic(hrRequest.type)} الخاص بك تقدم إلى مرحلة: ${nextStep.statusName}`,
+              type: 'request_updated',
               relatedId: hrRequest.id,
               isRead: false
             }
           });
         }
 
-        // Notify employee of progress
-        await prisma.notification.create({
-          data: {
-            userId: hrRequest.employeeId,
-            title: 'تقدم في طلبك',
-            message: `طلب ${getRequestTypeArabic(hrRequest.type)} الخاص بك تقدم إلى مرحلة: ${nextStep.statusName}`,
-            type: 'request_updated',
-            relatedId: hrRequest.id,
-            isRead: false
-          }
-        });
       }
     }
 

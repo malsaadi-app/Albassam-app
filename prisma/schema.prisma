@@ -82,6 +82,9 @@ model User {
   maintenanceManagerSettings   MaintenanceRoutingSettings[] @relation("MaintenanceManagerUser")
   maintenanceBranchForwardings MaintenanceBranchForwarder[] @relation("MaintenanceBranchForwarderUser")
 
+  // Educational routing
+  educationalVpSettings EducationalRoutingSettings[] @relation("VpEducationalUser")
+
   // Petty cash top-ups
   pettyCashTopUpRequested PettyCashTopUpRequest[] @relation("PettyCashTopUpRequestedBy")
   pettyCashTopUpApproved  PettyCashTopUpRequest[] @relation("PettyCashTopUpApprovedBy")
@@ -988,6 +991,7 @@ model Branch {
   // Workflows
   workflowBranches           WorkflowBranch[]
   maintenanceBranchForwarder MaintenanceBranchForwarder?
+  educationalRouting         EducationalRoutingSettings?
 
   @@index([name])
   @@index([type])
@@ -1094,6 +1098,17 @@ model MaintenanceBranchForwarder {
 
   @@unique([branchId])
   @@index([userId])
+}
+
+model EducationalRoutingSettings {
+  id                 String   @id @default(cuid())
+  branchId            String   @unique
+  branch              Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  vpEducationalUserId String?
+  vpEducational       User?    @relation("VpEducationalUser", fields: [vpEducationalUserId], references: [id])
+  updatedAt           DateTime @updatedAt
+
+  @@index([vpEducationalUserId])
 }
 
 enum MaintenanceType {
