@@ -25,6 +25,7 @@ function formatAttachments(raw?: string | null): string {
 
 function formatPettyCashItems(items: any[]): string {
   if (!items.length) return '-'
+  // Keep for backward compatibility in other areas.
   return items
     .map((it: any, idx: number) => {
       const date = it?.date ? new Date(it.date).toLocaleDateString() : ''
