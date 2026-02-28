@@ -34,6 +34,8 @@ export default function TopBar() {
 
   return (
     <div
+      className="no-print"
+      data-topbar="true"
       style={{
         position: 'fixed',
         top: 12,

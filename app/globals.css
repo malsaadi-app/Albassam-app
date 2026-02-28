@@ -289,9 +289,29 @@ textarea {
   body {
     background: white;
   }
-  
+
+  /* Hide app chrome */
+  aside,
+  nav,
+  header,
+  .ds-app-sidebar,
+  .ds-app-header,
   .no-print {
     display: none !important;
+  }
+
+  /* Remove fixed overlays/buttons */
+  [style*="position: fixed"],
+  [data-topbar="true"] {
+    display: none !important;
+  }
+
+  /* Make main content full width */
+  main,
+  .ds-app-main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
   }
 }
 
