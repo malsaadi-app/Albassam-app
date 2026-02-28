@@ -202,6 +202,13 @@ export default function HRRequestDetailPage() {
                 <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600' }}>{request.startDate ? new Date(request.startDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-'}</p>
                 <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginTop: 10, marginBottom: '4px' }}>{t('endDate')}</p>
                 <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600' }}>{request.endDate ? new Date(request.endDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-'}</p>
+
+                {(request.reason || request.recipientOrganization) && (
+                  <>
+                    <p style={{ fontSize: '13px', color: '#6B7280', fontWeight: '600', marginTop: 10, marginBottom: '4px' }}>{t('notes')}</p>
+                    <p style={{ fontSize: '15px', color: '#111827', fontWeight: '600', whiteSpace: 'pre-wrap' }}>{request.reason || request.recipientOrganization}</p>
+                  </>
+                )}
               </div>
             )}
 
