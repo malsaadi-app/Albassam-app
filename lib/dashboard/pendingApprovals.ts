@@ -270,7 +270,7 @@ export async function getPendingApprovals(params: {
           title: `صرف زيادة عهدة ${fr.requestNumber} - ${Number(t.amount).toFixed(2)}`,
           submittedBy: fr.requester.displayName,
           submittedAt: t.approvedAt ?? t.createdAt,
-          status: t.status,
+          status: 'EXECUTION',
           action: 'صرف الزيادة',
           url: `/finance/requests/${fr.id}`
         })
