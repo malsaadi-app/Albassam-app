@@ -46,11 +46,20 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
   await controlByNearbyText(basicSection, /رقم الهوية/).fill(nationalId)
   await controlByNearbyText(contactSection, /رقم الجوال/).fill(phone)
 
-  // Select QA branch + stage
-  const branchSelect = controlByNearbyText(jobSection, /الفرع/)
+  // Select QA branch + stage (these are <select> elements with role=combobox)
+  const branchSelect = jobSection
+    .locator('div')
+    .filter({ hasText: /الفرع\s*🏢/ })
+    .locator('select')
+    .first()
   await branchSelect.selectOption({ label: 'مدارس البسام الأهلية بنين — QA' })
 
-  const stageSelect = controlByNearbyText(jobSection, /المرحلة/)
+  const stageSelect = jobSection
+    .locator('div')
+    .filter({ hasText: /المرحلة\s*🎓/ })
+    .locator('select')
+    .first()
+
   await expect(stageSelect).toBeEnabled()
   await stageSelect.selectOption({ label: 'ابتدائي' })
 
