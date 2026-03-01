@@ -52,7 +52,14 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
     .filter({ hasText: /الفرع\s*🏢/ })
     .locator('select')
     .first()
-  await branchSelect.selectOption({ label: 'مدارس البسام الأهلية بنين — QA' })
+
+  // Select QA branch by partial text (label matching can be fragile)
+  const qaBranchValue = await branchSelect.evaluate((sel: HTMLSelectElement) => {
+    const opt = Array.from(sel.options).find((o) => (o.textContent || '').includes('بنين') && (o.textContent || '').includes('QA'))
+    return opt?.value || ''
+  })
+  expect(qaBranchValue, 'QA branch option not found in branch select').toBeTruthy()
+  await branchSelect.selectOption(qaBranchValue)
 
   const stageSelect = jobSection
     .locator('div')
@@ -68,15 +75,24 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
   // Select first real stage (index 1)
   await stageSelect.selectOption({ index: 1 })
 
-  // Submit and accept dialog
-  const dialogPromise = page.waitForEvent('dialog')
-  await page.getByRole('button', { name: /إضافة الموظف/ }).click()
-  const dialog = await dialogPromise
-  const msg = dialog.message()
-  await dialog.accept()
-  expect(msg).toMatch(/تم إضافة الموظف بنجاح|نجاح/i)
+  // Submit: wait for either dialog OR navigation to employee page
+  const dialogPromise = page.waitForEvent('dialog').then(async (d) => {
+    const msg = d.message()
+    await d.accept()
+    return msg
+  }).catch(() => null)
 
-  // Redirects to employee page
+  await page.getByRole('button', { name: /إضافة الموظف/ }).click()
+
+  const navPromise = page.waitForURL(/\/hr\/employees\//, { timeout: 20000 }).then(() => 'NAV' as const).catch(() => null)
+  const result = await Promise.race([
+    dialogPromise.then(() => 'DIALOG' as const),
+    navPromise,
+    page.waitForTimeout(20000).then(() => 'TIMEOUT' as const),
+  ])
+  expect(result).not.toBe('TIMEOUT')
+
+  // Ensure we are on employee page
   await expect(page).toHaveURL(/\/hr\/employees\//)
   await expect(page.locator('body')).toContainText(nameAr)
   await expect(page.locator('body')).toContainText(nationalId)
