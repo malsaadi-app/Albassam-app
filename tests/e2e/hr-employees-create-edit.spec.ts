@@ -53,9 +53,20 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
     .locator('select')
     .first()
 
+  // Wait for branches to load and include QA options
+  await expect
+    .poll(async () => {
+      const texts = await branchSelect.locator('option').allTextContents()
+      return texts.join(' | ')
+    }, { timeout: 15000 })
+    .toContain('QA')
+
   // Select QA branch by partial text (label matching can be fragile)
   const qaBranchValue = await branchSelect.evaluate((sel: HTMLSelectElement) => {
-    const opt = Array.from(sel.options).find((o) => (o.textContent || '').includes('بنين') && (o.textContent || '').includes('QA'))
+    const opt = Array.from(sel.options).find((o) => {
+      const t = (o.textContent || '').trim()
+      return t.includes('QA') && t.includes('بنين')
+    })
     return opt?.value || ''
   })
   expect(qaBranchValue, 'QA branch option not found in branch select').toBeTruthy()
