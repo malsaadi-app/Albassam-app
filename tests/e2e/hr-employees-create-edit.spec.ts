@@ -13,11 +13,15 @@ function uniqueId(prefix: string) {
   return `${prefix}-${Date.now()}`
 }
 
-function controlByNearbyText(page: any, labelText: RegExp) {
-  // Finds the first input/select/textarea in a container that contains the label text
-  const container = page.locator('div', { hasText: labelText }).first()
-  const control = container.locator('input, select, textarea').first()
-  return control
+function controlByNearbyText(scope: any, labelText: RegExp) {
+  // Finds the first input/select/textarea in a FIELD container that contains the label text.
+  // We scope this to a specific section/card to avoid matching the whole page.
+  const container = scope
+    .locator('div', { hasText: labelText })
+    .filter({ has: scope.locator('input, select, textarea') })
+    .first()
+
+  return container.locator('input, select, textarea').first()
 }
 
 test('HR employees: qa_hr can create employee in QA branch and then edit basic fields', async ({ page }) => {
@@ -33,18 +37,21 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
 
   await page.goto('/hr/employees/new')
 
+  const basicSection = page.locator('h3', { hasText: '📋 البيانات الأساسية' }).locator('..')
+  const contactSection = page.locator('h3', { hasText: '📞 معلومات الاتصال' }).locator('..')
+  const jobSection = page.locator('h3', { hasText: '💼 البيانات الوظيفية' }).locator('..')
+
   // Fill required fields
-  await controlByNearbyText(page, /رقم الموظف/).fill(empNo)
-  await controlByNearbyText(page, /الاسم الكامل بالعربي/).fill(nameAr)
-  await controlByNearbyText(page, /رقم الهوية/).fill(nationalId)
-  await controlByNearbyText(page, /رقم الجوال/).fill(phone)
+  await controlByNearbyText(basicSection, /رقم الموظف/).fill(empNo)
+  await controlByNearbyText(basicSection, /الاسم الكامل بالعربي/).fill(nameAr)
+  await controlByNearbyText(basicSection, /رقم الهوية/).fill(nationalId)
+  await controlByNearbyText(contactSection, /رقم الجوال/).fill(phone)
 
   // Select QA branch + stage
-  const branchSelect = controlByNearbyText(page, /الفرع/)
+  const branchSelect = controlByNearbyText(jobSection, /الفرع/)
   await branchSelect.selectOption({ label: 'مدارس البسام الأهلية بنين — QA' })
 
-  const stageSelect = controlByNearbyText(page, /المرحلة/)
-  // Wait for stages to populate
+  const stageSelect = controlByNearbyText(jobSection, /المرحلة/)
   await expect(stageSelect).toBeEnabled()
   await stageSelect.selectOption({ label: 'ابتدائي' })
 
