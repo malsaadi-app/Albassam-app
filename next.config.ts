@@ -8,7 +8,7 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig: NextConfig = {
   // Use a custom distDir to avoid permission issues if an old .next folder was created by a different user.
   // NOTE: distDir name is rotated when permissions get stuck from old builds.
-  distDir: '.next_run6',
+  distDir: '.next_run7',
   reactStrictMode: true,
   poweredByHeader: false,
   generateBuildId: async () => {
