@@ -75,25 +75,29 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
   // Select first real stage (index 1)
   await stageSelect.selectOption({ index: 1 })
 
-  // Submit: wait for either dialog OR navigation to employee page
-  const dialogPromise = page.waitForEvent('dialog').then(async (d) => {
-    const msg = d.message()
-    await d.accept()
-    return msg
-  }).catch(() => null)
+  // Submit and wait for API response
+  const dialogPromise = page
+    .waitForEvent('dialog')
+    .then(async (d) => {
+      const msg = d.message()
+      await d.accept()
+      return msg
+    })
+    .catch(() => null)
+
+  const createResPromise = page.waitForResponse((res: any) => res.url().includes('/api/hr/employees') && res.request().method() === 'POST')
 
   await page.getByRole('button', { name: /إضافة الموظف/ }).click()
 
-  const navPromise = page.waitForURL(/\/hr\/employees\//, { timeout: 20000 }).then(() => 'NAV' as const).catch(() => null)
-  const result = await Promise.race([
-    dialogPromise.then(() => 'DIALOG' as const),
-    navPromise,
-    page.waitForTimeout(20000).then(() => 'TIMEOUT' as const),
-  ])
-  expect(result).not.toBe('TIMEOUT')
+  const createRes = await createResPromise
+  if (!createRes.ok()) {
+    const msg = (await dialogPromise) || `Create employee failed: HTTP ${createRes.status()}`
+    throw new Error(msg)
+  }
 
-  // Ensure we are on employee page
-  await expect(page).toHaveURL(/\/hr\/employees\//)
+  // Must navigate to employee details page (not /new)
+  await page.waitForURL(/\/hr\/employees\/[a-z0-9]+$/i, { timeout: 20000 })
+
   await expect(page.locator('body')).toContainText(nameAr)
   await expect(page.locator('body')).toContainText(nationalId)
 
