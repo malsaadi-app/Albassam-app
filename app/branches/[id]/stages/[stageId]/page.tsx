@@ -27,6 +27,7 @@ export default function StageDetailPage() {
   const [saving, setSaving] = useState(false);
   const [stage, setStage] = useState<Stage | null>(null);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+  const [stageEmployees, setStageEmployees] = useState<EmployeeOption[]>([]);
   const [managerId, setManagerId] = useState<string>('');
   const [deputyId, setDeputyId] = useState<string>('');
 
@@ -38,9 +39,10 @@ export default function StageDetailPage() {
     const run = async () => {
       setLoading(true);
       try {
-        const [stRes, empRes] = await Promise.all([
+        const [stRes, empRes, stageEmpRes] = await Promise.all([
           fetch(`/api/stages?branchId=${branchId}`),
           fetch(`/api/branches/${branchId}/employees`),
+          fetch(`/api/stages/${stageId}/employees`),
         ]);
 
         if (stRes.ok) {
@@ -62,6 +64,11 @@ export default function StageDetailPage() {
         if (empRes.ok) {
           const data = await empRes.json();
           setEmployees(data.employees || []);
+        }
+
+        if (stageEmpRes.ok) {
+          const data = await stageEmpRes.json();
+          setStageEmployees(data.employees || []);
         }
       } finally {
         setLoading(false);
@@ -139,7 +146,8 @@ export default function StageDetailPage() {
 
         <Card variant="default">
           <div style={{ padding: '20px' }}>
-            <Select label="مدير المرحلة" value={managerId} onChange={(e) => setManagerId(e.target.value)}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <Select label="مدير المرحلة" value={managerId} onChange={(e) => setManagerId(e.target.value)}>
               {employeeOptions.map((e) => (
                 <option key={e.id || 'none'} value={e.id}>
                   {e.fullNameAr} {e.employeeNumber ? `(${e.employeeNumber})` : ''}
@@ -147,7 +155,6 @@ export default function StageDetailPage() {
               ))}
             </Select>
 
-            <div style={{ marginTop: '16px' }}>
               <Select label="نائب مدير المرحلة" value={deputyId} onChange={(e) => setDeputyId(e.target.value)}>
                 {employeeOptions.map((e) => (
                   <option key={e.id || 'none'} value={e.id}>
@@ -157,7 +164,29 @@ export default function StageDetailPage() {
               </Select>
             </div>
 
-            <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            {/* Stage employees */}
+            <div style={{ marginTop: '18px', gridColumn: '1 / -1' }}>
+              <div style={{ fontWeight: 800, marginBottom: '10px' }}>👥 موظفين المرحلة ({stageEmployees.length})</div>
+              {stageEmployees.length === 0 ? (
+                <div style={{ color: '#6B7280', fontSize: '14px' }}>ما فيه موظفين مربوطين على هالمرحلة حالياً.</div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
+                  {stageEmployees.slice(0, 30).map((e) => (
+                    <div key={e.id} style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '10px 12px' }}>
+                      <div style={{ fontWeight: 800 }}>{e.fullNameAr}</div>
+                      <div style={{ color: '#6B7280', fontSize: '13px' }}>{e.employeeNumber}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {stageEmployees.length > 30 && (
+                <div style={{ marginTop: '8px', color: '#6B7280', fontSize: '13px' }}>
+                  عرضنا أول 30 فقط.
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'flex-end', gridColumn: '1 / -1' }}>
               <Button variant="secondary" onClick={() => router.push(`/branches/${branchId}/stages`)}>
                 إلغاء
               </Button>
