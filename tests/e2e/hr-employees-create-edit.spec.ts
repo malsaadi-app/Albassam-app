@@ -41,10 +41,20 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
   const jobSection = page.locator('h3', { hasText: '💼 البيانات الوظيفية' }).locator('..')
 
   // Fill required fields
-  await controlByNearbyText(basicSection, /رقم الموظف/).fill(empNo)
-  await controlByNearbyText(basicSection, /الاسم الكامل بالعربي/).fill(nameAr)
-  await controlByNearbyText(basicSection, /رقم الهوية/).fill(nationalId)
-  await controlByNearbyText(contactSection, /رقم الجوال/).fill(phone)
+  const empNoInput = controlByNearbyText(basicSection, /رقم الموظف/)
+  const nameArInput = controlByNearbyText(basicSection, /الاسم الكامل بالعربي/)
+  const nationalIdInput = controlByNearbyText(basicSection, /رقم الهوية/)
+  const phoneInput = controlByNearbyText(contactSection, /رقم الجوال/)
+
+  await empNoInput.fill(empNo)
+  await nameArInput.fill(nameAr)
+  await nationalIdInput.fill(nationalId)
+  await phoneInput.fill(phone)
+
+  await expect(empNoInput).toHaveValue(empNo)
+  await expect(nameArInput).toHaveValue(nameAr)
+  await expect(nationalIdInput).toHaveValue(nationalId)
+  await expect(phoneInput).toHaveValue(phone)
 
   // Select QA branch + stage (these are <select> elements with role=combobox)
   const branchSelect = jobSection
@@ -96,13 +106,28 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
     })
     .catch(() => null)
 
-  const createResPromise = page.waitForResponse((res: any) => res.url().includes('/api/hr/employees') && res.request().method() === 'POST')
+  const createResPromise = page
+    .waitForResponse(
+      (res: any) => res.url().includes('/api/hr/employees') && res.request().method() === 'POST',
+      { timeout: 20000 }
+    )
+    .catch(() => null)
 
   await page.getByRole('button', { name: /إضافة الموظف/ }).click()
 
-  const createRes = await createResPromise
+  const race = await Promise.race([
+    dialogPromise.then((m) => ({ kind: 'dialog' as const, m })),
+    createResPromise.then((r) => ({ kind: 'response' as const, r })),
+  ])
+
+  if (race.kind === 'dialog') {
+    throw new Error(race.m || 'Employee create blocked by dialog')
+  }
+
+  const createRes = race.r
+  if (!createRes) throw new Error('No create employee response observed')
   if (!createRes.ok()) {
-    const msg = (await dialogPromise) || `Create employee failed: HTTP ${createRes.status()}`
+    const msg = `Create employee failed: HTTP ${createRes.status()}`
     throw new Error(msg)
   }
 
