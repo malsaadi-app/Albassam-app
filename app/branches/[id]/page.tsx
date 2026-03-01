@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 interface Stage {
   id: string;
   name: string;
-  isActive: boolean;
+  status: string;
 }
 
 interface BranchDetail {
@@ -34,9 +34,16 @@ export default function BranchDetailPage() {
   const [branch, setBranch] = useState<BranchDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [userRole, setUserRole] = useState<string>('');
 
   useEffect(() => {
     if (!params.id) return;
+
+    // Best-effort current user role (for admin-only actions)
+    fetch('/api/auth/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setUserRole(d?.user?.role || ''))
+      .catch(() => setUserRole(''))
 
     fetch(`/api/branches/${params.id}`)
       .then(res => {
@@ -225,16 +232,36 @@ export default function BranchDetailPage() {
         {/* المراحل الدراسية */}
         {branch.type === 'SCHOOL' && branch.stages.length > 0 && (
           <div style={{ background: 'white', borderRadius: '12px', padding: '24px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', marginBottom: '16px' }}>
-              📚 المراحل الدراسية ({branch.stages.length})
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', marginBottom: '16px' }}>
+                📚 المراحل الدراسية ({branch.stages.length})
+              </h3>
+              {userRole === 'ADMIN' && (
+                <button
+                  onClick={() => router.push(`/branches/${branch.id}/stages`)}
+                  style={{
+                    marginBottom: '16px',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #E5E7EB',
+                    background: '#111827',
+                    color: 'white',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  ⚙️ إدارة المراحل
+                </button>
+              )}
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
               {branch.stages.map(stage => (
                 <div
                   key={stage.id}
                   style={{
-                    background: stage.isActive ? '#F0FDF4' : '#F3F4F6',
-                    border: `2px solid ${stage.isActive ? '#86EFAC' : '#E5E7EB'}`,
+                    background: '#F0FDF4',
+                    border: '2px solid #86EFAC',
                     borderRadius: '8px',
                     padding: '16px',
                     textAlign: 'center'
@@ -244,10 +271,23 @@ export default function BranchDetailPage() {
                   <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>
                     {stage.name}
                   </div>
-                  {!stage.isActive && (
-                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>
-                      غير نشط
-                    </div>
+
+                  {userRole === 'ADMIN' && (
+                    <button
+                      onClick={() => router.push(`/branches/${branch.id}/stages/${stage.id}`)}
+                      style={{
+                        marginTop: '10px',
+                        padding: '8px 12px',
+                        borderRadius: '10px',
+                        border: '1px solid #E5E7EB',
+                        background: 'white',
+                        color: '#111827',
+                        fontWeight: 800,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⚙️ إدارة
+                    </button>
                   )}
                 </div>
               ))}
