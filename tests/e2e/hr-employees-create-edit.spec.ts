@@ -67,7 +67,11 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
   await positionInput.fill('QA Tester')
 
   // API later converts dateOfBirth to Date; provide a valid value
-  const dateOfBirthInput = basicSection.locator('input[type="date"]').first()
+  const dateOfBirthInput = basicSection
+    .locator('div')
+    .filter({ hasText: /تاريخ الميلاد/ })
+    .locator('input')
+    .first()
   await dateOfBirthInput.fill('1990-01-01')
 
   // Submit and wait for API response
