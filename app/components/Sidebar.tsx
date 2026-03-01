@@ -179,6 +179,7 @@ export default function Sidebar() {
         { href: '/hr/positions', icon: <HiOutlineBriefcase size={18} />, label: t('positions') },
         { href: '/settings', icon: <HiOutlineCog size={18} />, label: t('systemSettings') },
         ...(userRole === 'ADMIN' ? [
+          { href: '/admin/users', icon: <HiOutlineUserGroup size={18} />, label: 'إدارة المستخدمين' },
           { href: '/admin', icon: <HiOutlineShieldCheck size={18} />, label: t('adminPanel') },
         ] : []),
       ]

@@ -1,46 +1,43 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { PageHeader } from '@/components/ui/PageHeader';
 
-interface RoleStats {
-  role: string;
-  count: number;
-  arabicName: string;
-  permissions: string[];
+interface SystemRoleRow {
+  id: string;
+  name: string;
+  nameAr: string;
+  nameEn?: string | null;
+  description?: string | null;
+  isActive: boolean;
+  isSystem: boolean;
+  userCount: number;
+  permissionCount: number;
 }
 
 export default function RolesPage() {
-  const [roles, setRoles] = useState<RoleStats[]>([]);
+  const [roles, setRoles] = useState<SystemRoleRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/settings/roles')
-      .then(res => res.json())
-      .then(data => {
-        setRoles(data.roles || []);
-        setLoading(false);
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data.error || 'Failed to fetch roles')
+        return data
       })
-      .catch(err => {
-        console.error('Error fetching roles:', err);
-        setLoading(false);
-      });
-  }, []);
+      .then((data) => {
+        setRoles(data.roles || [])
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error('Error fetching roles:', err)
+        setLoading(false)
+      })
+  }, [])
 
-  const roleDescriptions: Record<string, { name: string; permissions: string[] }> = {
-    ADMIN: {
-      name: 'مدير النظام',
-      permissions: ['الوصول الكامل', 'إدارة المستخدمين', 'إدارة الفروع', 'إدارة الإعدادات', 'عرض جميع التقارير']
-    },
-    HR_EMPLOYEE: {
-      name: 'موظف موارد بشرية',
-      permissions: ['إدارة الموظفين', 'إدارة الحضور والانصراف', 'إدارة الإجازات', 'عرض تقارير الموارد البشرية']
-    },
-    USER: {
-      name: 'مستخدم عادي',
-      permissions: ['عرض البيانات الخاصة', 'تسجيل الحضور', 'طلب الإجازات', 'عرض المهام الخاصة']
-    }
-  };
+  // System roles are editable via /settings/roles/[id]
 
   if (loading) {
     return (
@@ -65,6 +62,21 @@ export default function RolesPage() {
         <PageHeader
           title="🔐 الأدوار والصلاحيات"
           breadcrumbs={['الرئيسية', 'الإعدادات', 'الأدوار']}
+          actions={
+            <Link
+              href="/settings/roles/new"
+              style={{
+                background: '#111827',
+                color: 'white',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                fontWeight: 800,
+                textDecoration: 'none'
+              }}
+            >
+              ➕ إضافة دور
+            </Link>
+          }
         />
 
         {/* إحصائيات سريعة */}
@@ -76,7 +88,7 @@ export default function RolesPage() {
           <div style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', borderRadius: '12px', padding: '24px', color: 'white' }}>
             <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px' }}>إجمالي المستخدمين</div>
             <div style={{ fontSize: '36px', fontWeight: '800' }}>
-              {roles.reduce((sum, r) => sum + r.count, 0)}
+              {roles.reduce((sum, r) => sum + r.userCount, 0)}
             </div>
           </div>
         </div>
@@ -96,67 +108,53 @@ export default function RolesPage() {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {roles.map((role) => {
-                  const info = roleDescriptions[role.role] || { name: role.role, permissions: [] };
-                  return (
-                    <div
-                      key={role.role}
-                      style={{
-                        border: '1px solid #E5E7EB',
-                        borderRadius: '8px',
-                        padding: '20px',
-                        background: '#F9FAFB'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <div>
-                          <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>
-                            {info.name}
+                {roles.map((role) => (
+                  <a
+                    key={role.id}
+                    href={`/settings/roles/${role.id}`}
+                    style={{
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '12px',
+                      padding: '18px 18px',
+                      background: 'white',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      display: 'block'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                      <div>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#111827', margin: 0 }}>
+                            {role.nameAr}
                           </h3>
-                          <div style={{ fontSize: '13px', color: '#6B7280' }}>
-                            {role.role}
-                          </div>
+                          {role.isSystem && (
+                            <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '999px', background: '#EEF2FF', border: '1px solid #C7D2FE', color: '#3730A3', fontWeight: 800 }}>
+                              🔒 نظام
+                            </span>
+                          )}
+                          {!role.isActive && (
+                            <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '999px', background: '#F3F4F6', border: '1px solid #E5E7EB', color: '#6B7280', fontWeight: 800 }}>
+                              ⚫ معطل
+                            </span>
+                          )}
                         </div>
-                        <div style={{
-                          background: role.count > 0 ? '#10B981' : '#6B7280',
-                          color: 'white',
-                          padding: '6px 16px',
-                          borderRadius: '20px',
-                          fontSize: '14px',
-                          fontWeight: '600'
-                        }}>
-                          {role.count} مستخدم
+                        <div style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>
+                          {role.name} {role.description ? `— ${role.description}` : ''}
                         </div>
                       </div>
-                      
-                      {/* الصلاحيات */}
-                      {info.permissions.length > 0 && (
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
-                            الصلاحيات:
-                          </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                            {info.permissions.map((perm, idx) => (
-                              <div
-                                key={idx}
-                                style={{
-                                  background: 'white',
-                                  border: '1px solid #D1D5DB',
-                                  borderRadius: '6px',
-                                  padding: '6px 12px',
-                                  fontSize: '13px',
-                                  color: '#374151'
-                                }}
-                              >
-                                ✓ {perm}
-                              </div>
-                            ))}
-                          </div>
+
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div style={{ textAlign: 'center', padding: '6px 12px', borderRadius: '999px', background: role.userCount > 0 ? '#10B981' : '#6B7280', color: 'white', fontWeight: 900, fontSize: '13px' }}>
+                          {role.userCount} مستخدم
                         </div>
-                      )}
+                        <div style={{ textAlign: 'center', padding: '6px 12px', borderRadius: '999px', background: '#111827', color: 'white', fontWeight: 900, fontSize: '13px' }}>
+                          {role.permissionCount} صلاحية
+                        </div>
+                      </div>
                     </div>
-                  );
-                })}
+                  </a>
+                ))}
               </div>
             )}
           </div>
@@ -174,7 +172,7 @@ export default function RolesPage() {
         }}>
           <div style={{ fontSize: '20px' }}>ℹ️</div>
           <div style={{ fontSize: '14px', color: '#1E40AF' }}>
-            <strong>ملاحظة:</strong> لتعديل صلاحيات الأدوار، يمكنك التواصل مع مدير النظام.
+            تقدر تضغط على أي دور عشان تعدل صلاحياته وتشوف المستخدمين المرتبطين فيه.
           </div>
         </div>
       </div>

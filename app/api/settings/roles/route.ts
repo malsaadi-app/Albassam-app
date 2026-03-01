@@ -4,38 +4,43 @@ import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/db';
 import { isSuperAdmin } from '@/lib/permissions';
 
-// Get all roles with user counts
+// Get all system roles with user counts
 export async function GET() {
   try {
-    // Define available roles
-    const availableRoles = [
-      { id: 'ADMIN', nameAr: 'مدير النظام', role: 'ADMIN' },
-      { id: 'HR_EMPLOYEE', nameAr: 'موظف موارد بشرية', role: 'HR_EMPLOYEE' },
-      { id: 'USER', nameAr: 'مستخدم عادي', role: 'USER' }
-    ];
+    const session = await getSession(await cookies())
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    // Get all users grouped by role
-    const usersByRole = await prisma.user.groupBy({
-      by: ['role'],
-      _count: true
-    });
+    // Admin-only for now (enterprise safety)
+    const isAdmin = await isSuperAdmin(session.user.id)
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
-    // Convert to RoleStats format with counts
-    const roles = availableRoles.map(availableRole => {
-      const userCount = usersByRole.find(u => u.role === availableRole.role)?._count || 0;
-      return {
-        id: availableRole.id,
-        nameAr: availableRole.nameAr,
-        role: availableRole.role,
-        count: userCount,
-        permissions: []
-      };
-    });
+    const roles = await prisma.systemRole.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { nameAr: 'asc' }],
+      include: {
+        _count: { select: { users: true, permissions: true } },
+      },
+    })
 
-    return NextResponse.json({ roles });
+    return NextResponse.json({
+      roles: roles.map((r) => ({
+        id: r.id,
+        name: r.name,
+        nameAr: r.nameAr,
+        nameEn: r.nameEn,
+        description: r.description,
+        isActive: r.isActive,
+        isSystem: r.isSystem,
+        userCount: r._count.users,
+        permissionCount: r._count.permissions,
+      })),
+    })
   } catch (error) {
-    console.error('Error fetching roles:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error fetching roles:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
