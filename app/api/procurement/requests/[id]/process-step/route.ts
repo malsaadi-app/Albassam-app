@@ -89,7 +89,9 @@ export async function POST(
       );
     }
 
-    // Verify user is authorized for this step (step0 may be dynamic gatekeeper)
+    // Verify user is authorized for this step.
+    // Special case: step0 can have a branch gatekeeper (e.g., Asma) who pre-approves,
+    // then the configured step owner (mq) still approves the same step.
     const { resolveProcurementStepAssignees } = await import('@/lib/procurementWorkflowRouting')
     const allowedUserIds = await resolveProcurementStepAssignees({
       requestedByUserId: purchaseRequest.requestedById,
@@ -98,7 +100,10 @@ export async function POST(
       fallbackUserId: currentStep.userId,
     })
 
-    if (!allowedUserIds.includes(session.user.id)) {
+    const isGatekeeperPreApproval = currentStepIndex === 0 && session.user.id !== currentStep.userId && allowedUserIds.includes(session.user.id)
+
+    // Normal step owner OR allowed assignee
+    if (!isGatekeeperPreApproval && currentStep.userId !== session.user.id) {
       return NextResponse.json(
         { error: 'غير مصرح لك بمعالجة هذه الخطوة' },
         { status: 403 }
@@ -109,6 +114,35 @@ export async function POST(
     const validatedData = processStepSchema.parse(body);
 
     let updatedRequest;
+
+    // Gatekeeper pre-approval: do NOT advance workflow step, just notify configured step owner.
+    if (isGatekeeperPreApproval && validatedData.action === 'approve') {
+      // notify configured owner (mq)
+      await prisma.notification.create({
+        data: {
+          userId: currentStep.userId,
+          title: 'طلب شراء جاهز للمراجعة النهائية',
+          message: `تمت موافقة مسؤول الفرع على طلب الشراء ${purchaseRequest.requestNumber}، بانتظار مراجعتك (${currentStep.statusName})`,
+          type: 'procurement_gatekeeper_approved',
+          relatedId: purchaseRequest.id,
+          isRead: false,
+        },
+      })
+
+      // notify requester
+      await prisma.notification.create({
+        data: {
+          userId: purchaseRequest.requestedById,
+          title: 'تقدم في طلب الشراء',
+          message: `تمت موافقة مسؤول الفرع على طلب الشراء ${purchaseRequest.requestNumber}، والآن بانتظار مراجعة المشتريات`,
+          type: 'procurement_updated',
+          relatedId: purchaseRequest.id,
+          isRead: false,
+        },
+      })
+
+      return NextResponse.json({ ok: true, status: purchaseRequest.status, currentWorkflowStep: purchaseRequest.currentWorkflowStep })
+    }
 
     if (validatedData.action === 'reject') {
       // Reject the request immediately
