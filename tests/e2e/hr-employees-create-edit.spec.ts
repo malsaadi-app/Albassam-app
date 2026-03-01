@@ -60,9 +60,15 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
   await expect(nationalIdInput).toHaveValue(nationalId)
   await expect(phoneInput).toHaveValue(phone)
 
-  // Branch/Stage selection is optional for employee creation.
-  // We'll keep the employee in QA context via QA IDs, but do not require selecting branch/stage here
-  // to avoid flakiness and to prevent accidental assignment to a real branch.
+  // API requires department + position (even though UI doesn't mark them required)
+  const deptInput = jobSection.locator('input').nth(0)
+  const positionInput = jobSection.locator('input').nth(1)
+  await deptInput.fill('QA')
+  await positionInput.fill('QA Tester')
+
+  // API later converts dateOfBirth to Date; provide a valid value
+  const dateOfBirthInput = basicSection.locator('input[type="date"]').first()
+  await dateOfBirthInput.fill('1990-01-01')
 
   // Submit and wait for API response
   const dialogPromise = page
