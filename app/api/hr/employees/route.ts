@@ -233,8 +233,14 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Helpful diagnostics for QA accounts (production QA only)
+    const session = await getSession(await cookies());
+    const isQaUser = !!session?.user?.username && session.user.username.startsWith('qa_');
+    const details = isQaUser ? String((error as any)?.message || error) : undefined;
+
     return NextResponse.json(
-      { error: 'حدث خطأ أثناء إنشاء الموظف' },
+      { error: 'حدث خطأ أثناء إنشاء الموظف', ...(details ? { details } : {}) },
       { status: 500 }
     );
   }
