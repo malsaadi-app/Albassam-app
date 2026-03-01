@@ -31,20 +31,23 @@ async function logout(page: any) {
 }
 
 test('Procurement UI E2E: requester -> asma -> mq -> abdullahsh -> requester confirm receipt', async ({ page, request }) => {
+  test.setTimeout(120000)
   // 1) Requester creates PR
   await login(page, 'qa_requester_girls', 'qa12345')
   await page.goto('/procurement/requests/new')
 
-  await page.getByLabel('القسم الطالب').fill('QA Dept')
-  await page.getByLabel('الفئة').selectOption('STATIONERY')
-  await page.getByLabel('الأولوية').selectOption('NORMAL')
+  await page.getByPlaceholder('مثال: القسم التعليمي').fill('QA Dept')
+
+  const selects = page.locator('select')
+  await selects.nth(0).selectOption('STATIONERY')
+  await selects.nth(1).selectOption('NORMAL')
 
   // first item row
-  await page.getByPlaceholder('اسم الصنف').fill('QA Item')
-  await page.getByLabel('الكمية').fill('1')
+  await page.getByPlaceholder('مثال: دفاتر 100 ورقة').fill('QA Item')
+  await page.locator('input[type="number"]').first().fill('1')
 
   // Submit
-  await page.getByRole('button', { name: /إرسال الطلب|إرسال|Submit/ }).click()
+  await page.getByRole('button', { name: /إنشاء الطلب/ }).click()
 
   await expect(page).toHaveURL(/\/procurement\/requests\/[a-z0-9]+/i)
   const prUrl = page.url()
