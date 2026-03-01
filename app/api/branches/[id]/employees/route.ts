@@ -40,6 +40,37 @@ async function generateUniqueNationalId() {
   return `TEMP-${Date.now()}`;
 }
 
+// GET /api/branches/[id]/employees - List employees in a branch (for admin tooling)
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const cookieStore = await cookies();
+    const session = await getSession(cookieStore);
+    if (!session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { id: branchId } = await params;
+
+    const employees = await prisma.employee.findMany({
+      where: { branchId },
+      select: { id: true, fullNameAr: true, employeeNumber: true, stageId: true },
+      orderBy: { fullNameAr: 'asc' },
+    });
+
+    return NextResponse.json({ employees }, { status: 200 });
+  } catch (error: any) {
+    console.error('Error listing branch employees:', error);
+    return NextResponse.json({ error: 'Failed to list employees' }, { status: 500 });
+  }
+}
+
 // POST /api/branches/[id]/employees - Assign an employee to a branch (or create + assign)
 export async function POST(
   request: NextRequest,

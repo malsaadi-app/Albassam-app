@@ -260,8 +260,8 @@ export default function BranchStagesPage() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
             {stages.map((stage) => (
-              <Card key={stage.id} variant="default" hover onClick={() => router.push(`/branches/${branchId}/stages/${stage.id}`)}>
-                <div style={{ padding: '20px', cursor: 'pointer' }}>
+              <Card key={stage.id} variant="default" hover>
+                <div style={{ padding: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
                     <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#111827' }}>
                       {stage.name}
@@ -294,6 +294,15 @@ export default function BranchStagesPage() {
 
                   <div style={{ fontSize: '13px', color: '#6B7280' }}>
                     📏 النطاق: {stage.geofenceRadius} متر
+                  </div>
+
+                  <div style={{ marginTop: '14px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => router.push(`/branches/${branchId}/stages/${stage.id}`)}
+                    >
+                      ⚙️ إدارة
+                    </Button>
                   </div>
                 </div>
               </Card>

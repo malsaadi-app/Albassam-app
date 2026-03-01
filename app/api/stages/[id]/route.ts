@@ -31,6 +31,7 @@ export async function PUT(
       workStartTime,
       workEndTime,
       managerId,
+      deputyId,
       status
     } = body;
 
@@ -45,6 +46,7 @@ export async function PUT(
         ...(workStartTime !== undefined && { workStartTime }),
         ...(workEndTime !== undefined && { workEndTime }),
         ...(managerId !== undefined && { managerId }),
+        ...(deputyId !== undefined && { deputyId }),
         ...(status && { status }),
         updatedAt: new Date()
       },
