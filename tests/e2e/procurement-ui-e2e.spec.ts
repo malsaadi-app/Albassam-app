@@ -25,8 +25,8 @@ async function login(page: any, username: string, password: string) {
 }
 
 async function logout(page: any) {
-  // best-effort: hit logout endpoint then go to login
-  await page.goto('/api/auth/logout')
+  // Clear cookies/storage instead of hitting logout endpoint (can trigger downloads/redirect quirks)
+  await page.context().clearCookies()
   await page.goto('/auth/login')
 }
 
