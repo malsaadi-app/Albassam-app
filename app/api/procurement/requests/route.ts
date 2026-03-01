@@ -115,24 +115,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate request number (e.g., PR-2026-0001)
+    // Use count-based generation to avoid parsing issues from legacy/bad requestNumber values.
     const year = new Date().getFullYear();
-    const lastRequest = await prisma.purchaseRequest.findFirst({
+    const existingCount = await prisma.purchaseRequest.count({
       where: {
         requestNumber: {
-          startsWith: `PR-${year}-`
-        }
+          startsWith: `PR-${year}-`,
+        },
       },
-      orderBy: {
-        requestNumber: 'desc'
-      }
     });
-
-    let nextNumber = 1;
-    if (lastRequest) {
-      const lastNumber = parseInt(lastRequest.requestNumber.split('-')[2]);
-      nextNumber = lastNumber + 1;
-    }
-    
+    const nextNumber = existingCount + 1;
     const requestNumber = `PR-${year}-${String(nextNumber).padStart(4, '0')}`;
 
     // Get workflow for this category
