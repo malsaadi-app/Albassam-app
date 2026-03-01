@@ -152,7 +152,8 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getSession(await cookies());
 
-    if (!session.user || session.user.role !== 'ADMIN') {
+    // Allow HR employees to create employees as well (UI permits HR_EMPLOYEE)
+    if (!session.user || (session.user.role !== 'ADMIN' && session.user.role !== 'HR_EMPLOYEE')) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 
