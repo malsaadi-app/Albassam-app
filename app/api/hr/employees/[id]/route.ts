@@ -117,6 +117,8 @@ export async function PUT(
     if (body.hireDate) updateData.hireDate = new Date(body.hireDate);
     if (body.position !== undefined) updateData.position = body.position;
     if (body.department !== undefined) updateData.department = body.department;
+    if (body.departmentId !== undefined) updateData.departmentId = body.departmentId || null;
+    if (body.jobTitleId !== undefined) updateData.jobTitleId = body.jobTitleId || null;
     if (body.systemRoleId !== undefined) updateData.systemRoleId = body.systemRoleId || null;
     if (body.status) updateData.status = body.status;
     if (body.basicSalary !== undefined) updateData.basicSalary = body.basicSalary;
@@ -126,6 +128,7 @@ export async function PUT(
     if (body.bankName !== undefined) updateData.bankName = body.bankName;
     if (body.iban !== undefined) updateData.iban = body.iban;
     if (body.education !== undefined) updateData.education = body.education;
+    if (body.specialization !== undefined) updateData.specialization = body.specialization;
     if (body.certifications !== undefined) updateData.certifications = body.certifications;
 
     const employee = await prisma.employee.update({
