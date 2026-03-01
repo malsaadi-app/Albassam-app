@@ -9,8 +9,11 @@ async function login(page: any, username: string, password: string) {
     await arBtn.first().click().catch(() => {})
   }
 
-  await page.getByPlaceholder('أدخل اسم المستخدم').fill(username)
-  await page.getByPlaceholder('أدخل كلمة المرور').fill(password)
+  // Inputs may not have placeholders in this UI; fill by input order.
+  const inputs = page.locator('input')
+  await inputs.nth(0).fill(username)
+  await inputs.nth(1).fill(password)
+
   await page.getByRole('button', { name: /تسجيل الدخول|دخول/ }).click()
 
   const ok = await page
