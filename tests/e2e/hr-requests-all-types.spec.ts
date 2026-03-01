@@ -45,42 +45,50 @@ test('HR requests: qa_user can submit all request types (smoke)', async ({ page 
     // Request type select (custom component label may not be associated)
     await page.getByRole('combobox').first().selectOption(type)
 
+    const form = page.locator('form')
+
     if (type === 'LEAVE') {
-      await page.getByLabel(/تاريخ البداية|Start Date/i).fill(isoDate(1))
-      await page.getByLabel(/تاريخ النهاية|End Date/i).fill(isoDate(2))
-      await page.getByLabel(/نوع الإجازة|Leave Type/i).selectOption('annual')
+      const dates = form.locator('input[type="date"]')
+      await dates.nth(0).fill(isoDate(1))
+      await dates.nth(1).fill(isoDate(2))
+      // leaveType is the second combobox on the page
+      await form.getByRole('combobox').nth(1).selectOption('annual')
     }
 
     if (type === 'TICKET_ALLOWANCE') {
-      await page.getByLabel(/الوجهة|Destination/i).fill('QA Destination')
-      await page.getByLabel(/تاريخ السفر|Travel Date/i).fill(isoDate(10))
-      await page.getByLabel(/المبلغ|Amount/i).fill('100')
+      await form.locator('input:not([type])').first().fill('QA Destination')
+      const dates = form.locator('input[type="date"]')
+      await dates.first().fill(isoDate(10))
+      await form.locator('input[type="number"]').first().fill('100')
     }
 
     if (type === 'FLIGHT_BOOKING') {
-      await page.getByLabel(/الوجهة|Destination/i).fill('QA Destination')
-      await page.getByLabel(/تاريخ المغادرة|Departure Date/i).fill(isoDate(10))
-      await page.getByLabel(/تاريخ العودة|Return Date/i).fill(isoDate(20))
+      await form.locator('input:not([type])').first().fill('QA Destination')
+      const dates = form.locator('input[type="date"]')
+      await dates.nth(0).fill(isoDate(10))
+      await dates.nth(1).fill(isoDate(20))
     }
 
     if (type === 'SALARY_CERTIFICATE') {
-      await page.getByLabel(/الغرض|Purpose/i).fill('QA salary certificate purpose')
+      await form.locator('textarea').first().fill('QA salary certificate purpose')
     }
 
     if (type === 'HOUSING_ALLOWANCE') {
-      await page.getByLabel(/المبلغ|Amount/i).fill('250')
-      await page.getByLabel(/المدة|Period/i).fill('12 شهر')
+      await form.locator('input[type="number"]').first().fill('250')
+      await form.locator('input:not([type])').first().fill('12 شهر')
     }
 
     if (type === 'VISA_EXIT_REENTRY_SINGLE' || type === 'VISA_EXIT_REENTRY_MULTI') {
-      await page.getByLabel(/تاريخ المغادرة|Departure Date/i).fill(isoDate(10))
-      await page.getByLabel(/تاريخ العودة|Return Date/i).fill(isoDate(30))
-      await page.getByLabel(/السبب|Reason/i).fill('QA visa reason')
+      const dates = form.locator('input[type="date"]')
+      await dates.nth(0).fill(isoDate(10))
+      await dates.nth(1).fill(isoDate(30))
+      await form.locator('textarea').first().fill('QA visa reason')
     }
 
     if (type === 'RESIGNATION') {
-      await page.getByLabel(/تاريخ النهاية|End Date/i).fill(isoDate(30))
-      await page.getByLabel(/السبب|Reason/i).fill('QA resignation reason')
+      const dates = form.locator('input[type="date"]')
+      await dates.first().fill(isoDate(30))
+      await form.locator('textarea').first().fill('QA resignation reason')
     }
 
     await page.getByRole('button', { name: /📝\s*إرسال|إرسال|Submit|تقديم/i }).click()
