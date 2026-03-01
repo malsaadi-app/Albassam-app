@@ -61,7 +61,12 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
     .first()
 
   await expect(stageSelect).toBeEnabled()
-  await stageSelect.selectOption({ label: 'ابتدائي' })
+  // Wait for stages to load (expect more than the default 'بدون مرحلة')
+  await expect
+    .poll(async () => stageSelect.locator('option').count(), { timeout: 15000 })
+    .toBeGreaterThan(1)
+  // Select first real stage (index 1)
+  await stageSelect.selectOption({ index: 1 })
 
   // Submit and accept dialog
   const dialogPromise = page.waitForEvent('dialog')
