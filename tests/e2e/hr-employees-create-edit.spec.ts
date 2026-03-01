@@ -41,10 +41,14 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
   const jobSection = page.locator('h3', { hasText: '💼 البيانات الوظيفية' }).locator('..')
 
   // Fill required fields
-  const empNoInput = controlByNearbyText(basicSection, /رقم الموظف/)
-  const nameArInput = controlByNearbyText(basicSection, /الاسم الكامل بالعربي/)
-  const nationalIdInput = controlByNearbyText(basicSection, /رقم الهوية/)
-  const phoneInput = controlByNearbyText(contactSection, /رقم الجوال/)
+  // The basic section renders inputs in a stable order (employeeNumber, arabicName, englishName, nationalId, ...)
+  const basicInputs = basicSection.locator('input')
+  const empNoInput = basicInputs.nth(0)
+  const nameArInput = basicInputs.nth(1)
+  const nationalIdInput = basicInputs.nth(3)
+
+  // Contact section first input is phone
+  const phoneInput = contactSection.locator('input').first()
 
   await empNoInput.fill(empNo)
   await nameArInput.fill(nameAr)
