@@ -2,11 +2,26 @@ import { test, expect } from '@playwright/test'
 
 async function login(page: any, username: string, password: string) {
   await page.goto('/auth/login')
-  await page.getByRole('button', { name: 'العربية' }).click()
+
+  // Best-effort: switch to Arabic for stable placeholders
+  const arBtn = page.getByRole('button', { name: 'العربية' })
+  if (await arBtn.count().catch(() => 0)) {
+    await arBtn.first().click().catch(() => {})
+  }
+
   await page.getByPlaceholder('أدخل اسم المستخدم').fill(username)
   await page.getByPlaceholder('أدخل كلمة المرور').fill(password)
   await page.getByRole('button', { name: /تسجيل الدخول|دخول/ }).click()
-  await expect(page).toHaveURL(/\/dashboard/)
+
+  const ok = await page
+    .waitForURL(/\/dashboard/, { timeout: 15000 })
+    .then(() => true)
+    .catch(() => false)
+
+  if (!ok) {
+    const errText = await page.locator('body').innerText().catch(() => '')
+    throw new Error(`Login failed for ${username}. Still on ${page.url()}. Page text: ${errText.slice(0, 300)}`)
+  }
 }
 
 async function logout(page: any) {
