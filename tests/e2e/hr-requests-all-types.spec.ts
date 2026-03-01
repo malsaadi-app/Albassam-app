@@ -42,8 +42,8 @@ test('HR requests: qa_user can submit all request types (smoke)', async ({ page 
       await d.accept()
     })
 
-    // Request type select (label has *)
-    await page.getByLabel(/نوع الطلب|Request Type/i).selectOption(type)
+    // Request type select (custom component label may not be associated)
+    await page.getByRole('combobox').first().selectOption(type)
 
     if (type === 'LEAVE') {
       await page.getByLabel(/تاريخ البداية|Start Date/i).fill(isoDate(1))
@@ -83,7 +83,7 @@ test('HR requests: qa_user can submit all request types (smoke)', async ({ page 
       await page.getByLabel(/السبب|Reason/i).fill('QA resignation reason')
     }
 
-    await page.getByRole('button', { name: /إرسال|Submit|تقديم/i }).click()
+    await page.getByRole('button', { name: /📝\s*إرسال|إرسال|Submit|تقديم/i }).click()
 
     // Expect either redirect to list, or at least a dialog message.
     await page.waitForTimeout(300)
