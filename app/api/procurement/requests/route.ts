@@ -238,6 +238,21 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating purchase request:', error);
+
+    // Helpful diagnostics for QA users
+    try {
+      const session = await getSession(await cookies());
+      const isQaUser = !!session?.user?.username && session.user.username.startsWith('qa_');
+      if (isQaUser) {
+        return NextResponse.json(
+          { error: 'Failed to create purchase request', details: String((error as any)?.message || error) },
+          { status: 500 }
+        );
+      }
+    } catch {
+      // ignore
+    }
+
     return NextResponse.json(
       { error: 'Failed to create purchase request' },
       { status: 500 }
