@@ -14,14 +14,13 @@ function uniqueId(prefix: string) {
 }
 
 function controlByNearbyText(scope: any, labelText: RegExp) {
-  // Finds the first input/select/textarea in a FIELD container that contains the label text.
-  // We scope this to a specific section/card to avoid matching the whole page.
-  const container = scope
-    .locator('div', { hasText: labelText })
-    .filter({ has: scope.locator('input, select, textarea') })
+  // Within a scoped section, find the first form control that appears in a div containing the label text.
+  // (UI inputs don't always have proper <label for=> associations.)
+  return scope
+    .locator('div')
+    .filter({ hasText: labelText })
+    .locator('input, select, textarea')
     .first()
-
-  return container.locator('input, select, textarea').first()
 }
 
 test('HR employees: qa_hr can create employee in QA branch and then edit basic fields', async ({ page }) => {
