@@ -14,6 +14,34 @@ export default function EmployeeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>('');
 
+  const handleLoginAs = async () => {
+    if (userRole !== 'ADMIN') return;
+    if (!employee?.userId) {
+      alert('لا يوجد حساب دخول مرتبط بهذا الموظف');
+      return;
+    }
+
+    if (!confirm(`هل تريد الدخول بحساب ${employee.fullNameAr}؟`)) return;
+
+    try {
+      const res = await fetch('/api/auth/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: employee.userId })
+      });
+
+      if (res.ok) {
+        window.location.href = '/dashboard';
+      } else {
+        const data = await res.json();
+        alert(data.error || 'حدث خطأ أثناء تبديل الحساب');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('حدث خطأ أثناء تبديل الحساب');
+    }
+  };
+
   useEffect(() => {
     fetchUserRole();
     if (params.id) {
@@ -95,6 +123,12 @@ export default function EmployeeDetailPage() {
           breadcrumbs={['الرئيسية', 'شؤون الموظفين', 'الموظفين', employee.fullNameAr]}
           actions={
             <>
+              {userRole === 'ADMIN' && employee.userId && (
+                <Button variant="warning" onClick={handleLoginAs}>
+                  🔄 دخول بحساب الموظف
+                </Button>
+              )}
+
               {canEdit && (
                 <>
                   <Button variant="primary" onClick={() => router.push(`/hr/employees/${params.id}/edit`)}>
