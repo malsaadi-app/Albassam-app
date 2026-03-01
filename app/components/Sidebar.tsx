@@ -510,6 +510,37 @@ export default function Sidebar() {
               textAlign: 'center'
             }}>
               ⚠️ وضع المحاكاة نشط
+              <div style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/auth/revert-impersonation', { method: 'POST' })
+                      if (!res.ok) {
+                        const data = await res.json().catch(() => ({}))
+                        alert(data?.error || 'تعذر الرجوع للحساب الأصلي')
+                        return
+                      }
+                      window.location.href = '/dashboard'
+                    } catch {
+                      alert('تعذر الرجوع للحساب الأصلي')
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    border: '1px solid #EF4444',
+                    background: '#FFFFFF',
+                    color: '#DC2626',
+                    fontSize: '12px',
+                    fontWeight: 900,
+                    cursor: 'pointer'
+                  }}
+                >
+                  ↩️ الرجوع لحساب المدير
+                </button>
+              </div>
             </div>
           )}
 
