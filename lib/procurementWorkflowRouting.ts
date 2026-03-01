@@ -32,7 +32,7 @@ export async function resolveProcurementStepAssignees(opts: {
   const coverages = await prisma.employeeBranchCoverage.findMany({
     where: {
       branchId: emp.branchId,
-      // @ts-ignore prisma enum
+      // @ts-expect-error prisma enum typing
       module: 'PROCUREMENT',
       active: true,
       role: 'GATEKEEPER',
