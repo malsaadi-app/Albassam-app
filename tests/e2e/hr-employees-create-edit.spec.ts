@@ -101,7 +101,11 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
   const createRes = race.r
   if (!createRes) throw new Error('No create employee response observed')
   if (!createRes.ok()) {
-    const msg = `Create employee failed: HTTP ${createRes.status()}`
+    let details = ''
+    try {
+      details = await createRes.text()
+    } catch {}
+    const msg = `Create employee failed: HTTP ${createRes.status()} ${details}`
     throw new Error(msg)
   }
 
