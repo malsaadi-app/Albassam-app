@@ -89,8 +89,16 @@ export async function POST(
       );
     }
 
-    // Verify user is authorized for this step
-    if (currentStep.userId !== session.user.id) {
+    // Verify user is authorized for this step (step0 may be dynamic gatekeeper)
+    const { resolveProcurementStepAssignees } = await import('@/lib/procurementWorkflowRouting')
+    const allowedUserIds = await resolveProcurementStepAssignees({
+      requestedByUserId: purchaseRequest.requestedById,
+      workflowCategory: purchaseRequest.category,
+      stepIndex: currentStepIndex,
+      fallbackUserId: currentStep.userId,
+    })
+
+    if (!allowedUserIds.includes(session.user.id)) {
       return NextResponse.json(
         { error: 'غير مصرح لك بمعالجة هذه الخطوة' },
         { status: 403 }
@@ -132,11 +140,11 @@ export async function POST(
       const isLastStep = nextStepIndex >= workflow.steps.length;
 
       if (isLastStep) {
-        // Final approval - complete the request
+        // Last workflow step: mark as IN_PROGRESS (execution/delivery happens next).
         updatedRequest = await prisma.purchaseRequest.update({
           where: { id },
           data: {
-            status: 'APPROVED',
+            status: 'IN_PROGRESS',
             approvalNotes: validatedData.comment || null,
             approvedById: session.user.id,
             approvedAt: new Date(),
@@ -148,9 +156,9 @@ export async function POST(
         await prisma.notification.create({
           data: {
             userId: purchaseRequest.requestedById,
-            title: 'طلب شراء موافق عليه',
-            message: `تمت الموافقة على طلب الشراء ${purchaseRequest.requestNumber}`,
-            type: 'procurement_approved',
+            title: 'طلب شراء قيد التنفيذ',
+            message: `تم اعتماد طلب الشراء ${purchaseRequest.requestNumber} وهو الآن قيد التنفيذ/التسليم` ,
+            type: 'procurement_in_progress',
             relatedId: purchaseRequest.id,
             isRead: false
           }
@@ -170,17 +178,26 @@ export async function POST(
           }
         });
 
-        // Notify next responsible person
-        await prisma.notification.create({
-          data: {
-            userId: nextStep.userId,
-            title: 'طلب شراء بانتظار موافقتك',
-            message: `طلب شراء ${purchaseRequest.requestNumber} (${getCategoryLabel(purchaseRequest.category)}) في مرحلة: ${nextStep.statusName}`,
-            type: 'procurement_pending',
-            relatedId: purchaseRequest.id,
-            isRead: false
-          }
-        });
+        // Notify next responsible person(s)
+        const nextAssignees = await resolveProcurementStepAssignees({
+          requestedByUserId: purchaseRequest.requestedById,
+          workflowCategory: purchaseRequest.category,
+          stepIndex: nextStepIndex,
+          fallbackUserId: nextStep.userId,
+        })
+
+        for (const userId of nextAssignees) {
+          await prisma.notification.create({
+            data: {
+              userId,
+              title: 'طلب شراء بانتظار موافقتك',
+              message: `طلب شراء ${purchaseRequest.requestNumber} (${getCategoryLabel(purchaseRequest.category)}) في مرحلة: ${nextStep.statusName}`,
+              type: 'procurement_pending',
+              relatedId: purchaseRequest.id,
+              isRead: false
+            }
+          });
+        }
 
         // Notify requester of progress
         await prisma.notification.create({

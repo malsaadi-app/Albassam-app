@@ -34,6 +34,7 @@ backups/
 
 # Playwright
 playwright-report/
+test-results/
 
 # Misc
 .tmp/

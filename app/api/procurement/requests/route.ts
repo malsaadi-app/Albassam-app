@@ -147,14 +147,21 @@ export async function POST(request: NextRequest) {
 
     // Determine initial workflow step
     let initialWorkflowStep: number | null = null;
-    let firstResponsibleUserId: string | null = null;
+    let firstResponsibleUserIds: string[] = [];
     let firstStepName: string | null = null;
 
     if (workflow && workflow.steps && workflow.steps.length > 0) {
       const firstStep = workflow.steps[0];
       firstStepName = firstStep.statusName;
       initialWorkflowStep = 0;
-      firstResponsibleUserId = firstStep.userId;
+      // Step0 may be dynamic (gatekeeper) based on requester branch coverage
+      const { resolveProcurementStepAssignees } = await import('@/lib/procurementWorkflowRouting');
+      firstResponsibleUserIds = await resolveProcurementStepAssignees({
+        requestedByUserId: session.user.id,
+        workflowCategory: category,
+        stepIndex: 0,
+        fallbackUserId: firstStep.userId,
+      });
     }
 
     // Create purchase request
@@ -184,19 +191,21 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Send notification to the responsible person for first step
-    if (firstResponsibleUserId) {
+    // Send notification to the responsible person(s) for first step
+    if (firstResponsibleUserIds.length > 0) {
       const stepDesc = firstStepName ? ` - المرحلة: ${firstStepName}` : '';
-      await prisma.notification.create({
-        data: {
-          userId: firstResponsibleUserId,
-          title: 'طلب شراء جديد بانتظار موافقتك',
-          message: `طلب شراء ${requestNumber} من ${session.user.displayName} - القسم: ${department}${stepDesc}`,
-          type: 'PURCHASE_REQUEST',
-          relatedId: purchaseRequest.id,
-          isRead: false
-        }
-      });
+      for (const userId of firstResponsibleUserIds) {
+        await prisma.notification.create({
+          data: {
+            userId,
+            title: 'طلب شراء جديد بانتظار موافقتك',
+            message: `طلب شراء ${requestNumber} من ${session.user.displayName} - القسم: ${department}${stepDesc}`,
+            type: 'PURCHASE_REQUEST',
+            relatedId: purchaseRequest.id,
+            isRead: false
+          }
+        });
+      }
     } else {
       // Fallback: notify admins if no workflow configured
       const admins = await prisma.user.findMany({
