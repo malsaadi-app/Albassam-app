@@ -128,8 +128,8 @@ export default function EmployeeDetailPage() {
             <InfoRow label="الاسم بالإنجليزي" value={employee.fullNameEn || '-'} />
             <InfoRow label="رقم الهوية" value={employee.nationalId} />
             <InfoRow label="الجنسية" value={employee.nationality} />
-            <InfoRow label="تاريخ الميلاد" value={new Date(employee.dateOfBirth).toLocaleDateString('ar-SA')} />
-            <InfoRow label="الجنس" value={employee.gender === 'MALE' ? 'ذكر' : 'أنثى'} />
+            <InfoRow label="تاريخ الميلاد" value={employee.dateOfBirth ? new Date(employee.dateOfBirth).toLocaleDateString('ar-SA') : '-'} />
+            <InfoRow label="الجنس" value={employee.gender ? (employee.gender === 'MALE' ? 'ذكر' : 'أنثى') : '-'} />
           </Card>
 
           {/* Job Info */}
@@ -138,10 +138,10 @@ export default function EmployeeDetailPage() {
               💼 البيانات الوظيفية
             </h3>
             <InfoRow label="رقم الموظف" value={employee.employeeNumber} />
-            <InfoRow label="القسم" value={employee.department} />
-            <InfoRow label="المسمى الوظيفي" value={employee.position} />
+            <InfoRow label="القسم" value={employee.departmentRef?.nameAr || employee.department} />
+            <InfoRow label="المسمى الوظيفي" value={employee.jobTitleRef?.nameAr || employee.position} />
             <InfoRow label="المدير المباشر" value={employee.directManager || '-'} />
-            <InfoRow label="تاريخ التوظيف" value={new Date(employee.hireDate).toLocaleDateString('ar-SA')} />
+            <InfoRow label="تاريخ المباشرة" value={employee.hireDate ? new Date(employee.hireDate).toLocaleDateString('ar-SA') : '-'} />
             <InfoRow
               label="نوع التوظيف"
               value={

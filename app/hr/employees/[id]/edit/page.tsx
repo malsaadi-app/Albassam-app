@@ -72,6 +72,7 @@ export default function EditEmployeePage() {
     transportAllowance: 0,
     otherAllowances: 0,
     bankName: '',
+    bankAccountNumber: '',
     iban: '',
     education: '',
     specialization: '',
@@ -206,6 +207,7 @@ export default function EditEmployeePage() {
           transportAllowance: data.transportAllowance || 0,
           otherAllowances: data.otherAllowances || 0,
           bankName: data.bankName || '',
+          bankAccountNumber: data.bankAccountNumber || '',
           iban: data.iban || '',
           education: (() => {
             // Handle old JSON format: {"degree":"بكالوريوس","institution":"..."}
@@ -398,7 +400,7 @@ export default function EditEmployeePage() {
                 ))}
               </Select>
               <Input
-                label="تاريخ التوظيف"
+                label="تاريخ المباشرة"
                 type="date"
                 value={formData.hireDate}
                 onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
@@ -521,6 +523,11 @@ export default function EditEmployeePage() {
                 label="اسم البنك"
                 value={formData.bankName}
                 onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
+              />
+              <Input
+                label="رقم الحساب البنكي"
+                value={formData.bankAccountNumber}
+                onChange={(e) => setFormData({ ...formData, bankAccountNumber: e.target.value })}
               />
               <Input
                 label="رقم الآيبان"
