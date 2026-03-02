@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { Select, Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import ReactSelect from 'react-select'
 
 type Branch = { id: string; name: string; type: string; status: string }
 
@@ -24,7 +25,7 @@ type Assignment = {
   active: boolean
 }
 
-type Employee = { id: string; fullNameAr: string; employeeNumber: string }
+type Employee = { id: string; fullNameAr: string; employeeNumber: string; department?: string; position?: string }
 
 function buildTree(units: OrgUnitRow[]) {
   const byId = new Map(units.map((u) => [u.id, { ...u, children: [] as any[] }]))
@@ -75,7 +76,10 @@ export default function OrgStructurePage() {
   const [selectedUnitId, setSelectedUnitId] = useState<string>('')
   const [supervisorId, setSupervisorId] = useState<string>('')
   const [supervisorSearch, setSupervisorSearch] = useState<string>('')
-  const [members, setMembers] = useState<string>('') // comma separated employeeNumbers
+
+  // members (multi-select)
+  const [memberFilter, setMemberFilter] = useState<'TEACHERS' | 'STAFF' | 'ALL'>('TEACHERS')
+  const [memberEmployeeIds, setMemberEmployeeIds] = useState<string[]>([])
 
   // org unit management (rename/merge)
   const [unitName, setUnitName] = useState<string>('')
@@ -131,11 +135,16 @@ export default function OrgStructurePage() {
     return map
   }, [assignments])
 
-  const employeesByNumber = useMemo(() => {
-    const map = new Map<string, Employee>()
-    for (const e of employees) map.set(e.employeeNumber, e)
-    return map
-  }, [employees])
+  const isTeacherEmployee = (e: Employee) => {
+    const pos = (e as any).position || ''
+    return String(pos).includes('معلم')
+  }
+
+  const filteredEmployeesForMembers = useMemo(() => {
+    if (memberFilter === 'ALL') return employees
+    if (memberFilter === 'TEACHERS') return employees.filter(isTeacherEmployee)
+    return employees.filter((e) => !isTeacherEmployee(e))
+  }, [employees, memberFilter])
 
   const filteredEmployeesForSupervisor = useMemo(() => {
     const q = supervisorSearch.trim().toLowerCase()
@@ -272,26 +281,16 @@ export default function OrgStructurePage() {
     setSupervisorId(sup?.employeeId || '')
 
     const mem = arr.filter((a) => a.assignmentType === 'FUNCTIONAL' && a.role === 'MEMBER' && a.active)
-    const memNumbers = mem
-      .map((m) => employees.find((e) => e.id === m.employeeId)?.employeeNumber)
-      .filter(Boolean)
-      .join(',')
-    setMembers(memNumbers)
+    setMemberEmployeeIds(mem.map((m) => m.employeeId))
   }
 
   const saveAssignments = async () => {
     if (!selectedUnitId) return
 
-    const memberIds: string[] = []
-    for (const token of members.split(',').map((x) => x.trim()).filter(Boolean)) {
-      const emp = employeesByNumber.get(token)
-      if (emp) memberIds.push(emp.id)
-    }
-
     const res = await fetch('/api/settings/org-structure/assignments', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orgUnitId: selectedUnitId, supervisorEmployeeId: supervisorId || null, memberEmployeeIds: memberIds }),
+      body: JSON.stringify({ orgUnitId: selectedUnitId, supervisorEmployeeId: supervisorId || null, memberEmployeeIds: memberEmployeeIds }),
     })
 
     const data = await res.json().catch(() => ({}))
@@ -842,15 +841,43 @@ export default function OrgStructurePage() {
                       ))}
                     </Select>
 
-                    <div style={{ marginTop: 12 }}>
-                      <Input
-                        label="أعضاء/معلمين (أرقام موظفين مفصولة بفواصل)"
-                        value={members}
-                        onChange={(e) => setMembers(e.target.value)}
-                        placeholder="مثال: 1001,1002,1003"
-                      />
-                      <div style={{ color: '#6B7280', fontSize: 12, marginTop: 6 }}>
-                        تلميح: اكتب أرقام الموظفين (employeeNumber) عشان الإدخال يكون سريع.
+                    <div style={{ marginTop: 12, background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                        <div style={{ fontWeight: 900 }}>👥 الأعضاء</div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span style={{ color: '#6B7280', fontSize: 12 }}>فلتر:</span>
+                          <select
+                            value={memberFilter}
+                            onChange={(e) => setMemberFilter(e.target.value as any)}
+                            style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid #E5E7EB', background: 'white' }}
+                          >
+                            <option value="TEACHERS">معلمين</option>
+                            <option value="STAFF">إداريين</option>
+                            <option value="ALL">الكل</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 10 }}>
+                        <ReactSelect
+                          isMulti
+                          isRtl
+                          placeholder="اختر أعضاء…"
+                          options={filteredEmployeesForMembers.map((e) => ({ value: e.id, label: `${e.fullNameAr} (${e.employeeNumber})` }))}
+                          value={memberEmployeeIds
+                            .map((id) => employees.find((e) => e.id === id))
+                            .filter(Boolean)
+                            .map((e) => ({ value: (e as any).id, label: `${(e as any).fullNameAr} (${(e as any).employeeNumber})` }))}
+                          onChange={(vals) => setMemberEmployeeIds((vals || []).map((v: any) => v.value))}
+                          styles={{
+                            control: (base) => ({ ...base, borderRadius: 12, borderColor: '#E5E7EB', minHeight: 44 }),
+                            menu: (base) => ({ ...base, zIndex: 60 }),
+                          }}
+                        />
+                      </div>
+
+                      <div style={{ color: '#6B7280', fontSize: 12, marginTop: 8 }}>
+                        المختارين: {memberEmployeeIds.length}
                       </div>
                     </div>
 
