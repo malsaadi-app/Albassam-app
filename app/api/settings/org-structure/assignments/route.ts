@@ -5,7 +5,13 @@ import { prisma } from '@/lib/db'
 import { isSuperAdmin } from '@/lib/permissions'
 
 // PUT /api/settings/org-structure/assignments
-// Body: { branchId, orgUnitId, supervisorEmployeeId?, memberEmployeeIds? }
+// Body:
+// {
+//   orgUnitId,
+//   headEmployeeId?, headCoverageScope?, headCoverageBranchIds?,
+//   supervisorEmployeeId?, supervisorCoverageScope?, supervisorCoverageBranchIds?,
+//   memberEmployeeIds?
+// }
 export async function PUT(request: NextRequest) {
   try {
     const session = await getSession(await cookies())
@@ -14,12 +20,61 @@ export async function PUT(request: NextRequest) {
     if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
-    const { orgUnitId, supervisorEmployeeId, memberEmployeeIds } = body || {}
+    const {
+      orgUnitId,
+      headEmployeeId,
+      headCoverageScope,
+      headCoverageBranchIds,
+      supervisorEmployeeId,
+      supervisorCoverageScope,
+      supervisorCoverageBranchIds,
+      memberEmployeeIds,
+    } = body || {}
 
     if (!orgUnitId) return NextResponse.json({ error: 'orgUnitId is required' }, { status: 400 })
 
+    // Upsert head/manager (FUNCTIONAL + HEAD)
+    if (headEmployeeId !== undefined || headCoverageScope !== undefined || headCoverageBranchIds !== undefined) {
+      // Deactivate existing heads for this unit
+      await prisma.orgUnitAssignment.updateMany({
+        where: { orgUnitId, assignmentType: 'FUNCTIONAL', role: 'HEAD' },
+        data: { active: false },
+      })
+
+      if (headEmployeeId) {
+        const scope = (headCoverageScope || 'BRANCH') as any
+        const branchIdsJson = Array.isArray(headCoverageBranchIds) ? JSON.stringify(headCoverageBranchIds) : null
+
+        await prisma.orgUnitAssignment.upsert({
+          where: {
+            employeeId_orgUnitId_assignmentType: {
+              employeeId: headEmployeeId,
+              orgUnitId,
+              assignmentType: 'FUNCTIONAL',
+            },
+          },
+          update: {
+            active: true,
+            role: 'HEAD',
+            coverageScope: scope,
+            coverageBranchIds: scope === 'MULTI_BRANCH' ? branchIdsJson : null,
+          },
+          create: {
+            employeeId: headEmployeeId,
+            orgUnitId,
+            assignmentType: 'FUNCTIONAL',
+            role: 'HEAD',
+            coverageScope: scope,
+            coverageBranchIds: scope === 'MULTI_BRANCH' ? branchIdsJson : null,
+            isPrimary: true,
+            active: true,
+          },
+        })
+      }
+    }
+
     // Upsert supervisor (FUNCTIONAL + SUPERVISOR)
-    if (supervisorEmployeeId !== undefined) {
+    if (supervisorEmployeeId !== undefined || supervisorCoverageScope !== undefined || supervisorCoverageBranchIds !== undefined) {
       // Deactivate existing supervisor assignments for this unit
       await prisma.orgUnitAssignment.updateMany({
         where: { orgUnitId, assignmentType: 'FUNCTIONAL', role: 'SUPERVISOR' },
@@ -27,6 +82,9 @@ export async function PUT(request: NextRequest) {
       })
 
       if (supervisorEmployeeId) {
+        const scope = (supervisorCoverageScope || 'BRANCH') as any
+        const branchIdsJson = Array.isArray(supervisorCoverageBranchIds) ? JSON.stringify(supervisorCoverageBranchIds) : null
+
         await prisma.orgUnitAssignment.upsert({
           where: {
             employeeId_orgUnitId_assignmentType: {
@@ -35,13 +93,19 @@ export async function PUT(request: NextRequest) {
               assignmentType: 'FUNCTIONAL',
             },
           },
-          update: { active: true, role: 'SUPERVISOR' },
+          update: {
+            active: true,
+            role: 'SUPERVISOR',
+            coverageScope: scope,
+            coverageBranchIds: scope === 'MULTI_BRANCH' ? branchIdsJson : null,
+          },
           create: {
             employeeId: supervisorEmployeeId,
             orgUnitId,
             assignmentType: 'FUNCTIONAL',
             role: 'SUPERVISOR',
-            coverageScope: 'BRANCH',
+            coverageScope: scope,
+            coverageBranchIds: scope === 'MULTI_BRANCH' ? branchIdsJson : null,
             isPrimary: false,
             active: true,
           },

@@ -22,6 +22,8 @@ type Assignment = {
   employeeId: string
   assignmentType: string
   role: string
+  coverageScope?: 'BRANCH' | 'MULTI_BRANCH' | 'ALL'
+  coverageBranchIds?: string | null
   active: boolean
 }
 
@@ -76,6 +78,16 @@ export default function OrgStructurePage() {
   const [selectedUnitId, setSelectedUnitId] = useState<string>('')
   const [supervisorId, setSupervisorId] = useState<string>('')
   const [supervisorSearch, setSupervisorSearch] = useState<string>('')
+
+  // head (manager)
+  const [headId, setHeadId] = useState<string>('')
+  const [headSearch, setHeadSearch] = useState<string>('')
+
+  // coverage
+  const [supervisorCoverageScope, setSupervisorCoverageScope] = useState<'BRANCH' | 'MULTI_BRANCH' | 'ALL'>('BRANCH')
+  const [supervisorCoverageBranchIds, setSupervisorCoverageBranchIds] = useState<string[]>([])
+  const [headCoverageScope, setHeadCoverageScope] = useState<'BRANCH' | 'MULTI_BRANCH' | 'ALL'>('BRANCH')
+  const [headCoverageBranchIds, setHeadCoverageBranchIds] = useState<string[]>([])
 
   // members (multi-select)
   const [memberFilter, setMemberFilter] = useState<'TEACHERS' | 'STAFF' | 'ALL'>('TEACHERS')
@@ -157,17 +169,42 @@ export default function OrgStructurePage() {
     })
   }, [employees, supervisorSearch])
 
+  const filteredEmployeesForHeadRole = useMemo(() => {
+    const q = headSearch.trim().toLowerCase()
+    if (!q) return employees
+    return employees.filter((e) => {
+      const name = (e.fullNameAr || '').toLowerCase()
+      const num = (e.employeeNumber || '').toLowerCase()
+      return name.includes(q) || num.includes(q)
+    })
+  }, [employees, headSearch])
+
   const selectedAssignments = useMemo(() => {
     if (!selectedUnitId) return [] as Assignment[]
     return assByUnit.get(selectedUnitId) || []
   }, [assByUnit, selectedUnitId])
 
-  const selectedSupervisor = useMemo(() => {
+  const selectedSupervisorAssignment = useMemo(() => {
     if (!selectedUnitId) return null
-    const sup = selectedAssignments.find((a) => a.assignmentType === 'FUNCTIONAL' && a.role === 'SUPERVISOR' && a.active)
+    return selectedAssignments.find((a) => a.assignmentType === 'FUNCTIONAL' && a.role === 'SUPERVISOR' && a.active) || null
+  }, [selectedAssignments, selectedUnitId])
+
+  const selectedSupervisor = useMemo(() => {
+    const sup = selectedSupervisorAssignment
     if (!sup) return null
     return employees.find((e) => e.id === sup.employeeId) || null
-  }, [employees, selectedAssignments, selectedUnitId])
+  }, [employees, selectedSupervisorAssignment])
+
+  const selectedHeadAssignment = useMemo(() => {
+    if (!selectedUnitId) return null
+    return selectedAssignments.find((a) => a.assignmentType === 'FUNCTIONAL' && a.role === 'HEAD' && a.active) || null
+  }, [selectedAssignments, selectedUnitId])
+
+  const selectedHead = useMemo(() => {
+    const h = selectedHeadAssignment
+    if (!h) return null
+    return employees.find((e) => e.id === h.employeeId) || null
+  }, [employees, selectedHeadAssignment])
 
   const selectedMembers = useMemo(() => {
     if (!selectedUnitId) return [] as Employee[]
@@ -267,6 +304,7 @@ export default function OrgStructurePage() {
   const openUnit = (id: string) => {
     setSelectedUnitId(id)
     setSupervisorSearch('')
+    setHeadSearch('')
     setMergeTargetUnitId('')
     setIncludeChildrenMembers(false)
     setShowUnassignedOnly(false)
@@ -278,8 +316,16 @@ export default function OrgStructurePage() {
     setUnitName(unit?.name || '')
 
     const arr = assByUnit.get(id) || []
+
+    const head = arr.find((a) => a.assignmentType === 'FUNCTIONAL' && a.role === 'HEAD' && a.active)
+    setHeadId(head?.employeeId || '')
+    setHeadCoverageScope((head?.coverageScope as any) || 'BRANCH')
+    setHeadCoverageBranchIds(head?.coverageBranchIds ? JSON.parse(head.coverageBranchIds) : [])
+
     const sup = arr.find((a) => a.assignmentType === 'FUNCTIONAL' && a.role === 'SUPERVISOR' && a.active)
     setSupervisorId(sup?.employeeId || '')
+    setSupervisorCoverageScope((sup?.coverageScope as any) || 'BRANCH')
+    setSupervisorCoverageBranchIds(sup?.coverageBranchIds ? JSON.parse(sup.coverageBranchIds) : [])
 
     const mem = arr.filter((a) => a.assignmentType === 'FUNCTIONAL' && a.role === 'MEMBER' && a.active)
     setMemberEmployeeIds(mem.map((m) => m.employeeId))
@@ -291,7 +337,16 @@ export default function OrgStructurePage() {
     const res = await fetch('/api/settings/org-structure/assignments', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orgUnitId: selectedUnitId, supervisorEmployeeId: supervisorId || null, memberEmployeeIds: memberEmployeeIds }),
+      body: JSON.stringify({
+        orgUnitId: selectedUnitId,
+        headEmployeeId: headId || null,
+        headCoverageScope,
+        headCoverageBranchIds,
+        supervisorEmployeeId: supervisorId || null,
+        supervisorCoverageScope,
+        supervisorCoverageBranchIds,
+        memberEmployeeIds: memberEmployeeIds,
+      }),
     })
 
     const data = await res.json().catch(() => ({}))
@@ -712,7 +767,8 @@ export default function OrgStructurePage() {
                       </div>
 
                       <div style={{ color: '#6B7280', fontSize: 12, marginBottom: 8 }}>
-                        المشرف: {selectedSupervisor ? `${selectedSupervisor.fullNameAr} (${selectedSupervisor.employeeNumber})` : '—'}
+                        المدير: {selectedHead ? `${selectedHead.fullNameAr} (${selectedHead.employeeNumber})` : '—'}
+                        {' — '}المشرف: {selectedSupervisor ? `${selectedSupervisor.fullNameAr} (${selectedSupervisor.employeeNumber})` : '—'}
                         {' — '}
                         {showUnassignedOnly ? `غير مربوطين: ${displayedMembers.length}` : `الأعضاء: ${displayedMembers.length}`}
                       </div>
@@ -827,6 +883,51 @@ export default function OrgStructurePage() {
                     </div>
 
                     <Input
+                      label="بحث عن مدير القسم (اسم أو رقم موظف)"
+                      value={headSearch}
+                      onChange={(e) => setHeadSearch(e.target.value)}
+                      placeholder="اكتب للاسراع…"
+                    />
+
+                    <Select label="مدير القسم" value={headId} onChange={(e) => setHeadId(e.target.value)}>
+                      <option value="">— بدون —</option>
+                      {filteredEmployeesForHeadRole.map((e) => (
+                        <option key={e.id} value={e.id}>
+                          {e.fullNameAr} ({e.employeeNumber})
+                        </option>
+                      ))}
+                    </Select>
+
+                    <Select label="تغطية مدير القسم" value={headCoverageScope} onChange={(e) => setHeadCoverageScope(e.target.value as any)}>
+                      <option value="BRANCH">فرع واحد</option>
+                      <option value="MULTI_BRANCH">عدة فروع</option>
+                      <option value="ALL">كل الفروع</option>
+                    </Select>
+
+                    {headCoverageScope === 'MULTI_BRANCH' && (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>اختر الفروع المغطاة</div>
+                        <ReactSelect
+                          isMulti
+                          isRtl
+                          placeholder="اختر الفروع…"
+                          options={branches.map((b) => ({ value: b.id, label: b.name }))}
+                          value={headCoverageBranchIds.map((id) => {
+                            const b = branches.find((x) => x.id === id)
+                            return { value: id, label: b?.name || id }
+                          })}
+                          onChange={(vals) => setHeadCoverageBranchIds((vals || []).map((v: any) => v.value))}
+                          styles={{
+                            control: (base) => ({ ...base, borderRadius: 12, borderColor: '#E5E7EB', minHeight: 44 }),
+                            menu: (base) => ({ ...base, zIndex: 60 }),
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    <div style={{ height: 10 }} />
+
+                    <Input
                       label="بحث عن المشرف (اسم أو رقم موظف)"
                       value={supervisorSearch}
                       onChange={(e) => setSupervisorSearch(e.target.value)}
@@ -841,6 +942,33 @@ export default function OrgStructurePage() {
                         </option>
                       ))}
                     </Select>
+
+                    <Select label="تغطية المشرف" value={supervisorCoverageScope} onChange={(e) => setSupervisorCoverageScope(e.target.value as any)}>
+                      <option value="BRANCH">فرع واحد</option>
+                      <option value="MULTI_BRANCH">عدة فروع</option>
+                      <option value="ALL">كل الفروع</option>
+                    </Select>
+
+                    {supervisorCoverageScope === 'MULTI_BRANCH' && (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>اختر الفروع المغطاة</div>
+                        <ReactSelect
+                          isMulti
+                          isRtl
+                          placeholder="اختر الفروع…"
+                          options={branches.map((b) => ({ value: b.id, label: b.name }))}
+                          value={supervisorCoverageBranchIds.map((id) => {
+                            const b = branches.find((x) => x.id === id)
+                            return { value: id, label: b?.name || id }
+                          })}
+                          onChange={(vals) => setSupervisorCoverageBranchIds((vals || []).map((v: any) => v.value))}
+                          styles={{
+                            control: (base) => ({ ...base, borderRadius: 12, borderColor: '#E5E7EB', minHeight: 44 }),
+                            menu: (base) => ({ ...base, zIndex: 60 }),
+                          }}
+                        />
+                      </div>
+                    )}
 
                     <div style={{ marginTop: 12, background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
