@@ -53,3 +53,7 @@ SCHEMA_PATCH.sql
 prisma-schema-patch.txt
 ecosystem.config-IMPROVED.js
 scripts/test-employee-api.sh
+
+# Local-only scripts/tests
+scripts/debug-latest-procurement.ts
+tests/e2e/procurement-flow-smoke.spec.ts
