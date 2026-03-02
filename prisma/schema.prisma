@@ -1003,6 +1003,9 @@ model Branch {
   // Org structure (enterprise)
   orgUnits OrgUnit[]
 
+  // Transport
+  transportVehicles TransportVehicle[]
+
   @@index([name])
   @@index([type])
   @@index([status])
@@ -2469,4 +2472,26 @@ model OrgUnitAssignment {
   @@index([employeeId])
   @@index([orgUnitId])
   @@index([assignmentType])
+}
+
+
+// ==================== TRANSPORT MODULE ====================
+model TransportVehicle {
+  id          String   @id @default(cuid())
+  plateNumber String   @unique
+
+  vehicleType String
+  model       String?
+  year        Int?
+  capacity    Int?
+  status      String   @default("ACTIVE")
+
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([branchId])
+  @@index([status])
 }

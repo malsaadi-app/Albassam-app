@@ -144,6 +144,7 @@ export default function Sidebar() {
       label: 'الخدمات المساندة',
       items: [
         { href: '/support-services/transport/drivers', icon: <HiOutlineTruck size={18} />, label: 'النقل — السائقين' },
+        { href: '/support-services/transport/vehicles', icon: <HiOutlineTruck size={18} />, label: 'النقل — المركبات' },
       ]
     },
     {
