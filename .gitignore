@@ -39,3 +39,17 @@ test-results/
 # Misc
 .tmp/
 .tmp*
+
+# Build artifacts
+.next_run*/
+# Agent debug artifacts
+DEBUG_*.md
+EXEC_SUMMARY.md
+QUICK_FIX_GUIDE.md
+SUMMARY_REPORT.md
+SUBAGENT_COMPLETION_REPORT.md
+FINAL_DELIVERY.txt
+SCHEMA_PATCH.sql
+prisma-schema-patch.txt
+ecosystem.config-IMPROVED.js
+scripts/test-employee-api.sh
