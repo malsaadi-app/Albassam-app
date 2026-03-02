@@ -26,14 +26,44 @@ export default function EmployeesPage() {
   const [search, setSearch] = useState('');
   const [department, setDepartment] = useState('');
   const [status, setStatus] = useState('');
+  const [branchId, setBranchId] = useState('');
+  const [stageId, setStageId] = useState('');
   const [departments, setDepartments] = useState<string[]>([]);
+  const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
+  const [stages, setStages] = useState<Array<{ id: string; name: string }>>([]);
   const [currentUserRole, setCurrentUserRole] = useState<string>('');
 
   useEffect(() => {
     fetchEmployees();
     fetchCurrentUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, department, status]);
+  }, [search, department, status, branchId, stageId]);
+
+  useEffect(() => {
+    fetch('/api/branches')
+      .then((r) => r.json())
+      .then((d) => {
+        const list = Array.isArray(d) ? d : d.branches || d.data || []
+        setBranches((list || []).filter((b: any) => b.status === 'ACTIVE').map((b: any) => ({ id: b.id, name: b.name })))
+      })
+      .catch(() => setBranches([]))
+  }, [])
+
+  useEffect(() => {
+    if (!branchId) {
+      setStages([])
+      setStageId('')
+      return
+    }
+
+    fetch(`/api/branches/${branchId}/stages`)
+      .then((r) => r.json())
+      .then((d) => {
+        const list = d.stages || d.data || d || []
+        setStages((list || []).map((s: any) => ({ id: s.id, name: s.name })))
+      })
+      .catch(() => setStages([]))
+  }, [branchId])
 
   const fetchCurrentUser = async () => {
     try {
@@ -53,6 +83,8 @@ export default function EmployeesPage() {
       if (search) params.append('search', search);
       if (department) params.append('department', department);
       if (status) params.append('status', status);
+      if (branchId) params.append('branchId', branchId);
+      if (stageId) params.append('stageId', stageId);
 
       const res = await fetch(`/api/hr/employees?${params}`);
       if (res.ok) {
@@ -236,6 +268,50 @@ export default function EmployeesPage() {
                 outline: 'none'
               }}
             />
+
+            <select
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              style={{
+                background: COLORS.white,
+                border: `1px solid ${COLORS.gray200}`,
+                borderRadius: '12px',
+                padding: '12px 14px',
+                color: COLORS.gray900,
+                fontSize: '15px',
+                outline: 'none'
+              }}
+            >
+              <option value="">كل الفروع</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={stageId}
+              onChange={(e) => setStageId(e.target.value)}
+              disabled={!branchId}
+              style={{
+                background: COLORS.white,
+                border: `1px solid ${COLORS.gray200}`,
+                borderRadius: '12px',
+                padding: '12px 14px',
+                color: COLORS.gray900,
+                fontSize: '15px',
+                outline: 'none',
+                opacity: branchId ? 1 : 0.6
+              }}
+            >
+              <option value="">كل المراحل</option>
+              {stages.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
 
             <select
               value={department}

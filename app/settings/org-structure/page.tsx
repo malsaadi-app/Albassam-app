@@ -774,9 +774,11 @@ export default function OrgStructurePage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
                       <div style={{ fontWeight: 900 }}>{selectedUnit.name}</div>
                       {selectedUnit.type === 'STAGE' && (
-                        <Button variant="secondary" onClick={syncStageMembers}>
-                          🔄 مزامنة أعضاء المرحلة
-                        </Button>
+                        <div style={{ position: 'relative', zIndex: 5, pointerEvents: 'auto' }}>
+                          <Button variant="secondary" onClick={syncStageMembers}>
+                            🔄 مزامنة أعضاء المرحلة
+                          </Button>
+                        </div>
                       )}
                     </div>
 
