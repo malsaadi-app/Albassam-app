@@ -30,9 +30,13 @@ const HR_EMPLOYEE_FIRST_STEP_TYPES = new Set<string>([
 ])
 
 export async function getStageManagerUserIdForRequester(requesterUserId: string): Promise<string | null> {
+  // Prefer org-structure STAGE->HEAD (new model)
   const employee = await prisma.employee.findUnique({
     where: { userId: requesterUserId },
     select: {
+      id: true,
+      branchId: true,
+      stageId: true,
       stage: {
         select: {
           manager: { select: { userId: true } },
@@ -42,6 +46,46 @@ export async function getStageManagerUserIdForRequester(requesterUserId: string)
     }
   })
 
+  // Prefer legacy Stage relation name -> OrgUnit STAGE name (stable)
+  if (employee?.branchId) {
+    const stageName = (employee as any)?.stage?.name || null
+    if (stageName) {
+      const stageUnit = await prisma.orgUnit.findFirst({
+        where: { branchId: employee.branchId, type: 'STAGE', isActive: true, name: { contains: stageName } },
+        select: { id: true },
+      })
+
+      if (stageUnit) {
+        const head = await prisma.orgUnitAssignment.findFirst({
+          where: { orgUnitId: stageUnit.id, active: true, role: 'HEAD', assignmentType: 'FUNCTIONAL' },
+          select: { employee: { select: { userId: true } } },
+        })
+        if (head?.employee?.userId) return head.employee.userId
+      }
+    }
+
+    // Fallback: try any ADMIN assignment to STAGE org unit (member), take its stage unit and find HEAD.
+    const adminStage = await prisma.orgUnitAssignment.findFirst({
+      where: {
+        employeeId: employee?.id || '__none__',
+        active: true,
+        assignmentType: 'ADMIN',
+        role: 'MEMBER',
+        orgUnit: { branchId: employee.branchId, type: 'STAGE', isActive: true },
+      },
+      select: { orgUnitId: true },
+    })
+
+    if (adminStage?.orgUnitId) {
+      const head = await prisma.orgUnitAssignment.findFirst({
+        where: { orgUnitId: adminStage.orgUnitId, active: true, role: 'HEAD', assignmentType: 'FUNCTIONAL' },
+        select: { employee: { select: { userId: true } } },
+      })
+      if (head?.employee?.userId) return head.employee.userId
+    }
+  }
+
+  // Final fallback: old Stage.manager/deputy
   return employee?.stage?.manager?.userId || employee?.stage?.deputy?.userId || null
 }
 
