@@ -224,9 +224,12 @@ export async function getApproverUserIdsForHRRequestStep(params: {
     return { userIds: admins, actor: 'ADMIN', labelAr: 'اعتماد نهائي' }
   }
 
-  // Step 3: HR executor(s) — routed is intentionally empty; assignment happens via delegation/pool.
+  // Step 3: HR executor(s) — default handler is HR manager (can delegate to any user/pool)
   if (stepOrder === 3) {
-    return { userIds: [], actor: 'HR_REVIEWER', labelAr: 'تنفيذ الموارد البشرية' }
+    const hrManagers = await getUserIdsBySystemRoleName('HR_MANAGER')
+    if (hrManagers.length) return { userIds: hrManagers, actor: 'ADMIN', labelAr: 'تنفيذ الموارد البشرية' }
+    const admins = await getAdminUserIds()
+    return { userIds: admins, actor: 'ADMIN', labelAr: 'تنفيذ الموارد البشرية' }
   }
 
   return { userIds: [], actor: 'ADMIN', labelAr: 'غير محدد' }
