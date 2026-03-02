@@ -27,8 +27,12 @@ export async function POST(request: NextRequest) {
         select: { id: true, name: true, type: true },
       }),
       prisma.employee.findMany({
-        where: { branchId, status: 'ACTIVE', employeeRole: 'TEACHER' },
-        select: { id: true, employeeNumber: true, fullNameAr: true, department: true, specialization: true },
+        where: {
+          branchId,
+          status: 'ACTIVE',
+          OR: [{ employeeRole: 'TEACHER' }, { position: { contains: 'معلم' } }],
+        },
+        select: { id: true, employeeNumber: true, fullNameAr: true, department: true, specialization: true, position: true, employeeRole: true },
       }),
     ])
 
