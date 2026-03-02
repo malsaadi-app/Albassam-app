@@ -12,9 +12,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Admin-only for now (enterprise safety)
-    const isAdmin = await isSuperAdmin(session.user.id)
-    if (!isAdmin) {
+    // Admin-only
+    if (session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
