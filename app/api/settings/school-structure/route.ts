@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { isSuperAdmin } from '@/lib/permissions'
 
 // GET /api/settings/school-structure
 // Returns branches + stages + managers + deputies + VP educational user
@@ -11,8 +10,8 @@ export async function GET(_request: NextRequest) {
     const session = await getSession(await cookies())
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const isAdmin = await isSuperAdmin(session.user.id)
-    if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // Allow legacy ADMIN role to access
+    if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const branches = await prisma.branch.findMany({
       where: { type: 'SCHOOL', status: 'ACTIVE' },
@@ -68,8 +67,8 @@ export async function PUT(request: NextRequest) {
     const session = await getSession(await cookies())
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const isAdmin = await isSuperAdmin(session.user.id)
-    if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // Allow legacy ADMIN role to access
+    if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
     const { branchId, vpEducationalUserId, stages } = body || {}
