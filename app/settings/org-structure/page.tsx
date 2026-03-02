@@ -53,7 +53,12 @@ export default function OrgStructurePage() {
 
   const [selectedUnitId, setSelectedUnitId] = useState<string>('')
   const [supervisorId, setSupervisorId] = useState<string>('')
+  const [supervisorSearch, setSupervisorSearch] = useState<string>('')
   const [members, setMembers] = useState<string>('') // comma separated employeeNumbers
+
+  // org unit management (rename/merge)
+  const [unitName, setUnitName] = useState<string>('')
+  const [mergeTargetUnitId, setMergeTargetUnitId] = useState<string>('')
 
   useEffect(() => {
     fetch('/api/branches')
@@ -85,6 +90,35 @@ export default function OrgStructurePage() {
     return map
   }, [employees])
 
+  const filteredEmployeesForSupervisor = useMemo(() => {
+    const q = supervisorSearch.trim().toLowerCase()
+    if (!q) return employees
+    return employees.filter((e) => {
+      const name = (e.fullNameAr || '').toLowerCase()
+      const num = (e.employeeNumber || '').toLowerCase()
+      return name.includes(q) || num.includes(q)
+    })
+  }, [employees, supervisorSearch])
+
+  const selectedAssignments = useMemo(() => {
+    if (!selectedUnitId) return [] as Assignment[]
+    return assByUnit.get(selectedUnitId) || []
+  }, [assByUnit, selectedUnitId])
+
+  const selectedSupervisor = useMemo(() => {
+    if (!selectedUnitId) return null
+    const sup = selectedAssignments.find((a) => a.assignmentType === 'FUNCTIONAL' && a.role === 'SUPERVISOR' && a.active)
+    if (!sup) return null
+    return employees.find((e) => e.id === sup.employeeId) || null
+  }, [employees, selectedAssignments, selectedUnitId])
+
+  const selectedMembers = useMemo(() => {
+    if (!selectedUnitId) return [] as Employee[]
+    const mem = selectedAssignments.filter((a) => a.assignmentType === 'FUNCTIONAL' && a.role === 'MEMBER' && a.active)
+    const ids = new Set(mem.map((m) => m.employeeId))
+    return employees.filter((e) => ids.has(e.id))
+  }, [employees, selectedAssignments, selectedUnitId])
+
   const load = async (bId: string) => {
     setLoading(true)
     setError('')
@@ -113,6 +147,12 @@ export default function OrgStructurePage() {
 
   const openUnit = (id: string) => {
     setSelectedUnitId(id)
+    setSupervisorSearch('')
+    setMergeTargetUnitId('')
+
+    const unit = units.find((u) => u.id === id)
+    setUnitName(unit?.name || '')
+
     const arr = assByUnit.get(id) || []
     const sup = arr.find((a) => a.assignmentType === 'FUNCTIONAL' && a.role === 'SUPERVISOR' && a.active)
     setSupervisorId(sup?.employeeId || '')
@@ -147,6 +187,56 @@ export default function OrgStructurePage() {
     }
 
     alert('✅ تم حفظ المشرف/الأعضاء')
+    if (branchId) load(branchId)
+  }
+
+  const saveUnitName = async () => {
+    if (!selectedUnitId) return
+    const name = unitName.trim()
+    if (!name) {
+      alert('اكتب اسم القسم')
+      return
+    }
+
+    const res = await fetch(`/api/settings/org-structure/${selectedUnitId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || 'فشل تعديل الاسم')
+      return
+    }
+
+    alert('✅ تم تعديل اسم القسم')
+    if (branchId) load(branchId)
+  }
+
+  const mergeUnitInto = async () => {
+    if (!selectedUnitId) return
+    if (!mergeTargetUnitId) {
+      alert('اختر القسم الهدف للدمج')
+      return
+    }
+
+    const ok = confirm('تأكيد: سيتم نقل التعيينات والوحدات الفرعية ثم تعطيل القسم المدموج. هل أنت متأكد؟')
+    if (!ok) return
+
+    const res = await fetch('/api/settings/org-structure/merge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromOrgUnitId: selectedUnitId, toOrgUnitId: mergeTargetUnitId }),
+    })
+
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || 'فشل الدمج')
+      return
+    }
+
+    alert('✅ تم دمج القسم')
     if (branchId) load(branchId)
   }
 
@@ -230,9 +320,64 @@ export default function OrgStructurePage() {
                   <>
                     <div style={{ fontWeight: 900, marginBottom: 8 }}>{selectedUnit.name}</div>
 
+                    <div style={{ marginTop: 8, marginBottom: 12, background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 12, padding: 12 }}>
+                      <div style={{ fontWeight: 900, marginBottom: 10 }}>✏️ إدارة القسم</div>
+
+                      <Input label="اسم القسم" value={unitName} onChange={(e) => setUnitName(e.target.value)} placeholder="مثال: قسم الرياضيات" />
+                      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button variant="secondary" onClick={saveUnitName}>
+                          حفظ الاسم
+                        </Button>
+                      </div>
+
+                      <div style={{ height: 10 }} />
+
+                      <Select label="دمج هذا القسم داخل" value={mergeTargetUnitId} onChange={(e) => setMergeTargetUnitId(e.target.value)}>
+                        <option value="">— اختر القسم الهدف —</option>
+                        {units
+                          .filter((u) => u.id !== selectedUnitId)
+                          .map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name}
+                            </option>
+                          ))}
+                      </Select>
+                      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button variant="danger" onClick={mergeUnitInto}>
+                          دمج
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: 12, background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 12 }}>
+                      <div style={{ fontWeight: 900, marginBottom: 10 }}>👀 الموظفين تحت القسم</div>
+                      <div style={{ color: '#6B7280', fontSize: 12, marginBottom: 8 }}>
+                        المشرف: {selectedSupervisor ? `${selectedSupervisor.fullNameAr} (${selectedSupervisor.employeeNumber})` : '—'}
+                        {' — '}الأعضاء: {selectedMembers.length}
+                      </div>
+                      {selectedMembers.length === 0 ? (
+                        <div style={{ color: '#6B7280' }}>ما فيه أعضاء مرتبطين مباشرة بهذا القسم.</div>
+                      ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 6, maxHeight: 220, overflow: 'auto' }}>
+                          {selectedMembers.map((m) => (
+                            <div key={m.id} style={{ padding: '8px 10px', background: 'white', border: '1px solid #E5E7EB', borderRadius: 10 }}>
+                              {m.fullNameAr} <span style={{ color: '#6B7280' }}>({m.employeeNumber})</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <Input
+                      label="بحث عن المشرف (اسم أو رقم موظف)"
+                      value={supervisorSearch}
+                      onChange={(e) => setSupervisorSearch(e.target.value)}
+                      placeholder="اكتب للاسراع…"
+                    />
+
                     <Select label="مشرف القسم" value={supervisorId} onChange={(e) => setSupervisorId(e.target.value)}>
                       <option value="">— بدون —</option>
-                      {employees.map((e) => (
+                      {filteredEmployeesForSupervisor.map((e) => (
                         <option key={e.id} value={e.id}>
                           {e.fullNameAr} ({e.employeeNumber})
                         </option>
