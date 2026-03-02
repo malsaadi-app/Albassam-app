@@ -287,14 +287,16 @@ export default function OrgStructurePage() {
     return Object.keys(selectedEmployeeIds).filter((id) => selectedEmployeeIds[id])
   }, [selectedEmployeeIds])
 
-  const load = async (bId: string) => {
+  const load = async (bId: string, keepUnitId?: string) => {
     setLoading(true)
     setError('')
     try {
       const res = await fetch(`/api/settings/org-structure?branchId=${bId}`)
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Failed to load')
-      setUnits(data.units || [])
+
+      const newUnits = data.units || []
+      setUnits(newUnits)
       setAssignments(data.assignments || [])
       setEmployees(data.employees || [])
 
@@ -303,7 +305,10 @@ export default function OrgStructurePage() {
       const d2 = await res2.json().catch(() => ({}))
       setUnassignedEmployees(res2.ok ? d2.employees || [] : [])
 
-      setSelectedUnitId('')
+      if (keepUnitId) {
+        const exists = (newUnits || []).some((u: any) => u.id === keepUnitId)
+        setSelectedUnitId(exists ? keepUnitId : '')
+      }
     } catch (e: any) {
       setUnits([])
       setAssignments([])
@@ -450,7 +455,7 @@ export default function OrgStructurePage() {
     }).catch(() => {})
 
     alert(`✅ تم. تمت إضافة مراحل: ${data.createdCount || 0}`)
-    load(branchId)
+    load(branchId, selectedUnitId)
   }
 
   const cleanupStages = async () => {
@@ -466,7 +471,7 @@ export default function OrgStructurePage() {
       return
     }
     alert(`✅ تم تنظيف المراحل. تم تعطيل: ${data.deactivatedCount || 0} — تفعيل: ${data.activatedCount || 0}`)
-    load(branchId)
+    load(branchId, selectedUnitId)
   }
 
   const syncStageMembers = async () => {
@@ -486,7 +491,7 @@ export default function OrgStructurePage() {
     }
 
     alert(`✅ تمت مزامنة أعضاء المرحلة: ${data.syncedCount || 0}`)
-    if (branchId) load(branchId)
+    if (branchId) load(branchId, selectedUnitId)
   }
 
   const runAutoAssignTeachers = async () => {
