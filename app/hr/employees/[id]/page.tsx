@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -205,17 +205,13 @@ export default function EmployeeDetailPage() {
 
   const canEdit = userRole === 'ADMIN' || userRole === 'HR_EMPLOYEE';
 
-  const stageOptions = useMemo(() => {
-    return orgUnits
-      .filter((u) => u.type === 'STAGE')
-      .map((u) => ({ value: u.id, label: u.name }));
-  }, [orgUnits]);
+  const stageOptions = orgUnits
+    .filter((u) => u.type === 'STAGE')
+    .map((u) => ({ value: u.id, label: u.name }));
 
-  const functionalOptions = useMemo(() => {
-    return orgUnits
-      .filter((u) => u.type === 'DEPARTMENT' || u.type === 'SUB_DEPARTMENT')
-      .map((u) => ({ value: u.id, label: u.name }));
-  }, [orgUnits]);
+  const functionalOptions = orgUnits
+    .filter((u) => u.type === 'DEPARTMENT' || u.type === 'SUB_DEPARTMENT')
+    .map((u) => ({ value: u.id, label: u.name }));
 
   return (
     <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
