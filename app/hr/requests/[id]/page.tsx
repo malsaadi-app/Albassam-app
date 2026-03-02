@@ -29,9 +29,10 @@ export default function HRRequestDetailPage() {
   );
   const [sendBackComment, setSendBackComment] = useState('');
 
-  const [delegateModal, setDelegateModal] = useState<{ open: boolean; selectedUserId: string | null }>(() => ({ open: false, selectedUserId: null }));
+  const [delegateModal, setDelegateModal] = useState<{ open: boolean; selectedUserIds: string[] }>(() => ({ open: false, selectedUserIds: [] }));
   const [delegateQuery, setDelegateQuery] = useState('');
   const [delegateComment, setDelegateComment] = useState('');
+  const [delegateMode, setDelegateMode] = useState<'SINGLE' | 'POOL'>('SINGLE');
   const [users, setUsers] = useState<any[]>([]);
   const [usersLoaded, setUsersLoaded] = useState(false);
 
@@ -204,7 +205,8 @@ export default function HRRequestDetailPage() {
                         await ensureUsers()
                         setDelegateQuery('')
                         setDelegateComment('')
-                        setDelegateModal({ open: true, selectedUserId: null })
+                        setDelegateMode('SINGLE')
+                        setDelegateModal({ open: true, selectedUserIds: [] })
                       }}
                     >
                       👤 إحالة
@@ -575,7 +577,7 @@ export default function HRRequestDetailPage() {
             }}
             onClick={() => {
               if (processing) return
-              setDelegateModal({ open: false, selectedUserId: null })
+              setDelegateModal({ open: false, selectedUserIds: [] })
             }}
           >
             <div
@@ -592,10 +594,10 @@ export default function HRRequestDetailPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                <div style={{ fontWeight: 900, fontSize: 16, color: '#0F172A' }}>👤 إحالة لشخص</div>
+                <div style={{ fontWeight: 900, fontSize: 16, color: '#0F172A' }}>👤 إحالة / توزيع</div>
                 <button
                   type="button"
-                  onClick={() => setDelegateModal({ open: false, selectedUserId: null })}
+                  onClick={() => setDelegateModal({ open: false, selectedUserIds: [] })}
                   disabled={processing}
                   style={{ border: 'none', background: 'transparent', fontSize: 20, cursor: 'pointer', color: '#64748B' }}
                 >
@@ -604,6 +606,40 @@ export default function HRRequestDetailPage() {
               </div>
 
               <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDelegateMode('SINGLE')
+                      setDelegateModal((p) => ({ ...p, selectedUserIds: p.selectedUserIds.slice(0, 1) }))
+                    }}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 10,
+                      border: delegateMode === 'SINGLE' ? '1px solid #2563EB' : '1px solid #CBD5E1',
+                      background: delegateMode === 'SINGLE' ? 'rgba(37, 99, 235, 0.08)' : '#FFFFFF',
+                      fontWeight: 900,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    لشخص واحد
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDelegateMode('POOL')}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 10,
+                      border: delegateMode === 'POOL' ? '1px solid #2563EB' : '1px solid #CBD5E1',
+                      background: delegateMode === 'POOL' ? 'rgba(37, 99, 235, 0.08)' : '#FFFFFF',
+                      fontWeight: 900,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Pool (عدة أشخاص)
+                  </button>
+                </div>
+
                 <input
                   value={delegateQuery}
                   onChange={(e) => setDelegateQuery(e.target.value)}
@@ -617,6 +653,10 @@ export default function HRRequestDetailPage() {
                     outline: 'none'
                   }}
                 />
+
+                <div style={{ color: '#6B7280', fontSize: 12 }}>
+                  المختارين: {delegateModal.selectedUserIds.length} {delegateMode === 'POOL' ? '(Pool)' : ''}
+                </div>
 
                 <div style={{ border: '1px solid #E2E8F0', borderRadius: 12, overflow: 'hidden' }}>
                   <div style={{ maxHeight: 280, overflow: 'auto' }}>
@@ -635,8 +675,16 @@ export default function HRRequestDetailPage() {
                           key={u.id}
                           type="button"
                           onClick={() => {
-                            setDelegateQuery(`${u.displayName} (${u.username})`)
-                            setDelegateModal({ open: true, selectedUserId: u.id })
+                            if (delegateMode === 'SINGLE') {
+                              setDelegateModal({ open: true, selectedUserIds: [u.id] })
+                            } else {
+                              setDelegateModal((p) => {
+                                const set = new Set(p.selectedUserIds)
+                                if (set.has(u.id)) set.delete(u.id)
+                                else set.add(u.id)
+                                return { ...p, selectedUserIds: Array.from(set) }
+                              })
+                            }
                           }}
                           style={{
                             width: '100%',
@@ -644,7 +692,7 @@ export default function HRRequestDetailPage() {
                             padding: 12,
                             border: 'none',
                             borderTop: '1px solid #E2E8F0',
-                            background: '#FFFFFF',
+                            background: delegateMode === 'POOL' && delegateModal.selectedUserIds.includes(u.id) ? 'rgba(37, 99, 235, 0.08)' : '#FFFFFF',
                             cursor: 'pointer'
                           }}
                         >
@@ -673,16 +721,16 @@ export default function HRRequestDetailPage() {
                 />
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                  <Button variant="outline" disabled={processing} onClick={() => setDelegateModal({ open: false, selectedUserId: null })}>
+                  <Button variant="outline" disabled={processing} onClick={() => setDelegateModal({ open: false, selectedUserIds: [] })}>
                     {t('cancel')}
                   </Button>
                   <Button
                     variant="primary"
                     disabled={processing}
                     onClick={async () => {
-                      const delegatedToUserId = delegateModal.selectedUserId
+                      const delegatedToUserIds = delegateModal.selectedUserIds
                       const comment = delegateComment.trim()
-                      if (!delegatedToUserId) {
+                      if (!delegatedToUserIds || delegatedToUserIds.length === 0) {
                         alert('اختر موظف من القائمة')
                         return
                       }
@@ -695,11 +743,11 @@ export default function HRRequestDetailPage() {
                         const res = await fetch(`/api/hr/requests/${params.id}/delegate`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ delegatedToUserId, comment })
+                          body: JSON.stringify({ delegatedToUserIds, comment })
                         })
                         const data = await res.json().catch(() => ({}))
                         if (!res.ok) throw new Error(data?.error || 'فشل')
-                        setDelegateModal({ open: false, selectedUserId: null })
+                        setDelegateModal({ open: false, selectedUserIds: [] })
                         await fetchRequest()
                       } catch (e: any) {
                         alert(e?.message || 'حدث خطأ')

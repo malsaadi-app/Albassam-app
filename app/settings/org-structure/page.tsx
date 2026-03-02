@@ -855,9 +855,21 @@ export default function OrgStructurePage() {
                         ) : (
                           <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: '1fr', gap: 6, maxHeight: 260, overflow: 'auto' }}>
                             {stageAdminMembers.map((m) => (
-                              <div key={m.id} style={{ padding: '8px 10px', background: 'white', border: '1px solid #E5E7EB', borderRadius: 10 }}>
-                                {m.fullNameAr} <span style={{ color: '#6B7280' }}>({m.employeeNumber})</span>
-                              </div>
+                              <a
+                                key={m.id}
+                                href={`/hr/employees/${m.id}?returnTo=${encodeURIComponent('/settings/org-structure')}&branchId=${encodeURIComponent(branchId || '')}&unitId=${encodeURIComponent(selectedUnitId || '')}`}
+                                style={{
+                                  padding: '8px 10px',
+                                  background: 'white',
+                                  border: '1px solid #E5E7EB',
+                                  borderRadius: 10,
+                                  color: '#111827',
+                                  textDecoration: 'none',
+                                  fontWeight: 800,
+                                }}
+                              >
+                                {m.fullNameAr} <span style={{ color: '#6B7280', fontWeight: 600 }}>({m.employeeNumber})</span>
+                              </a>
                             ))}
                           </div>
                         )}

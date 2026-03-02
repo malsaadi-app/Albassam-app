@@ -21,6 +21,12 @@ type OrgAssignmentRow = {
 export default function EmployeeDetailPage() {
   const params = useParams();
   const router = useRouter();
+
+  // return-to support (from org structure)
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const returnTo = searchParams?.get('returnTo') || '';
+  const returnBranchId = searchParams?.get('branchId') || '';
+  const returnUnitId = searchParams?.get('unitId') || '';
   const [employee, setEmployee] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>('');
@@ -238,9 +244,23 @@ export default function EmployeeDetailPage() {
                   </Button>
                 </>
               )}
-              <Button variant="outline" onClick={() => router.push('/hr/employees')}>
-                ← رجوع
-              </Button>
+              {returnTo ? (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const qs = new URLSearchParams();
+                    if (returnBranchId) qs.set('branchId', returnBranchId);
+                    if (returnUnitId) qs.set('unitId', returnUnitId);
+                    router.push(`${returnTo}${qs.toString() ? `?${qs.toString()}` : ''}`);
+                  }}
+                >
+                  ← رجوع للهيكل
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => router.push('/hr/employees')}>
+                  ← رجوع
+                </Button>
+              )}
             </>
           }
         />
