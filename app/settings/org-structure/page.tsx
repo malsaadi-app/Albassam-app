@@ -49,6 +49,7 @@ export default function OrgStructurePage() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string>('')
 
   const [selectedUnitId, setSelectedUnitId] = useState<string>('')
   const [supervisorId, setSupervisorId] = useState<string>('')
@@ -86,6 +87,7 @@ export default function OrgStructurePage() {
 
   const load = async (bId: string) => {
     setLoading(true)
+    setError('')
     try {
       const res = await fetch(`/api/settings/org-structure?branchId=${bId}`)
       const data = await res.json().catch(() => ({}))
@@ -94,6 +96,12 @@ export default function OrgStructurePage() {
       setAssignments(data.assignments || [])
       setEmployees(data.employees || [])
       setSelectedUnitId('')
+    } catch (e: any) {
+      setUnits([])
+      setAssignments([])
+      setEmployees([])
+      setSelectedUnitId('')
+      setError(e?.message || 'فشل تحميل الهيكل')
     } finally {
       setLoading(false)
     }
@@ -185,11 +193,30 @@ export default function OrgStructurePage() {
         </Card>
 
         {branchId && (
-          <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
             <Card variant="default">
               <div style={{ padding: 16 }}>
                 <div style={{ fontWeight: 900, marginBottom: 10 }}>🌳 الشجرة</div>
-                {loading ? <div>جاري التحميل…</div> : tree.map((n) => renderNode(n))}
+
+                {error && (
+                  <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', padding: '10px 12px', borderRadius: 10, marginBottom: 10 }}>
+                    {error}
+                  </div>
+                )}
+
+                {loading ? (
+                  <div>جاري التحميل…</div>
+                ) : tree.length === 0 ? (
+                  <div style={{ color: '#6B7280' }}>ما فيه وحدات لهذا الفرع حالياً.</div>
+                ) : (
+                  tree.map((n) => renderNode(n))
+                )}
+
+                {!loading && !error && (
+                  <div style={{ marginTop: 10, color: '#6B7280', fontSize: 12 }}>
+                    وحدات: {units.length} — تعيينات: {assignments.length} — موظفين الفرع: {employees.length}
+                  </div>
+                )}
               </div>
             </Card>
 
