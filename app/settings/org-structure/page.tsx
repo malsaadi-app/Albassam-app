@@ -86,6 +86,8 @@ export default function OrgStructurePage() {
 
   // display options
   const [includeChildrenMembers, setIncludeChildrenMembers] = useState<boolean>(false)
+  const [showUnassignedOnly, setShowUnassignedOnly] = useState<boolean>(false)
+  const [unassignedEmployees, setUnassignedEmployees] = useState<Employee[]>([])
   const [memberSearch, setMemberSearch] = useState<string>('')
 
   // bulk selection
@@ -154,6 +156,20 @@ export default function OrgStructurePage() {
   const displayedMembers = useMemo(() => {
     if (!selectedUnitId) return [] as Array<{ employee: Employee; orgUnitId: string; orgUnitName: string }>
 
+    // Show "unassigned" list to allow bulk assigning employees to the selected org unit
+    if (showUnassignedOnly) {
+      const q = memberSearch.trim().toLowerCase()
+      const list = !q
+        ? unassignedEmployees
+        : unassignedEmployees.filter((e) => {
+            const name = (e.fullNameAr || '').toLowerCase()
+            const num = (e.employeeNumber || '').toLowerCase()
+            return name.includes(q) || num.includes(q)
+          })
+
+      return list.map((employee) => ({ employee, orgUnitId: '', orgUnitName: '' }))
+    }
+
     const unitNameById = new Map(units.map((u) => [u.id, u.name]))
 
     const unitIds = includeChildrenMembers ? getDescendantUnitIds(units, selectedUnitId) : [selectedUnitId]
@@ -186,7 +202,7 @@ export default function OrgStructurePage() {
 
     filtered.sort((a, b) => a.employee.fullNameAr.localeCompare(b.employee.fullNameAr, 'ar'))
     return filtered
-  }, [assignments, employees, includeChildrenMembers, memberSearch, selectedUnitId, units])
+  }, [assignments, employees, includeChildrenMembers, memberSearch, selectedUnitId, showUnassignedOnly, unassignedEmployees, units])
 
   const selectedDisplayedEmployeeIds = useMemo(() => {
     return Object.keys(selectedEmployeeIds).filter((id) => selectedEmployeeIds[id])
@@ -202,11 +218,18 @@ export default function OrgStructurePage() {
       setUnits(data.units || [])
       setAssignments(data.assignments || [])
       setEmployees(data.employees || [])
+
+      // load unassigned employees (for bulk assignment workflow)
+      const res2 = await fetch(`/api/settings/org-structure/unassigned?branchId=${bId}`)
+      const d2 = await res2.json().catch(() => ({}))
+      setUnassignedEmployees(res2.ok ? d2.employees || [] : [])
+
       setSelectedUnitId('')
     } catch (e: any) {
       setUnits([])
       setAssignments([])
       setEmployees([])
+      setUnassignedEmployees([])
       setSelectedUnitId('')
       setError(e?.message || 'فشل تحميل الهيكل')
     } finally {
@@ -223,6 +246,7 @@ export default function OrgStructurePage() {
     setSupervisorSearch('')
     setMergeTargetUnitId('')
     setIncludeChildrenMembers(false)
+    setShowUnassignedOnly(false)
     setMemberSearch('')
     setSelectedEmployeeIds({})
     setBulkTargetUnitId('')
@@ -542,15 +566,37 @@ export default function OrgStructurePage() {
                     <div style={{ marginBottom: 12, background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
                         <div style={{ fontWeight: 900 }}>👀 الموظفين تحت القسم</div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#374151' }}>
-                          <input type="checkbox" checked={includeChildrenMembers} onChange={(e) => setIncludeChildrenMembers(e.target.checked)} />
-                          عرض الأقسام الفرعية
-                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#374151' }}>
+                            <input
+                              type="checkbox"
+                              checked={includeChildrenMembers}
+                              disabled={showUnassignedOnly}
+                              onChange={(e) => setIncludeChildrenMembers(e.target.checked)}
+                            />
+                            عرض الأقسام الفرعية
+                          </label>
+
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#374151' }}>
+                            <input
+                              type="checkbox"
+                              checked={showUnassignedOnly}
+                              onChange={(e) => {
+                                const v = e.target.checked
+                                setShowUnassignedOnly(v)
+                                if (v) setIncludeChildrenMembers(false)
+                                setSelectedEmployeeIds({})
+                              }}
+                            />
+                            غير مربوطين (بدون قسم)
+                          </label>
+                        </div>
                       </div>
 
                       <div style={{ color: '#6B7280', fontSize: 12, marginBottom: 8 }}>
                         المشرف: {selectedSupervisor ? `${selectedSupervisor.fullNameAr} (${selectedSupervisor.employeeNumber})` : '—'}
-                        {' — '}الأعضاء: {displayedMembers.length}
+                        {' — '}
+                        {showUnassignedOnly ? `غير مربوطين: ${displayedMembers.length}` : `الأعضاء: ${displayedMembers.length}`}
                       </div>
 
                       <Input label="بحث داخل الموظفين" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} placeholder="اسم أو رقم موظف…" />
@@ -624,6 +670,9 @@ export default function OrgStructurePage() {
                                   {includeChildrenMembers && (
                                     <div style={{ color: '#6B7280', fontSize: 12 }}>القسم: {orgUnitName}</div>
                                   )}
+                                  {showUnassignedOnly && (
+                                    <div style={{ color: '#6B7280', fontSize: 12 }}>الإدارة/القسم في بيانات الموظف: {(employee as any).department || '—'}</div>
+                                  )}
                                 </div>
                               </label>
 
@@ -649,7 +698,7 @@ export default function OrgStructurePage() {
                                     ))}
                                 </select>
 
-                                <Button variant="secondary" onClick={() => moveMember(employee.id, orgUnitId, moveTargetByEmployeeId[employee.id] || '')}>
+                                <Button variant="secondary" disabled={showUnassignedOnly} onClick={() => moveMember(employee.id, orgUnitId, moveTargetByEmployeeId[employee.id] || '')}>
                                   نقل
                                 </Button>
                               </div>
