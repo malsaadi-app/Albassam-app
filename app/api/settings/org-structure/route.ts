@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     const employees = await prisma.employee.findMany({
       where: { branchId },
-      select: { id: true, fullNameAr: true, employeeNumber: true, department: true, position: true },
+      select: { id: true, fullNameAr: true, employeeNumber: true, department: true, position: true, specialization: true },
       orderBy: { fullNameAr: 'asc' },
     })
 

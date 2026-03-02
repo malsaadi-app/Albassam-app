@@ -25,7 +25,7 @@ type Assignment = {
   active: boolean
 }
 
-type Employee = { id: string; fullNameAr: string; employeeNumber: string; department?: string; position?: string }
+type Employee = { id: string; fullNameAr: string; employeeNumber: string; department?: string; position?: string; specialization?: string }
 
 function buildTree(units: OrgUnitRow[]) {
   const byId = new Map(units.map((u) => [u.id, { ...u, children: [] as any[] }]))
@@ -137,7 +137,8 @@ export default function OrgStructurePage() {
 
   const isTeacherEmployee = (e: Employee) => {
     const pos = (e as any).position || ''
-    return String(pos).includes('معلم')
+    const spec = (e as any).specialization || ''
+    return String(pos).includes('معلم') || String(spec).trim().length > 0
   }
 
   const filteredEmployeesForMembers = useMemo(() => {
