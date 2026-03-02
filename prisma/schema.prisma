@@ -247,6 +247,9 @@ model Employee {
   leaves                Leave[]
   leaveBalance          LeaveBalance?
 
+  // Org structure assignments (enterprise)
+  orgAssignments OrgUnitAssignment[]
+
   // ==================== POSITION & HEADCOUNT MANAGEMENT ====================
   currentPosition OrganizationalPosition? @relation("CurrentPosition")
 
@@ -339,9 +342,9 @@ model Document {
 }
 
 model HRRequest {
-  id                    String              @id @default(cuid())
+  id                    String                @id @default(cuid())
   type                  RequestType
-  status                RequestStatus       @default(PENDING_REVIEW)
+  status                RequestStatus         @default(PENDING_REVIEW)
   currentWorkflowStep   Int? // Current step order in workflow (null = not started, 0 = step 1, etc.)
   employeeId            String
   startDate             DateTime?
@@ -364,11 +367,11 @@ model HRRequest {
   approvedBy            String?
   approvalComment       String?
   approvedAt            DateTime?
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  approver              User?               @relation("ApprovedRequests", fields: [approvedBy], references: [id])
-  reviewer              User?               @relation("ReviewedRequests", fields: [reviewedBy], references: [id])
-  employee              User                @relation("SubmittedRequests", fields: [employeeId], references: [id])
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  approver              User?                 @relation("ApprovedRequests", fields: [approvedBy], references: [id])
+  reviewer              User?                 @relation("ReviewedRequests", fields: [reviewedBy], references: [id])
+  employee              User                  @relation("SubmittedRequests", fields: [employeeId], references: [id])
   auditLogs             HRRequestAuditLog[]
   delegations           HRRequestDelegation[]
 
@@ -997,6 +1000,9 @@ model Branch {
   maintenanceBranchForwarder MaintenanceBranchForwarder?
   educationalRouting         EducationalRoutingSettings?
 
+  // Org structure (enterprise)
+  orgUnits OrgUnit[]
+
   @@index([name])
   @@index([type])
   @@index([status])
@@ -1105,7 +1111,7 @@ model MaintenanceBranchForwarder {
 }
 
 model EducationalRoutingSettings {
-  id                 String   @id @default(cuid())
+  id                  String   @id @default(cuid())
   branchId            String   @unique
   branch              Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
   vpEducationalUserId String?
@@ -1122,19 +1128,19 @@ enum HRRequestDelegationStatus {
 }
 
 model HRRequestDelegation {
-  id                String @id @default(cuid())
-  requestId          String
-  delegatedToUserId  String
-  delegatedByUserId  String
-  stepIndex          Int
-  comment            String
-  status             HRRequestDelegationStatus @default(ACTIVE)
-  usedAt             DateTime?
-  createdAt          DateTime @default(now())
+  id                String                    @id @default(cuid())
+  requestId         String
+  delegatedToUserId String
+  delegatedByUserId String
+  stepIndex         Int
+  comment           String
+  status            HRRequestDelegationStatus @default(ACTIVE)
+  usedAt            DateTime?
+  createdAt         DateTime                  @default(now())
 
-  request            HRRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  delegatedTo        User      @relation("HRRequestDelegatedTo", fields: [delegatedToUserId], references: [id], onDelete: Cascade)
-  delegatedBy        User      @relation("HRRequestDelegatedBy", fields: [delegatedByUserId], references: [id], onDelete: Cascade)
+  request     HRRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  delegatedTo User      @relation("HRRequestDelegatedTo", fields: [delegatedToUserId], references: [id], onDelete: Cascade)
+  delegatedBy User      @relation("HRRequestDelegatedBy", fields: [delegatedByUserId], references: [id], onDelete: Cascade)
 
   @@index([requestId, status])
   @@index([delegatedToUserId, status])
@@ -2343,14 +2349,14 @@ model WorkflowApprovalLog {
 }
 
 model EmployeeBranchCoverage {
-  id        String @id @default(cuid())
+  id         String @id @default(cuid())
   employeeId String
   branchId   String
 
   module CoverageModule
   // Optional: free-text role within that module (e.g., HR_REP, GATEKEEPER)
   role   String?
-  active Boolean @default(true)
+  active Boolean        @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2383,4 +2389,84 @@ model WorkflowReferral {
   @@index([referredToId])
   @@index([status])
   @@index([createdAt])
+}
+
+enum OrgUnitType {
+  SCHOOL
+  STAGE
+  DEPARTMENT
+  SUB_DEPARTMENT
+}
+
+enum OrgAssignmentType {
+  ADMIN
+  FUNCTIONAL
+}
+
+enum OrgAssignmentRole {
+  HEAD
+  SUPERVISOR
+  MEMBER
+}
+
+enum OrgCoverageScope {
+  BRANCH
+  MULTI_BRANCH
+  ALL
+}
+
+model OrgUnit {
+  id       String  @id @default(cuid())
+  branchId String?
+  parentId String?
+
+  name      String
+  type      OrgUnitType
+  sortOrder Int         @default(0)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branch   Branch?   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  parent   OrgUnit?  @relation("OrgUnitParent", fields: [parentId], references: [id], onDelete: Cascade)
+  children OrgUnit[] @relation("OrgUnitParent")
+
+  assignments OrgUnitAssignment[]
+
+  @@unique([branchId, parentId, name, type])
+  @@index([branchId])
+  @@index([parentId])
+  @@index([type])
+}
+
+model OrgUnitAssignment {
+  id         String @id @default(cuid())
+  employeeId String
+  orgUnitId  String
+
+  assignmentType OrgAssignmentType
+  role           OrgAssignmentRole @default(MEMBER)
+
+  // For multi-branch supervisors (e.g., quality, subject supervisors)
+  coverageScope     OrgCoverageScope @default(BRANCH)
+  coverageBranchIds String? // JSON string array when MULTI_BRANCH
+
+  // For multi-stage teachers: optional weighting
+  weightPercent Int?
+
+  isPrimary Boolean @default(false)
+  active    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  orgUnit  OrgUnit  @relation(fields: [orgUnitId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, orgUnitId, assignmentType])
+  @@index([employeeId])
+  @@index([orgUnitId])
+  @@index([assignmentType])
 }
