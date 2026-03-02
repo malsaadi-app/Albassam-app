@@ -139,6 +139,14 @@ export default function Sidebar() {
       ]
     },
     {
+      id: 'support_services',
+      icon: <HiOutlineTruck size={18} />,
+      label: 'الخدمات المساندة',
+      items: [
+        { href: '/support-services/transport/drivers', icon: <HiOutlineTruck size={18} />, label: 'النقل — السائقين' },
+      ]
+    },
+    {
       id: 'finance',
       icon: <HiOutlineCurrencyDollar size={18} />,
       label: t('finance'),
