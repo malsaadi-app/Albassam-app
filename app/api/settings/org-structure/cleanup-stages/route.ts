@@ -26,15 +26,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, deactivatedCount: 0, note: 'not boys branch; no cleanup applied' })
     }
 
-    // Keep only these stages for boys branch
-    const allowed = ['ابتدائي', 'متوسط', 'ثانوي']
+    // Keep only these stages for boys branch (support multiple spellings)
+    const allowed = ['ابتدائي', 'متوسط', 'ثانوي', 'ابتدائية', 'متوسطة', 'ثانوية']
 
-    const res = await prisma.orgUnit.updateMany({
+    // Deactivate unwanted
+    const deactivated = await prisma.orgUnit.updateMany({
       where: { branchId, type: 'STAGE', isActive: true, name: { notIn: allowed } },
       data: { isActive: false },
     })
 
-    return NextResponse.json({ ok: true, deactivatedCount: res.count })
+    // Reactivate allowed (in case previous cleanup disabled them)
+    const activated = await prisma.orgUnit.updateMany({
+      where: { branchId, type: 'STAGE', name: { in: allowed } },
+      data: { isActive: true },
+    })
+
+    return NextResponse.json({ ok: true, deactivatedCount: deactivated.count, activatedCount: activated.count })
   } catch (e) {
     console.error('cleanup-stages error', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

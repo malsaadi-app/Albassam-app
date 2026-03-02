@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Stage names can include legacy/extra values; for boys school we only want the 3 main stages.
     const BOYS_BRANCH_NAME = 'مجمع البسام الأهلية بنين'
-    const allowedBoys = new Set(['ابتدائي', 'متوسط', 'ثانوي'])
+    const allowedBoys = new Set(['ابتدائي', 'متوسط', 'ثانوي', 'ابتدائية', 'متوسطة', 'ثانوية'])
     const stages = String(branch.name).trim() === BOYS_BRANCH_NAME ? stagesRaw.filter((s) => allowedBoys.has(String(s.name).trim())) : stagesRaw
 
     if (stages.length === 0) return NextResponse.json({ ok: true, createdCount: 0, note: 'no stages found for branch' })
