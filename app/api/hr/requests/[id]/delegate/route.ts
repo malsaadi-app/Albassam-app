@@ -6,7 +6,9 @@ import { getSession } from '@/lib/session'
 import { createHRRequestAuditLog } from '@/lib/audit'
 
 const schema = z.object({
-  delegatedToUserId: z.string().min(1),
+  // Accept either a single userId or a list (pool)
+  delegatedToUserId: z.string().min(1).optional(),
+  delegatedToUserIds: z.array(z.string().min(1)).optional(),
   comment: z.string().min(1, 'سبب الإحالة مطلوب')
 })
 
@@ -16,8 +18,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params
     const session = await getSession(await cookies())
     if (!session.user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+    const actorUserId = session.user.id
 
     const body = schema.parse(await request.json())
+    const targetIds = (body.delegatedToUserIds && body.delegatedToUserIds.length ? body.delegatedToUserIds : body.delegatedToUserId ? [body.delegatedToUserId] : []).map(String)
+    if (targetIds.length === 0) return NextResponse.json({ error: 'المستخدم المستلم مطلوب' }, { status: 400 })
 
     const hrRequest = await prisma.hRRequest.findUnique({
       where: { id },
@@ -48,9 +53,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
-    // Validate user exists
-    const toUser = await prisma.user.findUnique({ where: { id: body.delegatedToUserId }, select: { id: true } })
-    if (!toUser) return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 400 })
+    // Validate users exist
+    const existingUsers = await prisma.user.findMany({ where: { id: { in: targetIds } }, select: { id: true } })
+    const existingIds = new Set(existingUsers.map((u) => u.id))
+    const validTargetIds = targetIds.filter((id) => existingIds.has(id))
+    if (validTargetIds.length === 0) return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 400 })
 
     const currentIndex = hrRequest.currentWorkflowStep ?? 0
 
@@ -60,35 +67,38 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       data: { status: 'CANCELLED' }
     })
 
-    const delegation = await prisma.hRRequestDelegation.create({
-      data: {
+    const delegations = await prisma.hRRequestDelegation.createMany({
+      data: validTargetIds.map((delegatedToUserId) => ({
         requestId: id,
-        delegatedToUserId: body.delegatedToUserId,
-        delegatedByUserId: session.user.id,
+        delegatedToUserId,
+        delegatedByUserId: actorUserId,
         stepIndex: currentIndex,
         comment: body.comment,
-      }
+      })),
+      skipDuplicates: true,
     })
 
     await createHRRequestAuditLog(prisma, {
       requestId: id,
-      actorUserId: session.user.id,
+      actorUserId: actorUserId,
       action: 'DELEGATION_CREATED',
-      message: `تمت إحالة الطلب لشخص آخر مع تعليق: ${body.comment}`
+      message: `تمت إحالة الطلب (Pool) لعدد ${validTargetIds.length} مع تعليق: ${body.comment}`
     })
 
-    await prisma.notification.create({
-      data: {
-        userId: body.delegatedToUserId,
+    // Notify each target
+    await prisma.notification.createMany({
+      data: validTargetIds.map((userId) => ({
+        userId,
         title: 'طلب محال لك',
         message: `تمت إحالة طلب HR لك. ملاحظة: ${body.comment}`,
         type: 'request_pending',
         relatedId: id,
-        isRead: false
-      }
+        isRead: false,
+      })),
+      skipDuplicates: true,
     })
 
-    return NextResponse.json({ ok: true, delegation })
+    return NextResponse.json({ ok: true, delegatedCount: delegations.count, delegatedToUserIds: validTargetIds })
   } catch (e: any) {
     console.error('POST /api/hr/requests/[id]/delegate error', e)
     return NextResponse.json({ error: e?.message || 'حدث خطأ' }, { status: 400 })

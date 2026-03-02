@@ -168,13 +168,11 @@ export async function getApproverUserIdsForHRRequestStep(params: {
   // Step 2
   if (stepOrder === 2) {
     if (EDUCATIONAL_CHAIN_TYPES.has(requestType)) {
-      // HR review after VP (or after skip)
-      if (branchId) {
-        const hrIds = await getHrReviewerUserIdsForBranch(branchId)
-        return { userIds: hrIds, actor: 'HR_REVIEWER', labelAr: 'مراجعة الموارد البشرية' }
-      }
-      const fallback = await prisma.user.findMany({ where: { role: 'HR_EMPLOYEE' }, select: { id: true } })
-      return { userIds: fallback.map((u) => u.id), actor: 'HR_REVIEWER', labelAr: 'مراجعة الموارد البشرية' }
+      // HR manager step (company-wide). Prefer systemRole=HR_MANAGER, fallback to admins.
+      const hrManagers = await getUserIdsBySystemRoleName('HR_MANAGER')
+      if (hrManagers.length) return { userIds: hrManagers, actor: 'ADMIN', labelAr: 'اعتماد مدير الموارد البشرية' }
+      const admins = await getAdminUserIds()
+      return { userIds: admins, actor: 'ADMIN', labelAr: 'اعتماد مدير الموارد البشرية' }
     }
 
     // admin final for manager-first flows
@@ -182,10 +180,9 @@ export async function getApproverUserIdsForHRRequestStep(params: {
     return { userIds: admins, actor: 'ADMIN', labelAr: 'اعتماد نهائي' }
   }
 
-  // Step 3 (admin final) for educational chain
+  // Step 3: HR executor(s) — routed is intentionally empty; assignment happens via delegation/pool.
   if (stepOrder === 3) {
-    const admins = await getAdminUserIds()
-    return { userIds: admins, actor: 'ADMIN', labelAr: 'اعتماد نهائي' }
+    return { userIds: [], actor: 'HR_REVIEWER', labelAr: 'تنفيذ الموارد البشرية' }
   }
 
   return { userIds: [], actor: 'ADMIN', labelAr: 'غير محدد' }
