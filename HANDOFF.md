@@ -133,3 +133,31 @@ Use:
 Common gotcha:
 - Next build may fail with EACCES under `.next_run*` due to root-owned files; fix:
   `sudo chown -R node:node .next .next_run*`
+
+---
+
+# Update checklist (must do with every meaningful change)
+
+When you change anything meaningful (behavior, DB schema, routing rules, permissions, new module/page/API):
+
+1) Update **this file** (`HANDOFF.md`)
+- What changed
+- Where (paths)
+- How to test
+- Any migration / rollout notes
+
+2) Update long-term memory
+- If it affects roadmap/decisions: update `/data/.openclaw/workspace/MEMORY.md`
+
+3) Update daily log
+- Add 5–15 lines to `/data/.openclaw/workspace/memory/YYYY-MM-DD.md`
+
+4) Sanity checks
+- `npx tsc -p tsconfig.json --noEmit`
+- `npm run build`
+- Restart (PM2) + confirm `/api/health` is 200
+
+5) If you added a DB migration
+- `npx prisma generate`
+- `npx prisma migrate deploy`
+- Mention migration id in `HANDOFF.md`
