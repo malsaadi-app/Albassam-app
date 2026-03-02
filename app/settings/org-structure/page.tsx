@@ -409,6 +409,22 @@ export default function OrgStructurePage() {
     if (branchId) load(branchId)
   }
 
+  const ensureStages = async () => {
+    if (!branchId) return
+    const res = await fetch('/api/settings/org-structure/ensure-stages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ branchId }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || 'فشل إنشاء المراحل')
+      return
+    }
+    alert(`✅ تم. تمت إضافة مراحل: ${data.createdCount || 0}`)
+    load(branchId)
+  }
+
   const runAutoAssignTeachers = async () => {
     if (!branchId) return
     const ok = confirm('سيتم ربط المعلمين تلقائياً بالأقسام (أعضاء فقط) حسب بيانات الموظف. تبي نكمل؟')
@@ -654,6 +670,9 @@ export default function OrgStructurePage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
                   <div style={{ fontWeight: 900 }}>🌳 الشجرة</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <Button variant="secondary" onClick={ensureStages}>
+                      🎓 إضافة المراحل
+                    </Button>
                     <Button variant="secondary" onClick={() => {
                       setShowCreateUnitModal(true)
                       setNewUnitParentId('')
