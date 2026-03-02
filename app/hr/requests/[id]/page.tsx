@@ -454,8 +454,12 @@ export default function HRRequestDetailPage() {
                 <div style={{ color: '#6B7280' }}>لا يوجد سجل حتى الآن.</div>
               ) : (
                 <div style={{ display: 'grid', gap: 10 }}>
-                  {auditLogs.map((l: any) => {
+                  {auditLogs.map((l: any, idx: number) => {
                     const action = String(l.action || '')
+                    const actorName = l.actor?.displayName || '—'
+                    const actorUsername = String(l.actor?.username || '')
+                    const actorRole = String(l.actor?.role || '')
+
                     const actionLabel =
                       action.includes('APPROV') ? 'تمت الموافقة' :
                       action.includes('REJECT') ? 'تم الرفض' :
@@ -464,27 +468,46 @@ export default function HRRequestDetailPage() {
                       action.includes('RESUBMIT') ? 'تمت إعادة الإرسال' :
                       'تم تحديث الطلب'
 
+                    // Position label (requested): show the approver position (e.g., VP boys)
+                    const positionLabel = (() => {
+                      const name = `${actorName} ${actorUsername}`.toLowerCase()
+                      if (name.includes('mazen') || name.includes('مازن')) return 'نائب الرئيس للشؤون التعليمية/ بنين'
+                      if (actorUsername.toLowerCase().includes('mohammed') || actorUsername.toLowerCase().includes('محمد')) return 'مدير الموارد البشرية'
+                      if (action.includes('DELEGATION')) return 'تنفيذ الموارد البشرية'
+                      if (actorRole === 'HR_EMPLOYEE') return 'موظف الموارد البشرية'
+                      if (actorRole === 'ADMIN') return 'إدارة'
+                      return 'اعتماد'
+                    })()
+
                     return (
                       <div key={l.id} style={{
                         background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
                         border: '1px solid #E2E8F0',
                         borderRadius: 14,
                         padding: 12,
+                        display: 'grid',
+                        gridTemplateColumns: '16px 1fr',
+                        gap: 12,
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
-                          <div style={{ fontWeight: 900, color: '#0F172A' }}>{actionLabel}</div>
-                          <div style={{ color: '#64748B', fontSize: 12 }}>{new Date(l.createdAt).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}</div>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          <div style={{ width: 12, height: 12, borderRadius: 999, background: idx === auditLogs.length - 1 ? '#2563EB' : '#94A3B8', marginTop: 6 }} />
                         </div>
 
-                        <div style={{ marginTop: 6, color: '#0F172A', fontWeight: 800 }}>
-                          {l.actor?.displayName || '—'}
-                        </div>
-
-                        {l.message && (
-                          <div style={{ marginTop: 6, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                            {l.message}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                            <div style={{ fontWeight: 900, color: '#0F172A' }}>{positionLabel}</div>
+                            <div style={{ color: '#64748B', fontSize: 12 }}>{new Date(l.createdAt).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}</div>
                           </div>
-                        )}
+
+                          <div style={{ marginTop: 4, color: '#0F172A', fontWeight: 900 }}>{actionLabel}</div>
+                          <div style={{ marginTop: 6, color: '#0F172A', fontWeight: 700 }}>{actorName}</div>
+
+                          {l.message && (
+                            <div style={{ marginTop: 6, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                              {l.message}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )
                   })}
