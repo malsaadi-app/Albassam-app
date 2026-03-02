@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { isSuperAdmin } from '@/lib/permissions'
 
 // GET /api/settings/org-structure?branchId=...
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession(await cookies())
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const isAdmin = session.user.role === 'ADMIN' || (await isSuperAdmin(session.user.id))
+    if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { searchParams } = new URL(request.url)
     const branchId = searchParams.get('branchId')
@@ -62,7 +64,8 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getSession(await cookies())
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const isAdmin = session.user.role === 'ADMIN' || (await isSuperAdmin(session.user.id))
+    if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
     const { branchId, parentId, name, type } = body || {}

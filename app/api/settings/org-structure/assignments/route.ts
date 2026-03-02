@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { isSuperAdmin } from '@/lib/permissions'
 
 // PUT /api/settings/org-structure/assignments
 // Body: { branchId, orgUnitId, supervisorEmployeeId?, memberEmployeeIds? }
@@ -9,7 +10,8 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getSession(await cookies())
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const isAdmin = session.user.role === 'ADMIN' || (await isSuperAdmin(session.user.id))
+    if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const body = await request.json()
     const { orgUnitId, supervisorEmployeeId, memberEmployeeIds } = body || {}
