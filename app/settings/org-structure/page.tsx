@@ -445,8 +445,28 @@ export default function OrgStructurePage() {
       alert(data.error || 'فشل تنظيف المراحل')
       return
     }
-    alert(`✅ تم تنظيف المراحل. تم تعطيل: ${data.deactivatedCount || 0}`)
+    alert(`✅ تم تنظيف المراحل. تم تعطيل: ${data.deactivatedCount || 0} — تفعيل: ${data.activatedCount || 0}`)
     load(branchId)
+  }
+
+  const syncStageMembers = async () => {
+    if (!selectedUnitId) return
+    const ok = confirm('سيتم مزامنة أعضاء المرحلة من بيانات الموظف الحالية (stage) وربطهم إداريًا بالمرحلة. تبي نكمل؟')
+    if (!ok) return
+
+    const res = await fetch('/api/settings/org-structure/sync-stage-members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stageOrgUnitId: selectedUnitId }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || 'فشل مزامنة أعضاء المرحلة')
+      return
+    }
+
+    alert(`✅ تمت مزامنة أعضاء المرحلة: ${data.syncedCount || 0}`)
+    if (branchId) load(branchId)
   }
 
   const runAutoAssignTeachers = async () => {
@@ -751,7 +771,14 @@ export default function OrgStructurePage() {
                   <div style={{ color: '#6B7280' }}>اختر وحدة من الشجرة يسار.</div>
                 ) : (
                   <>
-                    <div style={{ fontWeight: 900, marginBottom: 8 }}>{selectedUnit.name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                      <div style={{ fontWeight: 900 }}>{selectedUnit.name}</div>
+                      {selectedUnit.type === 'STAGE' && (
+                        <Button variant="secondary" onClick={syncStageMembers}>
+                          🔄 مزامنة أعضاء المرحلة
+                        </Button>
+                      )}
+                    </div>
 
                     <div style={{ marginTop: 8, marginBottom: 12, background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 12, padding: 12 }}>
                       <div style={{ fontWeight: 900, marginBottom: 10 }}>✏️ إدارة القسم</div>
