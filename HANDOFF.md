@@ -22,9 +22,9 @@
 **Current focus:** finish **Org Structure V2** + then implement HR routing rules.
 
 **Next milestone checklist (order):**
-1) Org structure: add **coverageScope UI** (BRANCH / MULTI_BRANCH / ALL) + branch picker.
-2) Org structure: add **ADMIN assignments UI** (teacher stage(s)) + optional weighting.
-3) HR routing rules: implement per-request-type routing + admin UI to edit.
+1) ✅ Org structure: coverageScope UI (BRANCH / MULTI_BRANCH / ALL) + branch picker.
+2) ✅ Org structure: ADMIN assignments UI (teacher stage(s)) on employee page (basic).
+3) ⏳ HR routing rules: implement per-request-type routing + **admin UI to edit**.
 4) Security P0: tighten uploads (`/api/upload`) + private files.
 5) Resume Transport module.
 
@@ -81,6 +81,9 @@ Under `app/api/settings/org-structure/*`:
 - `POST /api/settings/org-structure/bulk-move-members`
 - `GET /api/settings/org-structure/unassigned?branchId=...`
 - `POST /api/settings/org-structure/auto-assign-teachers` (maps by Employee.department/specialization)
+- `POST /api/settings/org-structure/ensure-stages`
+- `POST /api/settings/org-structure/cleanup-stages`
+- `POST /api/settings/org-structure/sync-stage-members`
 
 Auth note:
 - Org structure APIs allow **legacy ADMIN** OR **RBAC superadmin**.
@@ -100,7 +103,10 @@ Desired chain (example):
 requester → stage manager → branch VP → HR manager (محمد/admin) → HR executors (khalidj/mohammedz)
 
 Status:
-- Not fully implemented yet. Next after finishing Org Structure V2.
+- Implemented boys-chain routing for: LEAVE + VISA_EXIT_REENTRY_SINGLE + VISA_EXIT_REENTRY_MULTI + RESIGNATION.
+- Stage manager source: Org Structure STAGE→HEAD (fallback to legacy).
+- HR execution: HR manager delegates to one/pool/any user.
+- Missing: Admin UI to edit HR workflow rules (config instead of hardcoded).
 
 ---
 
