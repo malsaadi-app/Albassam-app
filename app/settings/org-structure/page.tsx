@@ -57,7 +57,10 @@ export default function OrgStructurePage() {
   useEffect(() => {
     fetch('/api/branches')
       .then((r) => r.json())
-      .then((d) => setBranches((d.branches || []).filter((b: any) => b.status === 'ACTIVE')))
+      .then((d) => {
+        const list = Array.isArray(d) ? d : d.branches || d.data || []
+        setBranches((list || []).filter((b: any) => b.status === 'ACTIVE'))
+      })
       .catch(() => setBranches([]))
   }, [])
 
