@@ -61,6 +61,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({
       canProcess: routed.userIds.includes(session.user.id) || !!delegated,
       canResubmit: isOwner && (hrRequest as any).status === 'PENDING_REVIEW',
+      isOwner,
       stepIndex: currentStepIndex,
       stepName: currentStep.statusName,
       expectedLabel: routed.labelAr

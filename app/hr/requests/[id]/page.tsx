@@ -18,6 +18,8 @@ export default function HRRequestDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionCtx, setActionCtx] = useState<any>(null);
   const [processing, setProcessing] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLoaded, setAuditLoaded] = useState(false);
   const [actionModal, setActionModal] = useState<{ open: boolean; action: 'approve' | 'reject' | null }>({
     open: false,
     action: null
@@ -76,6 +78,14 @@ export default function HRRequestDetailPage() {
       const ctxRes = await fetch(`/api/hr/requests/${params.id}/action-context`);
       if (ctxRes.ok) {
         setActionCtx(await ctxRes.json());
+      }
+
+      // audit timeline (for approvers/admin/hr only; requester won't see it)
+      const auditRes = await fetch(`/api/hr/requests/${params.id}/audit`);
+      if (auditRes.ok) {
+        const a = await auditRes.json().catch(() => ({}));
+        setAuditLogs(a.logs || []);
+        setAuditLoaded(true);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -139,6 +149,31 @@ export default function HRRequestDetailPage() {
             </div>
           }
         />
+
+        {/* Timeline (visible to approvers/admin/hr; requester won't see it) */}
+        {auditLoaded && actionCtx && !actionCtx.isOwner && !actionCtx.canResubmit && (
+          <Card variant="default" style={{ marginBottom: 16 }}>
+            <div style={{ padding: 16 }}>
+              <div style={{ fontWeight: 900, marginBottom: 10 }}>🧭 مسار المعاملة</div>
+              {auditLogs.length === 0 ? (
+                <div style={{ color: '#6B7280' }}>لا يوجد سجل حتى الآن.</div>
+              ) : (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {auditLogs.map((l: any) => (
+                    <div key={l.id} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                        <div style={{ fontWeight: 900 }}>{l.actor?.displayName || '—'}</div>
+                        <div style={{ color: '#6B7280', fontSize: 12 }}>{new Date(l.createdAt).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}</div>
+                      </div>
+                      <div style={{ color: '#6B7280', fontSize: 12, marginTop: 4 }}>{l.action}</div>
+                      {l.message && <div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{l.message}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
         <Card variant="default">
           <div style={{ marginBottom: '20px' }}>
