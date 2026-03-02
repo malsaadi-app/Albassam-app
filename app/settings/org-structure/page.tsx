@@ -105,6 +105,7 @@ export default function OrgStructurePage() {
   const [showUnassignedOnly, setShowUnassignedOnly] = useState<boolean>(false)
   const [unassignedEmployees, setUnassignedEmployees] = useState<Employee[]>([])
   const [memberSearch, setMemberSearch] = useState<string>('')
+  const [stageAdminSearch, setStageAdminSearch] = useState<string>('')
 
   // bulk selection
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Record<string, boolean>>({})
@@ -213,6 +214,24 @@ export default function OrgStructurePage() {
     return employees.filter((e) => ids.has(e.id))
   }, [employees, selectedAssignments, selectedUnitId])
 
+  const stageAdminMembers = useMemo(() => {
+    if (!selectedUnitId) return [] as Employee[]
+    const unit = units.find((u) => u.id === selectedUnitId)
+    if (!unit || unit.type !== 'STAGE') return [] as Employee[]
+
+    const adminMem = selectedAssignments.filter((a) => a.assignmentType === 'ADMIN' && a.role === 'MEMBER' && a.active)
+    const ids = new Set(adminMem.map((m) => m.employeeId))
+    const list = employees.filter((e) => ids.has(e.id))
+
+    const q = stageAdminSearch.trim().toLowerCase()
+    if (!q) return list
+    return list.filter((e) => {
+      const name = (e.fullNameAr || '').toLowerCase()
+      const num = (e.employeeNumber || '').toLowerCase()
+      return name.includes(q) || num.includes(q)
+    })
+  }, [employees, selectedAssignments, selectedUnitId, stageAdminSearch, units])
+
   const displayedMembers = useMemo(() => {
     if (!selectedUnitId) return [] as Array<{ employee: Employee; orgUnitId: string; orgUnitName: string }>
 
@@ -309,6 +328,7 @@ export default function OrgStructurePage() {
     setIncludeChildrenMembers(false)
     setShowUnassignedOnly(false)
     setMemberSearch('')
+    setStageAdminSearch('')
     setSelectedEmployeeIds({})
     setBulkTargetUnitId('')
 
@@ -810,6 +830,34 @@ export default function OrgStructurePage() {
                         </Button>
                       </div>
                     </div>
+
+                    {selectedUnit.type === 'STAGE' && (
+                      <div style={{ marginBottom: 12, background: '#EEF2FF', border: '1px solid #E5E7EB', borderRadius: 12, padding: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
+                          <div style={{ fontWeight: 900 }}>🎓 أعضاء المرحلة (إداري / ADMIN)</div>
+                          <div style={{ color: '#6B7280', fontSize: 12 }}>
+                            مدير المرحلة: {selectedHead ? `${selectedHead.fullNameAr} (${selectedHead.employeeNumber})` : '—'}
+                            {' — '}الأعضاء: {stageAdminMembers.length}
+                          </div>
+                        </div>
+
+                        <Input label="بحث داخل أعضاء المرحلة" value={stageAdminSearch} onChange={(e) => setStageAdminSearch(e.target.value)} placeholder="اسم أو رقم موظف…" />
+
+                        {stageAdminMembers.length === 0 ? (
+                          <div style={{ color: '#6B7280', marginTop: 8 }}>
+                            ما فيه أعضاء ADMIN مرتبطين بهذه المرحلة. اضغط "مزامنة أعضاء المرحلة" لربطهم من بيانات الموظف.
+                          </div>
+                        ) : (
+                          <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: '1fr', gap: 6, maxHeight: 260, overflow: 'auto' }}>
+                            {stageAdminMembers.map((m) => (
+                              <div key={m.id} style={{ padding: '8px 10px', background: 'white', border: '1px solid #E5E7EB', borderRadius: 10 }}>
+                                {m.fullNameAr} <span style={{ color: '#6B7280' }}>({m.employeeNumber})</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div style={{ marginBottom: 12, background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
