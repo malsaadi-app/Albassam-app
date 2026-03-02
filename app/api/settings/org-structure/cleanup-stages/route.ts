@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     if (!branch) return NextResponse.json({ error: 'Branch not found' }, { status: 404 })
 
     const BOYS_BRANCH_NAME = 'مجمع البسام الأهلية بنين'
-    if (branch.name !== BOYS_BRANCH_NAME) {
+    if (String(branch.name).trim() !== BOYS_BRANCH_NAME) {
       return NextResponse.json({ ok: true, deactivatedCount: 0, note: 'not boys branch; no cleanup applied' })
     }
 
