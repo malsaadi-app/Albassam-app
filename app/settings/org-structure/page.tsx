@@ -60,6 +60,9 @@ export default function OrgStructurePage() {
   const [unitName, setUnitName] = useState<string>('')
   const [mergeTargetUnitId, setMergeTargetUnitId] = useState<string>('')
 
+  // member move UI
+  const [moveTargetByEmployeeId, setMoveTargetByEmployeeId] = useState<Record<string, string>>({})
+
   useEffect(() => {
     fetch('/api/branches')
       .then((r) => r.json())
@@ -240,6 +243,50 @@ export default function OrgStructurePage() {
     if (branchId) load(branchId)
   }
 
+  const runAutoAssignTeachers = async () => {
+    if (!branchId) return
+    const ok = confirm('سيتم ربط المعلمين تلقائياً بالأقسام (أعضاء فقط) حسب بيانات الموظف. تبي نكمل؟')
+    if (!ok) return
+
+    const res = await fetch('/api/settings/org-structure/auto-assign-teachers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ branchId }),
+    })
+
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || 'فشل الربط التلقائي')
+      return
+    }
+
+    alert(`✅ تم الربط التلقائي. تمت إضافة: ${data.toAssignCount} — يحتاج مراجعة: ${data.needsReviewCount}`)
+    if (branchId) load(branchId)
+  }
+
+  const moveMember = async (employeeId: string, toOrgUnitId: string) => {
+    if (!selectedUnitId) return
+    if (!toOrgUnitId) {
+      alert('اختر القسم الهدف')
+      return
+    }
+
+    const res = await fetch('/api/settings/org-structure/move-member', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employeeId, fromOrgUnitId: selectedUnitId, toOrgUnitId }),
+    })
+
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || 'فشل نقل الموظف')
+      return
+    }
+
+    setMoveTargetByEmployeeId((prev) => ({ ...prev, [employeeId]: '' }))
+    if (branchId) load(branchId)
+  }
+
   const renderNode = (n: any, depth = 0) => {
     return (
       <div key={n.id} style={{ marginRight: depth * 12, borderRight: depth ? '2px solid #E5E7EB' : 'none', paddingRight: depth ? 10 : 0 }}>
@@ -286,7 +333,12 @@ export default function OrgStructurePage() {
           <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
             <Card variant="default">
               <div style={{ padding: 16 }}>
-                <div style={{ fontWeight: 900, marginBottom: 10 }}>🌳 الشجرة</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                  <div style={{ fontWeight: 900 }}>🌳 الشجرة</div>
+                  <Button variant="secondary" onClick={runAutoAssignTeachers}>
+                    ربط المعلمين تلقائياً
+                  </Button>
+                </div>
 
                 {error && (
                   <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B', padding: '10px 12px', borderRadius: 10, marginBottom: 10 }}>
@@ -358,10 +410,50 @@ export default function OrgStructurePage() {
                       {selectedMembers.length === 0 ? (
                         <div style={{ color: '#6B7280' }}>ما فيه أعضاء مرتبطين مباشرة بهذا القسم.</div>
                       ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 6, maxHeight: 220, overflow: 'auto' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 6, maxHeight: 260, overflow: 'auto' }}>
                           {selectedMembers.map((m) => (
-                            <div key={m.id} style={{ padding: '8px 10px', background: 'white', border: '1px solid #E5E7EB', borderRadius: 10 }}>
-                              {m.fullNameAr} <span style={{ color: '#6B7280' }}>({m.employeeNumber})</span>
+                            <div
+                              key={m.id}
+                              style={{
+                                padding: '10px 10px',
+                                background: 'white',
+                                border: '1px solid #E5E7EB',
+                                borderRadius: 10,
+                                display: 'grid',
+                                gridTemplateColumns: '1fr',
+                                gap: 8,
+                              }}
+                            >
+                              <div>
+                                {m.fullNameAr} <span style={{ color: '#6B7280' }}>({m.employeeNumber})</span>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
+                                <select
+                                  value={moveTargetByEmployeeId[m.id] || ''}
+                                  onChange={(e) => setMoveTargetByEmployeeId((prev) => ({ ...prev, [m.id]: e.target.value }))}
+                                  style={{
+                                    width: '100%',
+                                    padding: '10px 10px',
+                                    borderRadius: 10,
+                                    border: '1px solid #E5E7EB',
+                                    background: 'white',
+                                  }}
+                                >
+                                  <option value="">— نقل إلى… —</option>
+                                  {units
+                                    .filter((u) => u.id !== selectedUnitId)
+                                    .map((u) => (
+                                      <option key={u.id} value={u.id}>
+                                        {u.name}
+                                      </option>
+                                    ))}
+                                </select>
+
+                                <Button variant="secondary" onClick={() => moveMember(m.id, moveTargetByEmployeeId[m.id] || '')}>
+                                  نقل
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>
