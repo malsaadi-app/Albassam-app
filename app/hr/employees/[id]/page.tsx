@@ -1,11 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
+import ReactSelect from 'react-select';
+
+type OrgUnitRow = { id: string; name: string; type: string; parentId: string | null };
+
+type OrgAssignmentRow = {
+  id: string;
+  orgUnitId: string;
+  assignmentType: string;
+  role: string;
+  active?: boolean;
+};
 
 export default function EmployeeDetailPage() {
   const params = useParams();
@@ -13,6 +24,17 @@ export default function EmployeeDetailPage() {
   const [employee, setEmployee] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>('');
+
+  // org structure data for this employee branch
+  const [orgUnits, setOrgUnits] = useState<OrgUnitRow[]>([]);
+  const [orgAssignments, setOrgAssignments] = useState<OrgAssignmentRow[]>([]);
+
+  // editable selections
+  const [adminStageUnitIds, setAdminStageUnitIds] = useState<string[]>([]);
+  const [functionalUnitIds, setFunctionalUnitIds] = useState<string[]>([]);
+  const [primaryStageId, setPrimaryStageId] = useState<string>('');
+
+  const [savingOrg, setSavingOrg] = useState(false);
 
   const handleLoginAs = async () => {
     if (userRole !== 'ADMIN') return;
@@ -49,6 +71,14 @@ export default function EmployeeDetailPage() {
     }
   }, [params.id]);
 
+  useEffect(() => {
+    if (!params.id) return;
+    if (!employee?.branchId) return;
+    fetchOrgStructure();
+    fetchOrgAssignments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id, employee?.branchId]);
+
   const fetchUserRole = async () => {
     try {
       const res = await fetch('/api/auth/me');
@@ -67,11 +97,72 @@ export default function EmployeeDetailPage() {
       if (res.ok) {
         const data = await res.json();
         setEmployee(data);
+        setPrimaryStageId(data.stageId || '');
       }
     } catch (error) {
       console.error('Error fetching employee:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOrgStructure = async () => {
+    try {
+      const res = await fetch(`/api/settings/org-structure?branchId=${employee.branchId}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      setOrgUnits((data.units || []) as OrgUnitRow[]);
+    } catch (e) {
+      console.error('Error fetching org structure', e);
+      setOrgUnits([]);
+    }
+  };
+
+  const fetchOrgAssignments = async () => {
+    try {
+      const res = await fetch(`/api/hr/employees/${params.id}/org-assignments`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      const list = (data.assignments || []) as OrgAssignmentRow[];
+      setOrgAssignments(list);
+
+      const adminStages = list.filter((a) => a.assignmentType === 'ADMIN' && a.role === 'MEMBER').map((a) => a.orgUnitId);
+      const functional = list.filter((a) => a.assignmentType === 'FUNCTIONAL' && a.role === 'MEMBER').map((a) => a.orgUnitId);
+      setAdminStageUnitIds(adminStages);
+      setFunctionalUnitIds(functional);
+    } catch (e) {
+      console.error('Error fetching org assignments', e);
+      setOrgAssignments([]);
+      setAdminStageUnitIds([]);
+      setFunctionalUnitIds([]);
+    }
+  };
+
+  const saveOrgAssignments = async () => {
+    try {
+      setSavingOrg(true);
+      const res = await fetch(`/api/hr/employees/${params.id}/org-assignments`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminStageUnitIds,
+          functionalUnitIds,
+          primaryStageId: primaryStageId || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'فشل الحفظ');
+        return;
+      }
+      alert('✅ تم حفظ التبعيات');
+      fetchEmployee();
+      fetchOrgAssignments();
+    } catch (e) {
+      console.error(e);
+      alert('فشل الحفظ');
+    } finally {
+      setSavingOrg(false);
     }
   };
 
@@ -113,6 +204,18 @@ export default function EmployeeDetailPage() {
     employee.basicSalary + employee.housingAllowance + employee.transportAllowance + employee.otherAllowances;
 
   const canEdit = userRole === 'ADMIN' || userRole === 'HR_EMPLOYEE';
+
+  const stageOptions = useMemo(() => {
+    return orgUnits
+      .filter((u) => u.type === 'STAGE')
+      .map((u) => ({ value: u.id, label: u.name }));
+  }, [orgUnits]);
+
+  const functionalOptions = useMemo(() => {
+    return orgUnits
+      .filter((u) => u.type === 'DEPARTMENT' || u.type === 'SUB_DEPARTMENT')
+      .map((u) => ({ value: u.id, label: u.name }));
+  }, [orgUnits]);
 
   return (
     <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
@@ -217,6 +320,72 @@ export default function EmployeeDetailPage() {
             <InfoRow label="المدينة" value={employee.city || '-'} />
           </Card>
         </div>
+
+        {/* Org assignments (ADMIN/FUNCTIONAL) */}
+        {canEdit && employee.branchId && (
+          <Card variant="default" style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginBottom: '16px' }}>
+              🏗️ التبعيات (الهيكل)
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 8 }}>المرحلة الأساسية (Legacy)</div>
+                <select
+                  value={primaryStageId}
+                  onChange={(e) => setPrimaryStageId(e.target.value)}
+                  style={{ width: '100%', padding: '10px 10px', borderRadius: 12, border: '1px solid #E5E7EB', background: 'white' }}
+                >
+                  <option value="">— بدون —</option>
+                  {stageOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <div style={{ color: '#6B7280', fontSize: 12, marginTop: 6 }}>
+                  ملاحظة: هذا الحقل للتوافق مع النظام القديم. التبعيات الفعلية متعددة المراحل تكون تحت "مراحل المعلم".
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 8 }}>مراحل المعلم (ADMIN line) — متعدد</div>
+                <ReactSelect
+                  isMulti
+                  isRtl
+                  placeholder="اختر المراحل…"
+                  options={stageOptions}
+                  value={adminStageUnitIds.map((id) => stageOptions.find((o) => o.value === id)).filter(Boolean) as any}
+                  onChange={(vals) => setAdminStageUnitIds((vals || []).map((v: any) => v.value))}
+                />
+              </div>
+
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 8 }}>الأقسام (FUNCTIONAL line) — متعدد</div>
+                <ReactSelect
+                  isMulti
+                  isRtl
+                  placeholder="اختر الأقسام…"
+                  options={functionalOptions}
+                  value={functionalUnitIds.map((id) => functionalOptions.find((o) => o.value === id)).filter(Boolean) as any}
+                  onChange={(vals) => setFunctionalUnitIds((vals || []).map((v: any) => v.value))}
+                />
+                <div style={{ color: '#6B7280', fontSize: 12, marginTop: 6 }}>
+                  تقدر تربط الموظف بأكثر من قسم. هذا لا يغيّر تعيين المشرف/المدير للقسم.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+                <Button variant="outline" onClick={fetchOrgAssignments}>
+                  تحديث
+                </Button>
+                <Button variant="primary" onClick={saveOrgAssignments} disabled={savingOrg}>
+                  {savingOrg ? 'جاري الحفظ…' : 'حفظ التبعيات'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Leave Balance */}
         {employee.leaveBalance && (
