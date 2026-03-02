@@ -421,6 +421,14 @@ export default function OrgStructurePage() {
       alert(data.error || 'فشل إنشاء المراحل')
       return
     }
+
+    // Also cleanup unwanted stage units (boys branch)
+    await fetch('/api/settings/org-structure/cleanup-stages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ branchId }),
+    }).catch(() => {})
+
     alert(`✅ تم. تمت إضافة مراحل: ${data.createdCount || 0}`)
     load(branchId)
   }

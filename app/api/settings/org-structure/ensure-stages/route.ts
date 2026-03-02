@@ -18,11 +18,19 @@ export async function POST(request: NextRequest) {
     const branchId = String(body?.branchId || '')
     if (!branchId) return NextResponse.json({ error: 'branchId is required' }, { status: 400 })
 
-    const stages = await prisma.stage.findMany({
+    const branch = await prisma.branch.findUnique({ where: { id: branchId }, select: { id: true, name: true } })
+    if (!branch) return NextResponse.json({ error: 'Branch not found' }, { status: 404 })
+
+    const stagesRaw = await prisma.stage.findMany({
       where: { branchId },
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     })
+
+    // Stage names can include legacy/extra values; for boys school we only want the 3 main stages.
+    const BOYS_BRANCH_NAME = 'مجمع البسام الأهلية بنين'
+    const allowedBoys = new Set(['ابتدائي', 'متوسط', 'ثانوي'])
+    const stages = branch.name === BOYS_BRANCH_NAME ? stagesRaw.filter((s) => allowedBoys.has(String(s.name).trim())) : stagesRaw
 
     if (stages.length === 0) return NextResponse.json({ ok: true, createdCount: 0, note: 'no stages found for branch' })
 
