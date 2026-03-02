@@ -26,10 +26,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, deactivatedCount: 0, note: 'not boys branch; no cleanup applied' })
     }
 
-    const unwanted = ['عام', 'رياض أطفال']
+    // Keep only these stages for boys branch
+    const allowed = ['ابتدائي', 'متوسط', 'ثانوي']
 
     const res = await prisma.orgUnit.updateMany({
-      where: { branchId, type: 'STAGE', isActive: true, name: { in: unwanted } },
+      where: { branchId, type: 'STAGE', isActive: true, name: { notIn: allowed } },
       data: { isActive: false },
     })
 
