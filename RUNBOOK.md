@@ -23,6 +23,35 @@ sudo env PM2_HOME=/data/.pm2 PATH=/data/.npm-global/bin:$PATH pm2 restart albass
 sudo env PM2_HOME=/data/.pm2 PATH=/data/.npm-global/bin:$PATH pm2 restart cloudflared
 ```
 
+## Deploy (safe-ish procedure)
+> This repo is inside `/data/.openclaw/workspace/albassam-tasks` and IS a git repo.
+
+```bash
+cd /data/.openclaw/workspace/albassam-tasks
+
+# 1) Update code
+git pull
+
+# 2) Install deps (only if needed)
+npm ci
+
+# 3) Prisma
+npx prisma generate
+npx prisma migrate deploy
+
+# 4) Build
+npm run build
+
+# If build fails with EACCES under .next_run*:
+#   sudo chown -R node:node .next .next_run*
+
+# 5) Restart app
+sudo env PM2_HOME=/data/.pm2 PATH=/data/.npm-global/bin:$PATH pm2 restart albassam-app
+
+# 6) Health check
+curl -s -o /dev/null -w "public /api/health: %{http_code}\n" https://app.albassam-app.com/api/health
+```
+
 ## Logs
 ```bash
 sudo env PM2_HOME=/data/.pm2 PATH=/data/.npm-global/bin:$PATH pm2 logs albassam-app --lines 200 --nostream
