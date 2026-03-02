@@ -94,6 +94,19 @@ export default function OrgStructurePage() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Record<string, boolean>>({})
   const [bulkTargetUnitId, setBulkTargetUnitId] = useState<string>('')
 
+  // modals
+  const [showUnassignedModal, setShowUnassignedModal] = useState<boolean>(false)
+  const [unassignedSelectedIds, setUnassignedSelectedIds] = useState<Record<string, boolean>>({})
+  const [unassignedSearch, setUnassignedSearch] = useState<string>('')
+  const [unassignedTargetUnitId, setUnassignedTargetUnitId] = useState<string>('')
+
+  const [showCreateUnitModal, setShowCreateUnitModal] = useState<boolean>(false)
+  const [newUnitName, setNewUnitName] = useState<string>('')
+  const [newUnitType, setNewUnitType] = useState<string>('SUB_DEPARTMENT')
+  const [newUnitParentId, setNewUnitParentId] = useState<string>('')
+  const [newUnitHeadId, setNewUnitHeadId] = useState<string>('')
+  const [newUnitHeadSearch, setNewUnitHeadSearch] = useState<string>('')
+
   useEffect(() => {
     fetch('/api/branches')
       .then((r) => r.json())
@@ -362,6 +375,72 @@ export default function OrgStructurePage() {
     if (branchId) load(branchId)
   }
 
+  const createUnit = async () => {
+    if (!branchId) return
+    const name = newUnitName.trim()
+    if (!name) {
+      alert('اكتب اسم القسم')
+      return
+    }
+
+    const res = await fetch('/api/settings/org-structure/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        branchId,
+        parentId: newUnitParentId || null,
+        name,
+        type: newUnitType,
+        headEmployeeId: newUnitHeadId || null,
+      }),
+    })
+
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || 'فشل إضافة القسم')
+      return
+    }
+
+    alert('✅ تم إضافة القسم')
+    setShowCreateUnitModal(false)
+    setNewUnitName('')
+    setNewUnitParentId('')
+    setNewUnitHeadId('')
+    setNewUnitHeadSearch('')
+    if (branchId) load(branchId)
+  }
+
+  const addUnassignedSelectedToUnit = async () => {
+    if (!unassignedTargetUnitId) {
+      alert('اختر القسم الهدف')
+      return
+    }
+
+    const ids = Object.keys(unassignedSelectedIds).filter((id) => unassignedSelectedIds[id])
+    if (ids.length === 0) {
+      alert('اختر موظفين أولاً')
+      return
+    }
+
+    const res = await fetch('/api/settings/org-structure/bulk-add-members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employeeIds: ids, toOrgUnitId: unassignedTargetUnitId }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || 'فشل الربط الجماعي')
+      return
+    }
+
+    alert(`✅ تم ربط ${data.addedCount || 0} موظف`) 
+    setUnassignedSelectedIds({})
+    setUnassignedTargetUnitId('')
+    setUnassignedSearch('')
+    setShowUnassignedModal(false)
+    if (branchId) load(branchId)
+  }
+
   const moveMember = async (employeeId: string, fromOrgUnitId: string, toOrgUnitId: string) => {
     if (!fromOrgUnitId) return
     if (!toOrgUnitId) {
@@ -473,6 +552,28 @@ export default function OrgStructurePage() {
     )
   }
 
+  const filteredEmployeesForHead = useMemo(() => {
+    const q = newUnitHeadSearch.trim().toLowerCase()
+    if (!q) return employees
+    return employees.filter((e) => {
+      const name = (e.fullNameAr || '').toLowerCase()
+      const num = (e.employeeNumber || '').toLowerCase()
+      return name.includes(q) || num.includes(q)
+    })
+  }, [employees, newUnitHeadSearch])
+
+  const filteredUnassigned = useMemo(() => {
+    const q = unassignedSearch.trim().toLowerCase()
+    if (!q) return unassignedEmployees
+    return unassignedEmployees.filter((e) => {
+      const name = (e.fullNameAr || '').toLowerCase()
+      const num = (e.employeeNumber || '').toLowerCase()
+      const dept = ((e as any).department || '').toLowerCase()
+      const pos = ((e as any).position || '').toLowerCase()
+      return name.includes(q) || num.includes(q) || dept.includes(q) || pos.includes(q)
+    })
+  }, [unassignedEmployees, unassignedSearch])
+
   return (
     <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -495,11 +596,28 @@ export default function OrgStructurePage() {
           <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
             <Card variant="default">
               <div style={{ padding: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
                   <div style={{ fontWeight: 900 }}>🌳 الشجرة</div>
-                  <Button variant="secondary" onClick={runAutoAssignTeachers}>
-                    ربط المعلمين تلقائياً
-                  </Button>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <Button variant="secondary" onClick={() => {
+                      setShowCreateUnitModal(true)
+                      setNewUnitParentId('')
+                      setNewUnitType('SUB_DEPARTMENT')
+                    }}>
+                      ➕ إضافة قسم
+                    </Button>
+                    <Button variant="secondary" onClick={() => {
+                      setShowUnassignedModal(true)
+                      setUnassignedSelectedIds({})
+                      setUnassignedTargetUnitId('')
+                      setUnassignedSearch('')
+                    }}>
+                      👥 غير مربوطين
+                    </Button>
+                    <Button variant="secondary" onClick={runAutoAssignTeachers}>
+                      ربط المعلمين تلقائياً
+                    </Button>
+                  </div>
                 </div>
 
                 {error && (
@@ -745,6 +863,119 @@ export default function OrgStructurePage() {
                 )}
               </div>
             </Card>
+          </div>
+        )}
+        {showCreateUnitModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div style={{ width: '100%', maxWidth: 520, background: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontWeight: 900 }}>➕ إضافة قسم</div>
+                <button onClick={() => setShowCreateUnitModal(false)} style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#F9FAFB' }}>
+                  إغلاق
+                </button>
+              </div>
+
+              <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+                <Input label="اسم القسم" value={newUnitName} onChange={(e) => setNewUnitName(e.target.value)} placeholder="مثال: قسم الجودة" />
+
+                <Select label="نوع القسم" value={newUnitType} onChange={(e) => setNewUnitType(e.target.value)}>
+                  <option value="DEPARTMENT">DEPARTMENT</option>
+                  <option value="SUB_DEPARTMENT">SUB_DEPARTMENT</option>
+                  <option value="STAGE">STAGE</option>
+                  <option value="SCHOOL">SCHOOL</option>
+                </Select>
+
+                <Select label="يتبع لـ (اختياري)" value={newUnitParentId} onChange={(e) => setNewUnitParentId(e.target.value)}>
+                  <option value="">— تحت الفرع مباشرة —</option>
+                  {units.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </Select>
+
+                <Input label="بحث عن مدير القسم (اختياري)" value={newUnitHeadSearch} onChange={(e) => setNewUnitHeadSearch(e.target.value)} placeholder="اسم أو رقم موظف…" />
+                <Select label="مدير القسم (اختياري)" value={newUnitHeadId} onChange={(e) => setNewUnitHeadId(e.target.value)}>
+                  <option value="">— بدون —</option>
+                  {filteredEmployeesForHead.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.fullNameAr} ({e.employeeNumber})
+                    </option>
+                  ))}
+                </Select>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <Button variant="primary" onClick={createUnit}>
+                    حفظ
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showUnassignedModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div style={{ width: '100%', maxWidth: 720, background: 'white', borderRadius: 16, border: '1px solid #E5E7EB', padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontWeight: 900 }}>👥 الموظفين غير المربوطين (بدون قسم)</div>
+                <button onClick={() => setShowUnassignedModal(false)} style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#F9FAFB' }}>
+                  إغلاق
+                </button>
+              </div>
+
+              <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+                <Input label="بحث" value={unassignedSearch} onChange={(e) => setUnassignedSearch(e.target.value)} placeholder="اسم/رقم/قسم/مسمى…" />
+
+                <Select label="اربط المحددين إلى قسم" value={unassignedTargetUnitId} onChange={(e) => setUnassignedTargetUnitId(e.target.value)}>
+                  <option value="">— اختر —</option>
+                  {units.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </Select>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      const map: Record<string, boolean> = {}
+                      for (const e of filteredUnassigned) map[e.id] = true
+                      setUnassignedSelectedIds(map)
+                    }}
+                  >
+                    تحديد الكل
+                  </Button>
+                  <Button variant="secondary" onClick={() => setUnassignedSelectedIds({})}>
+                    مسح التحديد
+                  </Button>
+                  <Button variant="primary" onClick={addUnassignedSelectedToUnit}>
+                    ربط المحددين
+                  </Button>
+                </div>
+
+                <div style={{ maxHeight: 420, overflow: 'auto', border: '1px solid #E5E7EB', borderRadius: 12, padding: 10, background: '#F9FAFB' }}>
+                  {filteredUnassigned.length === 0 ? (
+                    <div style={{ color: '#6B7280' }}>ما فيه موظفين غير مربوطين حسب البحث الحالي.</div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+                      {filteredUnassigned.map((e) => (
+                        <label key={e.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'white', border: '1px solid #E5E7EB', borderRadius: 12, padding: 10 }}>
+                          <input type="checkbox" checked={Boolean(unassignedSelectedIds[e.id])} onChange={(ev) => setUnassignedSelectedIds((p) => ({ ...p, [e.id]: ev.target.checked }))} />
+                          <div>
+                            <div style={{ fontWeight: 800 }}>{e.fullNameAr}</div>
+                            <div style={{ color: '#6B7280', fontSize: 12 }}>
+                              {e.employeeNumber} — {(e as any).position || '—'} — {(e as any).department || '—'}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
