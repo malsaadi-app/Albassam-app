@@ -42,6 +42,27 @@ function buildTree(units: OrgUnitRow[]) {
   return roots
 }
 
+function getDescendantUnitIds(units: OrgUnitRow[], rootId: string) {
+  const childrenByParent = new Map<string, string[]>()
+  for (const u of units) {
+    if (!u.parentId) continue
+    const arr = childrenByParent.get(u.parentId) || []
+    arr.push(u.id)
+    childrenByParent.set(u.parentId, arr)
+  }
+
+  const out = new Set<string>()
+  const stack = [rootId]
+  while (stack.length) {
+    const cur = stack.pop()!
+    if (out.has(cur)) continue
+    out.add(cur)
+    const kids = childrenByParent.get(cur) || []
+    for (const k of kids) stack.push(k)
+  }
+  return Array.from(out)
+}
+
 export default function OrgStructurePage() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [branchId, setBranchId] = useState('')
@@ -62,6 +83,14 @@ export default function OrgStructurePage() {
 
   // member move UI
   const [moveTargetByEmployeeId, setMoveTargetByEmployeeId] = useState<Record<string, string>>({})
+
+  // display options
+  const [includeChildrenMembers, setIncludeChildrenMembers] = useState<boolean>(false)
+  const [memberSearch, setMemberSearch] = useState<string>('')
+
+  // bulk selection
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Record<string, boolean>>({})
+  const [bulkTargetUnitId, setBulkTargetUnitId] = useState<string>('')
 
   useEffect(() => {
     fetch('/api/branches')
@@ -122,6 +151,47 @@ export default function OrgStructurePage() {
     return employees.filter((e) => ids.has(e.id))
   }, [employees, selectedAssignments, selectedUnitId])
 
+  const displayedMembers = useMemo(() => {
+    if (!selectedUnitId) return [] as Array<{ employee: Employee; orgUnitId: string; orgUnitName: string }>
+
+    const unitNameById = new Map(units.map((u) => [u.id, u.name]))
+
+    const unitIds = includeChildrenMembers ? getDescendantUnitIds(units, selectedUnitId) : [selectedUnitId]
+    const unitIdSet = new Set(unitIds)
+
+    const memAssignments = assignments.filter(
+      (a) => a.active && a.assignmentType === 'FUNCTIONAL' && a.role === 'MEMBER' && unitIdSet.has(a.orgUnitId)
+    )
+
+    const seen = new Set<string>()
+    const out: Array<{ employee: Employee; orgUnitId: string; orgUnitName: string }> = []
+
+    for (const a of memAssignments) {
+      const emp = employees.find((e) => e.id === a.employeeId)
+      if (!emp) continue
+      const key = `${emp.id}:${a.orgUnitId}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push({ employee: emp, orgUnitId: a.orgUnitId, orgUnitName: unitNameById.get(a.orgUnitId) || '' })
+    }
+
+    const q = memberSearch.trim().toLowerCase()
+    const filtered = !q
+      ? out
+      : out.filter(({ employee }) => {
+          const name = (employee.fullNameAr || '').toLowerCase()
+          const num = (employee.employeeNumber || '').toLowerCase()
+          return name.includes(q) || num.includes(q)
+        })
+
+    filtered.sort((a, b) => a.employee.fullNameAr.localeCompare(b.employee.fullNameAr, 'ar'))
+    return filtered
+  }, [assignments, employees, includeChildrenMembers, memberSearch, selectedUnitId, units])
+
+  const selectedDisplayedEmployeeIds = useMemo(() => {
+    return Object.keys(selectedEmployeeIds).filter((id) => selectedEmployeeIds[id])
+  }, [selectedEmployeeIds])
+
   const load = async (bId: string) => {
     setLoading(true)
     setError('')
@@ -152,6 +222,10 @@ export default function OrgStructurePage() {
     setSelectedUnitId(id)
     setSupervisorSearch('')
     setMergeTargetUnitId('')
+    setIncludeChildrenMembers(false)
+    setMemberSearch('')
+    setSelectedEmployeeIds({})
+    setBulkTargetUnitId('')
 
     const unit = units.find((u) => u.id === id)
     setUnitName(unit?.name || '')
@@ -264,8 +338,8 @@ export default function OrgStructurePage() {
     if (branchId) load(branchId)
   }
 
-  const moveMember = async (employeeId: string, toOrgUnitId: string) => {
-    if (!selectedUnitId) return
+  const moveMember = async (employeeId: string, fromOrgUnitId: string, toOrgUnitId: string) => {
+    if (!fromOrgUnitId) return
     if (!toOrgUnitId) {
       alert('اختر القسم الهدف')
       return
@@ -274,7 +348,7 @@ export default function OrgStructurePage() {
     const res = await fetch('/api/settings/org-structure/move-member', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ employeeId, fromOrgUnitId: selectedUnitId, toOrgUnitId }),
+      body: JSON.stringify({ employeeId, fromOrgUnitId, toOrgUnitId }),
     })
 
     const data = await res.json().catch(() => ({}))
@@ -284,6 +358,70 @@ export default function OrgStructurePage() {
     }
 
     setMoveTargetByEmployeeId((prev) => ({ ...prev, [employeeId]: '' }))
+    if (branchId) load(branchId)
+  }
+
+  const bulkMoveSelected = async () => {
+    if (!branchId) return
+    const ids = selectedDisplayedEmployeeIds
+    if (ids.length === 0) {
+      alert('اختر موظفين أولاً')
+      return
+    }
+    if (!bulkTargetUnitId) {
+      alert('اختر القسم الهدف')
+      return
+    }
+
+    const ok = confirm(`تأكيد نقل ${ids.length} موظف إلى القسم المختار؟`)
+    if (!ok) return
+
+    const res = await fetch('/api/settings/org-structure/bulk-move-members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ branchId, employeeIds: ids, toOrgUnitId: bulkTargetUnitId }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || 'فشل النقل الجماعي')
+      return
+    }
+
+    alert(`✅ تم نقل ${data.movedCount || 0} موظف`)
+    setSelectedEmployeeIds({})
+    setBulkTargetUnitId('')
+    if (branchId) load(branchId)
+  }
+
+  const bulkAddSelected = async () => {
+    if (!branchId) return
+    const ids = selectedDisplayedEmployeeIds
+    if (ids.length === 0) {
+      alert('اختر موظفين أولاً')
+      return
+    }
+    if (!bulkTargetUnitId) {
+      alert('اختر القسم الهدف')
+      return
+    }
+
+    const ok = confirm(`تأكيد إضافة ${ids.length} موظف إلى القسم المختار؟`)
+    if (!ok) return
+
+    const res = await fetch('/api/settings/org-structure/bulk-add-members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employeeIds: ids, toOrgUnitId: bulkTargetUnitId }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || 'فشل الإضافة الجماعية')
+      return
+    }
+
+    alert(`✅ تم إضافة ${data.addedCount || 0} موظف`)
+    setSelectedEmployeeIds({})
+    setBulkTargetUnitId('')
     if (branchId) load(branchId)
   }
 
@@ -402,18 +540,67 @@ export default function OrgStructurePage() {
                     </div>
 
                     <div style={{ marginBottom: 12, background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 12 }}>
-                      <div style={{ fontWeight: 900, marginBottom: 10 }}>👀 الموظفين تحت القسم</div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                        <div style={{ fontWeight: 900 }}>👀 الموظفين تحت القسم</div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#374151' }}>
+                          <input type="checkbox" checked={includeChildrenMembers} onChange={(e) => setIncludeChildrenMembers(e.target.checked)} />
+                          عرض الأقسام الفرعية
+                        </label>
+                      </div>
+
                       <div style={{ color: '#6B7280', fontSize: 12, marginBottom: 8 }}>
                         المشرف: {selectedSupervisor ? `${selectedSupervisor.fullNameAr} (${selectedSupervisor.employeeNumber})` : '—'}
-                        {' — '}الأعضاء: {selectedMembers.length}
+                        {' — '}الأعضاء: {displayedMembers.length}
                       </div>
-                      {selectedMembers.length === 0 ? (
-                        <div style={{ color: '#6B7280' }}>ما فيه أعضاء مرتبطين مباشرة بهذا القسم.</div>
+
+                      <Input label="بحث داخل الموظفين" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} placeholder="اسم أو رقم موظف…" />
+
+                      <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr', gap: 8, background: 'white', border: '1px solid #E5E7EB', borderRadius: 12, padding: 10 }}>
+                        <div style={{ fontWeight: 900, fontSize: 12 }}>إجراءات جماعية</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+                          <select
+                            value={bulkTargetUnitId}
+                            onChange={(e) => setBulkTargetUnitId(e.target.value)}
+                            style={{ width: '100%', padding: '10px 10px', borderRadius: 10, border: '1px solid #E5E7EB', background: 'white' }}
+                          >
+                            <option value="">— اختر القسم الهدف —</option>
+                            {units
+                              .filter((u) => u.id !== selectedUnitId)
+                              .map((u) => (
+                                <option key={u.id} value={u.id}>
+                                  {u.name}
+                                </option>
+                              ))}
+                          </select>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+                            <Button variant="secondary" onClick={() => {
+                              // select all in current filtered list
+                              const map: Record<string, boolean> = {}
+                              for (const m of displayedMembers) map[m.employee.id] = true
+                              setSelectedEmployeeIds(map)
+                            }}>
+                              تحديد الكل
+                            </Button>
+                            <Button variant="secondary" onClick={() => setSelectedEmployeeIds({})}>
+                              مسح التحديد
+                            </Button>
+                            <Button variant="secondary" onClick={bulkAddSelected}>
+                              إضافة المحددين
+                            </Button>
+                            <Button variant="danger" onClick={bulkMoveSelected}>
+                              نقل المحددين
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {displayedMembers.length === 0 ? (
+                        <div style={{ color: '#6B7280', marginTop: 10 }}>ما فيه أعضاء مرتبطين بهذا القسم (حسب الفلتر الحالي).</div>
                       ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 6, maxHeight: 260, overflow: 'auto' }}>
-                          {selectedMembers.map((m) => (
+                        <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr', gap: 6, maxHeight: 360, overflow: 'auto' }}>
+                          {displayedMembers.map(({ employee, orgUnitId, orgUnitName }) => (
                             <div
-                              key={m.id}
+                              key={`${employee.id}:${orgUnitId}`}
                               style={{
                                 padding: '10px 10px',
                                 background: 'white',
@@ -424,14 +611,26 @@ export default function OrgStructurePage() {
                                 gap: 8,
                               }}
                             >
-                              <div>
-                                {m.fullNameAr} <span style={{ color: '#6B7280' }}>({m.employeeNumber})</span>
-                              </div>
+                              <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(selectedEmployeeIds[employee.id])}
+                                  onChange={(e) => setSelectedEmployeeIds((prev) => ({ ...prev, [employee.id]: e.target.checked }))}
+                                />
+                                <div>
+                                  <div>
+                                    {employee.fullNameAr} <span style={{ color: '#6B7280' }}>({employee.employeeNumber})</span>
+                                  </div>
+                                  {includeChildrenMembers && (
+                                    <div style={{ color: '#6B7280', fontSize: 12 }}>القسم: {orgUnitName}</div>
+                                  )}
+                                </div>
+                              </label>
 
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
                                 <select
-                                  value={moveTargetByEmployeeId[m.id] || ''}
-                                  onChange={(e) => setMoveTargetByEmployeeId((prev) => ({ ...prev, [m.id]: e.target.value }))}
+                                  value={moveTargetByEmployeeId[employee.id] || ''}
+                                  onChange={(e) => setMoveTargetByEmployeeId((prev) => ({ ...prev, [employee.id]: e.target.value }))}
                                   style={{
                                     width: '100%',
                                     padding: '10px 10px',
@@ -442,7 +641,7 @@ export default function OrgStructurePage() {
                                 >
                                   <option value="">— نقل إلى… —</option>
                                   {units
-                                    .filter((u) => u.id !== selectedUnitId)
+                                    .filter((u) => u.id !== orgUnitId)
                                     .map((u) => (
                                       <option key={u.id} value={u.id}>
                                         {u.name}
@@ -450,7 +649,7 @@ export default function OrgStructurePage() {
                                     ))}
                                 </select>
 
-                                <Button variant="secondary" onClick={() => moveMember(m.id, moveTargetByEmployeeId[m.id] || '')}>
+                                <Button variant="secondary" onClick={() => moveMember(employee.id, orgUnitId, moveTargetByEmployeeId[employee.id] || '')}>
                                   نقل
                                 </Button>
                               </div>
