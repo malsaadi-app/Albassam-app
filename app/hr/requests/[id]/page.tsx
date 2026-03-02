@@ -150,30 +150,6 @@ export default function HRRequestDetailPage() {
           }
         />
 
-        {/* Timeline (visible to approvers/admin/hr; requester won't see it) */}
-        {auditLoaded && actionCtx && !actionCtx.isOwner && !actionCtx.canResubmit && (
-          <Card variant="default" style={{ marginBottom: 16 }}>
-            <div style={{ padding: 16 }}>
-              <div style={{ fontWeight: 900, marginBottom: 10 }}>🧭 مسار المعاملة</div>
-              {auditLogs.length === 0 ? (
-                <div style={{ color: '#6B7280' }}>لا يوجد سجل حتى الآن.</div>
-              ) : (
-                <div style={{ display: 'grid', gap: 10 }}>
-                  {auditLogs.map((l: any) => (
-                    <div key={l.id} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 12, padding: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                        <div style={{ fontWeight: 900 }}>{l.actor?.displayName || '—'}</div>
-                        <div style={{ color: '#6B7280', fontSize: 12 }}>{new Date(l.createdAt).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}</div>
-                      </div>
-                      <div style={{ color: '#6B7280', fontSize: 12, marginTop: 4 }}>{l.action}</div>
-                      {l.message && <div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{l.message}</div>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </Card>
-        )}
 
         <Card variant="default">
           <div style={{ marginBottom: '20px' }}>
@@ -467,6 +443,56 @@ export default function HRRequestDetailPage() {
             </div>
           </div>
         </Card>
+
+        {/* Timeline (visible to approvers/admin/hr; requester won't see it) */}
+        {auditLoaded && actionCtx && !actionCtx.isOwner && !actionCtx.canResubmit && (
+          <Card variant="default" style={{ marginTop: 16, marginBottom: 16 }}>
+            <div style={{ padding: 16 }}>
+              <div style={{ fontWeight: 900, marginBottom: 10 }}>🧾 سجل المعاملة</div>
+
+              {auditLogs.length === 0 ? (
+                <div style={{ color: '#6B7280' }}>لا يوجد سجل حتى الآن.</div>
+              ) : (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {auditLogs.map((l: any) => {
+                    const action = String(l.action || '')
+                    const actionLabel =
+                      action.includes('APPROV') ? 'تمت الموافقة' :
+                      action.includes('REJECT') ? 'تم الرفض' :
+                      action.includes('SEND_BACK') ? 'تم الإرجاع' :
+                      action.includes('DELEGATION') ? 'تمت الإحالة' :
+                      action.includes('RESUBMIT') ? 'تمت إعادة الإرسال' :
+                      'تم تحديث الطلب'
+
+                    return (
+                      <div key={l.id} style={{
+                        background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: 14,
+                        padding: 12,
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                          <div style={{ fontWeight: 900, color: '#0F172A' }}>{actionLabel}</div>
+                          <div style={{ color: '#64748B', fontSize: 12 }}>{new Date(l.createdAt).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}</div>
+                        </div>
+
+                        <div style={{ marginTop: 6, color: '#0F172A', fontWeight: 800 }}>
+                          {l.actor?.displayName || '—'}
+                        </div>
+
+                        {l.message && (
+                          <div style={{ marginTop: 6, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                            {l.message}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
         {/* Send-back modal */}
         {sendBackModal.open && (
