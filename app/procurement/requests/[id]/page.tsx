@@ -642,13 +642,45 @@ export default function PurchaseRequestDetailsPage() {
                         <div style={{ width: 12, height: 12, borderRadius: 999, background: idx === auditLogs.length - 1 ? '#2563EB' : '#94A3B8', marginTop: 6 }} />
                       </div>
                       <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
-                          <div style={{ fontWeight: 900, color: '#0F172A' }}>{l.actor?.displayName || '—'}</div>
-                          <div style={{ color: '#64748B', fontSize: 12 }}>{new Date(l.createdAt).toLocaleString('ar-SA')}</div>
-                        </div>
-                        <div style={{ marginTop: 6, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                          {l.message || l.action}
-                        </div>
+                        {(() => {
+                          const action = String(l.action || '')
+                          const actorName = l.actor?.displayName || '—'
+                          const actorUsername = String(l.actor?.username || '')
+                          const actorRole = String(l.actor?.role || '')
+
+                          const actionLabel =
+                            action === 'WAREHOUSE_ISSUE' ? 'تم صرف من المخزون' :
+                            action.includes('REJECT') ? 'تم الرفض' :
+                            action.includes('APPROV') ? 'تمت الموافقة' :
+                            action.includes('STEP') ? 'تمت موافقة خطوة' :
+                            'تم تحديث الطلب'
+
+                          const positionLabel = (() => {
+                            // Prefer SYSTEM_ROLE label if we can infer by system role/username patterns.
+                            if (action === 'WAREHOUSE_ISSUE') return 'المخازن'
+                            if (actorRole === 'ADMIN') return 'إدارة'
+
+                            // Heuristic by usernames/names (MVP): later we can store role label in audit log.
+                            const name = `${actorName} ${actorUsername}`.toLowerCase()
+                            if (name.includes('gatekeeper') || name.includes('مسؤول')) return 'مسؤول مشتريات الفرع'
+                            if (name.includes('procurement') || name.includes('مشتريات')) return 'إدارة المشتريات'
+                            return 'اعتماد'
+                          })()
+
+                          return (
+                            <>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                                <div style={{ fontWeight: 900, color: '#0F172A' }}>{positionLabel}</div>
+                                <div style={{ color: '#64748B', fontSize: 12 }}>{new Date(l.createdAt).toLocaleString('ar-SA')}</div>
+                              </div>
+                              <div style={{ marginTop: 4, color: '#0F172A', fontWeight: 900 }}>{actionLabel}</div>
+                              <div style={{ marginTop: 6, color: '#0F172A', fontWeight: 700 }}>{actorName}</div>
+                              <div style={{ marginTop: 6, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                                {l.message || l.action}
+                              </div>
+                            </>
+                          )
+                        })()}
                       </div>
                     </div>
                   ))}
