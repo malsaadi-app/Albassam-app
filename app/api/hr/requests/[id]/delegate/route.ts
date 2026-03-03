@@ -5,12 +5,24 @@ import { z } from 'zod'
 import { getSession } from '@/lib/session'
 import { createHRRequestAuditLog } from '@/lib/audit'
 
-const schema = z.object({
-  // Accept either a single userId or a list (pool)
-  delegatedToUserId: z.string().min(1).optional(),
-  delegatedToUserIds: z.array(z.string().min(1)).optional(),
-  comment: z.string().min(1, 'سبب الإحالة مطلوب')
-})
+const schema = z
+  .object({
+    // Accept either a single userId or a list (pool)
+    delegatedToUserId: z.string().min(1).optional(),
+    delegatedToUserIds: z.array(z.string().min(1)).optional(),
+    comment: z.string().optional(),
+    _requireComment: z.boolean().optional(),
+  })
+  .superRefine((val, ctx) => {
+    const require = val._requireComment !== false
+    if (require && (!val.comment || val.comment.trim().length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'سبب الإحالة مطلوب',
+        path: ['comment'],
+      })
+    }
+  })
 
 // POST /api/hr/requests/[id]/delegate
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -20,9 +32,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!session.user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
     const actorUserId = session.user.id
 
-    const body = schema.parse(await request.json())
-    const targetIds = (body.delegatedToUserIds && body.delegatedToUserIds.length ? body.delegatedToUserIds : body.delegatedToUserId ? [body.delegatedToUserId] : []).map(String)
-    if (targetIds.length === 0) return NextResponse.json({ error: 'المستخدم المستلم مطلوب' }, { status: 400 })
+    const raw = await request.json()
+
 
     const hrRequest = await prisma.hRRequest.findUnique({
       where: { id },
@@ -30,6 +41,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     })
 
     if (!hrRequest) return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 })
+
+    let requireComment = true
+    try {
+      const builderStep = await (await import('@/lib/hrWorkflowBuilderRouting')).getStepDefinitionFromBuilder({
+        requestType: hrRequest.type,
+        requesterUserId: hrRequest.employeeId,
+        stepOrder: hrRequest.currentWorkflowStep ?? 0,
+      })
+      if (builderStep && typeof builderStep.requireComment === 'boolean') {
+        requireComment = builderStep.requireComment
+      }
+    } catch {
+      // ignore
+    }
+
+    const body = schema.parse({ ...raw, _requireComment: requireComment })
+
+    const targetIds = (body.delegatedToUserIds && body.delegatedToUserIds.length ? body.delegatedToUserIds : body.delegatedToUserId ? [body.delegatedToUserId] : []).map(String)
+    if (targetIds.length === 0) return NextResponse.json({ error: 'المستخدم المستلم مطلوب' }, { status: 400 })
 
     // Must be able to process current step OR admin
     if (session.user.role !== 'ADMIN') {
@@ -73,7 +103,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         delegatedToUserId,
         delegatedByUserId: actorUserId,
         stepIndex: currentIndex,
-        comment: body.comment,
+        comment: body.comment || '',
       })),
       skipDuplicates: true,
     })

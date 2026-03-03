@@ -8,7 +8,18 @@ import { createHRRequestAuditLog } from '@/lib/audit'
 const schema = z
   .object({
     target: z.enum(['REQUESTER', 'PREVIOUS_STEP']),
-    comment: z.string().min(1, 'سبب الإرجاع مطلوب')
+    comment: z.string().optional(),
+    _requireComment: z.boolean().optional(),
+  })
+  .superRefine((val, ctx) => {
+    const require = val._requireComment !== false
+    if (require && (!val.comment || val.comment.trim().length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'سبب الإرجاع مطلوب',
+        path: ['comment'],
+      })
+    }
   })
 
 // POST /api/hr/requests/[id]/send-back
@@ -18,7 +29,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const session = await getSession(await cookies())
     if (!session.user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
 
-    const body = schema.parse(await request.json())
+    const raw = await request.json()
 
     const hrRequest = await prisma.hRRequest.findUnique({
       where: { id },
@@ -26,6 +37,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     })
 
     if (!hrRequest) return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 })
+
+    // Determine requireComment from Workflow Builder step definition (if published), else default true.
+    let requireComment = true
+    try {
+      const builderStep = await (await import('@/lib/hrWorkflowBuilderRouting')).getStepDefinitionFromBuilder({
+        requestType: hrRequest.type,
+        requesterUserId: hrRequest.employeeId,
+        stepOrder: hrRequest.currentWorkflowStep ?? 0,
+      })
+      if (builderStep && typeof builderStep.requireComment === 'boolean') {
+        requireComment = builderStep.requireComment
+      }
+    } catch {
+      // ignore
+    }
+
+    const body = schema.parse({ ...raw, _requireComment: requireComment })
 
     // Must be able to process current step OR admin
     if (session.user.role !== 'ADMIN') {

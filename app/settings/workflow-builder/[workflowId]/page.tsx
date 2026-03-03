@@ -52,8 +52,12 @@ export default function WorkflowBuilderDetail() {
   const [ruleRequestType, setRuleRequestType] = useState('')
   const [ruleBranchQuery, setRuleBranchQuery] = useState('')
   const [ruleSelectedBranchIds, setRuleSelectedBranchIds] = useState<string[]>([])
+  const [stages, setStages] = useState<any[]>([])
+  const [stagesLoadedForBranch, setStagesLoadedForBranch] = useState<string | null>(null)
+
   const [departments, setDepartments] = useState<any[]>([])
-  const [departmentsLoaded, setDepartmentsLoaded] = useState(false)
+  const [departmentsLoadedForBranch, setDepartmentsLoadedForBranch] = useState<string | null>(null)
+
   const [ruleStageId, setRuleStageId] = useState<string>('')
   const [ruleDepartmentId, setRuleDepartmentId] = useState<string>('')
   const [dragId, setDragId] = useState<string | null>(null)
@@ -119,20 +123,40 @@ export default function WorkflowBuilderDetail() {
     })()
   }, [requestTypesLoaded])
 
+  // Load stages + departments for the selected branch (only when exactly 1 branch selected)
   useEffect(() => {
-    if (departmentsLoaded) return
-    ;(async () => {
-      try {
-        const res = await fetch('/api/hr/master-data/departments')
-        if (!res.ok) return
-        const data = await res.json().catch(() => ({}))
-        setDepartments(Array.isArray(data?.departments) ? data.departments : [])
-        setDepartmentsLoaded(true)
-      } catch {
-        // ignore
-      }
-    })()
-  }, [departmentsLoaded])
+    if (!ruleModal) return
+    if (ruleSelectedBranchIds.length !== 1) return
+    const branchId = ruleSelectedBranchIds[0]
+
+    if (stagesLoadedForBranch !== branchId) {
+      ;(async () => {
+        try {
+          const res = await fetch(`/api/branches/${branchId}/stages`)
+          if (!res.ok) return
+          const data = await res.json().catch(() => [])
+          setStages(Array.isArray(data) ? data : [])
+          setStagesLoadedForBranch(branchId)
+        } catch {
+          // ignore
+        }
+      })()
+    }
+
+    if (departmentsLoadedForBranch !== branchId) {
+      ;(async () => {
+        try {
+          const res = await fetch(`/api/hr/master-data/departments?branchId=${branchId}`)
+          if (!res.ok) return
+          const data = await res.json().catch(() => ({}))
+          setDepartments(Array.isArray(data?.departments) ? data.departments : [])
+          setDepartmentsLoadedForBranch(branchId)
+        } catch {
+          // ignore
+        }
+      })()
+    }
+  }, [ruleModal, ruleSelectedBranchIds, stagesLoadedForBranch, departmentsLoadedForBranch])
 
   const saveSteps = async () => {
     if (!draft?.id) return
@@ -484,17 +508,17 @@ export default function WorkflowBuilderDetail() {
                       <select
                         value={ruleStageId}
                         onChange={(e) => setRuleStageId(e.target.value)}
+                        disabled={ruleSelectedBranchIds.length !== 1}
                         style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB', background: 'white', width: '100%' }}
                       >
                         <option value="">بدون</option>
-                        {branches
-                          .flatMap((b: any) => b.stages || [])
-                          .filter((s: any) => s && s.id && s.name)
-                          .slice(0, 200)
-                          .map((s: any) => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
+                        {stages.map((s: any) => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
                       </select>
+                      {ruleSelectedBranchIds.length !== 1 && (
+                        <div style={{ color: '#64748B', fontSize: 12, marginTop: 6 }}>اختر فرع واحد لعرض مراحل هذا الفرع فقط.</div>
+                      )}
                     </div>
 
                     <div>
@@ -502,6 +526,7 @@ export default function WorkflowBuilderDetail() {
                       <select
                         value={ruleDepartmentId}
                         onChange={(e) => setRuleDepartmentId(e.target.value)}
+                        disabled={ruleSelectedBranchIds.length !== 1}
                         style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB', background: 'white', width: '100%' }}
                       >
                         <option value="">بدون</option>
@@ -509,6 +534,9 @@ export default function WorkflowBuilderDetail() {
                           <option key={d.id} value={d.id}>{d.nameAr || d.nameEn || d.id}</option>
                         ))}
                       </select>
+                      {ruleSelectedBranchIds.length !== 1 && (
+                        <div style={{ color: '#64748B', fontSize: 12, marginTop: 6 }}>اختر فرع واحد لعرض الأقسام المرتبطة به فقط.</div>
+                      )}
                     </div>
                   </div>
 

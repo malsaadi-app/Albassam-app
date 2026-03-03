@@ -77,6 +77,19 @@ export async function POST(
       return NextResponse.json({ error: 'الطلب غير موجود' }, { status: 404 });
     }
 
+    const getStatusName = async (stepOrder: number, fallback: string) => {
+      try {
+        const s = await (await import('@/lib/hrWorkflowBuilderRouting')).getStepDefinitionFromBuilder({
+          requestType: hrRequest.type,
+          requesterUserId: hrRequest.employeeId,
+          stepOrder,
+        })
+        return s?.titleAr ? String(s.titleAr) : fallback
+      } catch {
+        return fallback
+      }
+    }
+
     // Get workflow for this request type
     const workflow = await prisma.hRRequestTypeWorkflow.findUnique({
       where: { requestType: hrRequest.type as any },
@@ -96,6 +109,7 @@ export async function POST(
 
     const currentStepIndex = hrRequest.currentWorkflowStep ?? 0;
     const currentStep = workflow.steps[currentStepIndex];
+    const currentStepName = await getStatusName(currentStep.order, currentStep.statusName);
 
     if (!currentStep) {
       return NextResponse.json(
@@ -179,7 +193,7 @@ export async function POST(
         requestId: id,
         actorUserId: session.user.id,
         action: 'REJECTED',
-        message: `رفض في خطوة: ${currentStep.statusName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
+        message: `رفض في خطوة: ${currentStepName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
       });
 
       // Notify employee
@@ -187,7 +201,7 @@ export async function POST(
         data: {
           userId: hrRequest.employeeId,
           title: 'طلب مرفوض',
-          message: `تم رفض طلب ${getRequestTypeArabic(hrRequest.type)} الخاص بك في مرحلة: ${currentStep.statusName}`,
+          message: `تم رفض طلب ${getRequestTypeArabic(hrRequest.type)} الخاص بك في مرحلة: ${currentStepName}`,
           type: 'request_rejected',
           relatedId: hrRequest.id,
           isRead: false
@@ -252,7 +266,7 @@ export async function POST(
           requestId: id,
           actorUserId: session.user.id,
           action: 'APPROVED',
-          message: `موافقة نهائية من: ${currentStep.statusName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
+          message: `موافقة نهائية من: ${currentStepName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
         });
 
         // Notify employee
@@ -305,7 +319,7 @@ export async function POST(
             requestId: id,
             actorUserId: session.user.id,
             action: 'APPROVED',
-            message: `موافقة نهائية (تخطي تلقائي للخطوات الفارغة): ${currentStep.statusName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
+            message: `موافقة نهائية (تخطي تلقائي للخطوات الفارغة): ${currentStepName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
           });
 
           await prisma.notification.create({
@@ -330,11 +344,13 @@ export async function POST(
             }
           });
 
+          const nextStepName = await getStatusName(nextStep.order, nextStep.statusName)
+
           await createHRRequestAuditLog(prisma, {
             requestId: id,
             actorUserId: session.user.id,
             action: 'STEP_APPROVED',
-            message: `تمت الموافقة في خطوة: ${currentStep.statusName}. تحول إلى: ${nextStep.statusName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
+            message: `تمت الموافقة في خطوة: ${currentStepName}. تحول إلى: ${nextStepName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
           });
 
           // Notify next responsible person(s)
@@ -343,7 +359,7 @@ export async function POST(
               data: {
                 userId,
                 title: 'طلب بانتظار موافقتك',
-                message: `طلب ${getRequestTypeArabic(hrRequest.type)} من ${hrRequest.employee.displayName} في مرحلة: ${nextStep.statusName}`,
+                message: `طلب ${getRequestTypeArabic(hrRequest.type)} من ${hrRequest.employee.displayName} في مرحلة: ${nextStepName}`, 
                 type: 'request_pending',
                 relatedId: hrRequest.id,
                 isRead: false
@@ -356,7 +372,7 @@ export async function POST(
             data: {
               userId: hrRequest.employeeId,
               title: 'تقدم في طلبك',
-              message: `طلب ${getRequestTypeArabic(hrRequest.type)} الخاص بك تقدم إلى مرحلة: ${nextStep.statusName}`,
+              message: `طلب ${getRequestTypeArabic(hrRequest.type)} الخاص بك تقدم إلى مرحلة: ${nextStepName}`,
               type: 'request_updated',
               relatedId: hrRequest.id,
               isRead: false
