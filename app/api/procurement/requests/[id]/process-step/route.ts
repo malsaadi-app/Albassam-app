@@ -5,11 +5,23 @@ import { z } from 'zod';
 import { getSession } from '@/lib/session';
 
 
-// Validation schema
-const processStepSchema = z.object({
-  action: z.enum(['approve', 'reject']),
-  comment: z.string().optional()
-});
+// Validation schema (requireComment resolved dynamically from builder when available)
+const processStepSchema = z
+  .object({
+    action: z.enum(['approve', 'reject']),
+    comment: z.string().optional(),
+    _requireComment: z.boolean().optional(),
+  })
+  .superRefine((val, ctx) => {
+    const require = val._requireComment !== false
+    if (require && (!val.comment || val.comment.trim().length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: val.action === 'reject' ? 'سبب الرفض مطلوب' : 'تعليق الموافقة مطلوب',
+        path: ['comment'],
+      })
+    }
+  });
 
 // Helper function to get category label
 function getCategoryLabel(category: string): string {
@@ -111,7 +123,36 @@ export async function POST(
     }
 
     const body = await request.json();
-    const validatedData = processStepSchema.parse(body);
+
+    // Builder-first: get step name + requireComment (if published)
+    let requireComment = true
+    let currentStepName = currentStep.statusName
+    let nextStepName: string | null = null
+    try {
+      const { getProcurementStepDefinitionFromBuilder } = await import('@/lib/procurementWorkflowBuilderRouting')
+      const stepDef = await getProcurementStepDefinitionFromBuilder({
+        requestType: 'PURCHASE_REQUEST',
+        requestedByUserId: purchaseRequest.requestedById,
+        category: String(purchaseRequest.category),
+        stepIndex: currentStepIndex,
+      })
+      if (stepDef) {
+        if (typeof stepDef.requireComment === 'boolean') requireComment = stepDef.requireComment
+        if (stepDef.titleAr) currentStepName = String(stepDef.titleAr)
+      }
+
+      const ns = await getProcurementStepDefinitionFromBuilder({
+        requestType: 'PURCHASE_REQUEST',
+        requestedByUserId: purchaseRequest.requestedById,
+        category: String(purchaseRequest.category),
+        stepIndex: currentStepIndex + 1,
+      })
+      if (ns?.titleAr) nextStepName = String(ns.titleAr)
+    } catch {
+      // ignore
+    }
+
+    const validatedData = processStepSchema.parse({ ...body, _requireComment: requireComment });
 
     let updatedRequest;
 
@@ -122,7 +163,7 @@ export async function POST(
         data: {
           userId: currentStep.userId,
           title: 'طلب شراء جاهز للمراجعة النهائية',
-          message: `تمت موافقة مسؤول الفرع على طلب الشراء ${purchaseRequest.requestNumber}، بانتظار مراجعتك (${currentStep.statusName})`,
+          message: `تمت موافقة مسؤول الفرع على طلب الشراء ${purchaseRequest.requestNumber}، بانتظار مراجعتك (${currentStepName})`,
           type: 'procurement_gatekeeper_approved',
           relatedId: purchaseRequest.id,
           isRead: false,
@@ -153,7 +194,7 @@ export async function POST(
           reviewNotes: validatedData.comment || null,
           reviewedById: session.user.id,
           reviewedAt: new Date(),
-          rejectedReason: `رفض في مرحلة: ${currentStep.statusName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
+          rejectedReason: `رفض في مرحلة: ${currentStepName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
         }
       });
 
@@ -162,7 +203,7 @@ export async function POST(
         data: {
           userId: purchaseRequest.requestedById,
           title: 'طلب شراء مرفوض',
-          message: `تم رفض طلب الشراء ${purchaseRequest.requestNumber} في مرحلة: ${currentStep.statusName}`,
+          message: `تم رفض طلب الشراء ${purchaseRequest.requestNumber} في مرحلة: ${currentStepName}`,
           type: 'procurement_rejected',
           relatedId: purchaseRequest.id,
           isRead: false
@@ -225,7 +266,7 @@ export async function POST(
             data: {
               userId,
               title: 'طلب شراء بانتظار موافقتك',
-              message: `طلب شراء ${purchaseRequest.requestNumber} (${getCategoryLabel(purchaseRequest.category)}) في مرحلة: ${nextStep.statusName}`,
+              message: `طلب شراء ${purchaseRequest.requestNumber} (${getCategoryLabel(purchaseRequest.category)}) في مرحلة: ${nextStepName || nextStep.statusName}`,
               type: 'procurement_pending',
               relatedId: purchaseRequest.id,
               isRead: false
@@ -238,7 +279,7 @@ export async function POST(
           data: {
             userId: purchaseRequest.requestedById,
             title: 'تقدم في طلب الشراء',
-            message: `طلب الشراء ${purchaseRequest.requestNumber} تقدم إلى مرحلة: ${nextStep.statusName}`,
+            message: `طلب الشراء ${purchaseRequest.requestNumber} تقدم إلى مرحلة: ${nextStepName || nextStep.statusName}`,
             type: 'procurement_updated',
             relatedId: purchaseRequest.id,
             isRead: false
