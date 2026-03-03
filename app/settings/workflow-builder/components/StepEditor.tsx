@@ -319,8 +319,54 @@ export function StepEditor(props: {
                           })}
                       </div>
 
-                      <div style={{ color: '#64748B', fontSize: 12 }}>
-                        المختار: <span style={{ fontFamily: 'monospace' }}>{delegateUserIds.join(', ') || '—'}</span>
+                      <div style={{ display: 'grid', gap: 6 }}>
+                        <div style={{ color: '#64748B', fontSize: 12, fontWeight: 900 }}>المختار</div>
+                        {delegateUserIds.length === 0 ? (
+                          <div style={{ color: '#94A3B8', fontSize: 12 }}>—</div>
+                        ) : (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {delegateUserIds
+                              .map((id) => users.find((u: any) => String(u.id) === String(id)))
+                              .filter(Boolean)
+                              .map((u: any) => (
+                                <span
+                                  key={u.id}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    padding: '6px 10px',
+                                    borderRadius: 999,
+                                    border: '1px solid #E2E8F0',
+                                    background: '#F8FAFC',
+                                    fontWeight: 900,
+                                    fontSize: 12,
+                                    color: '#0F172A',
+                                  }}
+                                >
+                                  {u.displayName || u.username}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const next = delegateUserIds.filter((x) => String(x) !== String(u.id))
+                                      update({ configJson: { ...(draft.configJson || {}), userIds: next } })
+                                    }}
+                                    style={{
+                                      border: 'none',
+                                      background: 'transparent',
+                                      cursor: 'pointer',
+                                      color: '#64748B',
+                                      fontWeight: 900,
+                                    }}
+                                    aria-label="remove"
+                                    title="إزالة"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                          </div>
+                        )}
                       </div>
                     </>
                   )}
