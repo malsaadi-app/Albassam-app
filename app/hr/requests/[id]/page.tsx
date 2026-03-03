@@ -444,8 +444,8 @@ export default function HRRequestDetailPage() {
           </div>
         </Card>
 
-        {/* Timeline (visible to approvers/admin/hr; requester won't see it) */}
-        {auditLoaded && actionCtx && !actionCtx.isOwner && !actionCtx.canResubmit && (
+        {/* Timeline (visible to requester + approvers/admin/hr) */}
+        {auditLoaded && actionCtx && (
           <Card variant="default" style={{ marginTop: 16, marginBottom: 16 }}>
             <div style={{ padding: 16 }}>
               <div style={{ fontWeight: 900, marginBottom: 10 }}>🧾 سجل المعاملة</div>
