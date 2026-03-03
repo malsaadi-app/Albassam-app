@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
 import { getSession } from '@/lib/session';
-
+import { createPurchaseRequestAuditLog } from '@/lib/procurementAudit';
 
 // Validation schema (requireComment resolved dynamically from builder when available)
 const processStepSchema = z
@@ -182,6 +182,13 @@ export async function POST(
         },
       })
 
+      await createPurchaseRequestAuditLog(prisma as any, {
+        requestId: purchaseRequest.id,
+        actorUserId: session.user.id,
+        action: 'STEP_APPROVED',
+        message: `اعتماد (Gatekeeper): ${currentStepName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`,
+      })
+
       return NextResponse.json({ ok: true, status: purchaseRequest.status, currentWorkflowStep: purchaseRequest.currentWorkflowStep })
     }
 
@@ -197,6 +204,13 @@ export async function POST(
           rejectedReason: `رفض في مرحلة: ${currentStepName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`
         }
       });
+
+      await createPurchaseRequestAuditLog(prisma as any, {
+        requestId: purchaseRequest.id,
+        actorUserId: session.user.id,
+        action: 'REJECTED',
+        message: `تم الرفض في مرحلة: ${currentStepName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`,
+      })
 
       // Notify requester
       await prisma.notification.create({
@@ -226,6 +240,13 @@ export async function POST(
             currentWorkflowStep: nextStepIndex
           }
         });
+
+        await createPurchaseRequestAuditLog(prisma as any, {
+          requestId: purchaseRequest.id,
+          actorUserId: session.user.id,
+          action: 'APPROVED',
+          message: `موافقة نهائية: ${currentStepName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`,
+        })
 
         // Notify requester
         await prisma.notification.create({
@@ -273,6 +294,13 @@ export async function POST(
             }
           });
         }
+
+        await createPurchaseRequestAuditLog(prisma as any, {
+          requestId: purchaseRequest.id,
+          actorUserId: session.user.id,
+          action: 'STEP_APPROVED',
+          message: `تمت الموافقة في خطوة: ${currentStepName}. تحول إلى: ${nextStepName || nextStep.statusName}${validatedData.comment ? ` - ${validatedData.comment}` : ''}`,
+        })
 
         // Notify requester of progress
         await prisma.notification.create({

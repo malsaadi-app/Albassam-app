@@ -87,6 +87,7 @@ model User {
   workflowDefsUpdated WorkflowDefinition[] @relation("WorkflowDefUpdatedBy")
   workflowVersionsCreated WorkflowVersion[] @relation("WorkflowVersionCreatedBy")
   inventorySettingsUpdates InventorySettings[] @relation("InventorySettingsUpdater")
+  purchaseRequestAuditLogs PurchaseRequestAuditLog[]
 
   // Maintenance routing
   maintenanceManagerSettings   MaintenanceRoutingSettings[] @relation("MaintenanceManagerUser")
@@ -1421,6 +1422,7 @@ model PurchaseRequest {
   requestedBy User  @relation("PurchaseRequestsCreated", fields: [requestedById], references: [id])
   reviewedBy  User? @relation("PurchaseRequestsReviewed", fields: [reviewedById], references: [id])
   approvedBy  User? @relation("PurchaseRequestsApproved", fields: [approvedById], references: [id])
+  auditLogs   PurchaseRequestAuditLog[]
 
   @@index([requestedById])
   @@index([status])
@@ -1941,6 +1943,23 @@ model InventorySettings {
   updatedBy         String?
 
   updater User? @relation(fields: [updatedBy], references: [id], onDelete: SetNull, name: "InventorySettingsUpdater")
+}
+
+model PurchaseRequestAuditLog {
+  id          String   @id @default(cuid())
+  requestId   String
+  actorUserId String
+  action      String
+  message     String?
+  diffJson    String?
+  createdAt   DateTime @default(now())
+
+  request PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actor   User            @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([actorUserId])
+  @@index([createdAt])
 }
 
 enum StockMovementType {

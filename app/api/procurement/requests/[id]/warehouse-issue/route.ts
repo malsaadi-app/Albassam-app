@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import prisma from '@/lib/prisma'
 import { z } from 'zod'
 import { getSession } from '@/lib/session'
+import { createPurchaseRequestAuditLog } from '@/lib/procurementAudit'
 
 const schema = z.object({
   lines: z
@@ -144,6 +145,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       })
 
       return { updated, nextStepIndex, isLast }
+    })
+
+    // Audit
+    await createPurchaseRequestAuditLog(prisma as any, {
+      requestId: purchaseRequest.id,
+      actorUserId: session.user.id,
+      action: 'WAREHOUSE_ISSUE',
+      message: `تم صرف مواد من المخزون للطلب ${purchaseRequest.requestNumber} (${body.lines.length} صنف/أصناف).${body.comment ? ` ${body.comment}` : ''}`,
     })
 
     return NextResponse.json({ ok: true, ...result })

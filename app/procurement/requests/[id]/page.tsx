@@ -119,6 +119,9 @@ export default function PurchaseRequestDetailsPage() {
   const [approvalNotes, setApprovalNotes] = useState('');
   const [rejectReason, setRejectReason] = useState('');
 
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLoaded, setAuditLoaded] = useState(false);
+
   const [stockQuery, setStockQuery] = useState('');
   const [stockResults, setStockResults] = useState<any[]>([]);
   const [issueLines, setIssueLines] = useState<Array<{ stockItemId: string; itemName: string; quantity: number }>>([]);
@@ -126,7 +129,20 @@ export default function PurchaseRequestDetailsPage() {
 
   useEffect(() => {
     fetchRequest();
+    fetchAudit();
   }, [id]);
+
+  const fetchAudit = async () => {
+    try {
+      const res = await fetch(`/api/procurement/requests/${id}/audit`);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) setAuditLogs(Array.isArray(data.logs) ? data.logs : []);
+    } catch {
+      // ignore
+    } finally {
+      setAuditLoaded(true);
+    }
+  };
 
   const fetchRequest = async () => {
     try {
@@ -596,6 +612,48 @@ export default function PurchaseRequestDetailsPage() {
                 📎 المرفقات
               </h3>
               <AttachmentsViewer attachments={request.attachments} />
+            </Card>
+          )}
+
+          {/* Timeline / Audit */}
+          {auditLoaded && (
+            <Card variant="default">
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', marginBottom: '12px' }}>
+                🧾 سجل المعاملة
+              </h3>
+              {auditLogs.length === 0 ? (
+                <div style={{ color: '#6B7280' }}>لا يوجد سجل حتى الآن.</div>
+              ) : (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {auditLogs.map((l: any, idx: number) => (
+                    <div
+                      key={l.id}
+                      style={{
+                        background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: 14,
+                        padding: 12,
+                        display: 'grid',
+                        gridTemplateColumns: '16px 1fr',
+                        gap: 12,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <div style={{ width: 12, height: 12, borderRadius: 999, background: idx === auditLogs.length - 1 ? '#2563EB' : '#94A3B8', marginTop: 6 }} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                          <div style={{ fontWeight: 900, color: '#0F172A' }}>{l.actor?.displayName || '—'}</div>
+                          <div style={{ color: '#64748B', fontSize: 12 }}>{new Date(l.createdAt).toLocaleString('ar-SA')}</div>
+                        </div>
+                        <div style={{ marginTop: 6, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                          {l.message || l.action}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
           )}
 
