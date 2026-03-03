@@ -40,7 +40,7 @@ export function StepEditor(props: {
   }, [step])
 
   useEffect(() => {
-    const shouldLoad = open && !!draft && draft.stepType === 'USER'
+    const shouldLoad = open && !!draft && (draft.stepType === 'USER' || draft.stepType === 'DELEGATE_POOL')
     if (!shouldLoad || usersLoaded) return
     ;(async () => {
       try {
@@ -60,6 +60,22 @@ export function StepEditor(props: {
   const userId = useMemo(() => {
     if (stepType !== 'USER') return ''
     return String((draft?.configJson || {})?.userId || '')
+  }, [draft, stepType])
+
+  const delegateMode = useMemo(() => {
+    if (stepType !== 'DELEGATE_POOL') return 'pool'
+    return String((draft?.configJson || {})?.mode || 'pool')
+  }, [draft, stepType])
+
+  const delegateAllowAny = useMemo(() => {
+    if (stepType !== 'DELEGATE_POOL') return true
+    return (draft?.configJson || {})?.allowAny !== false
+  }, [draft, stepType])
+
+  const delegateUserIds = useMemo(() => {
+    if (stepType !== 'DELEGATE_POOL') return [] as string[]
+    const ids = (draft?.configJson || {})?.userIds
+    return Array.isArray(ids) ? ids.map(String) : []
   }, [draft, stepType])
 
   if (!open || !draft) return null
@@ -169,6 +185,94 @@ export function StepEditor(props: {
                   <div style={{ color: '#64748B', fontSize: 12 }}>
                     userId المختار: <span style={{ fontFamily: 'monospace' }}>{userId || '—'}</span>
                   </div>
+                </>
+              )}
+
+              {draft.stepType === 'DELEGATE_POOL' && (
+                <>
+                  <label style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>نمط التنفيذ</label>
+                  <select
+                    value={delegateMode}
+                    onChange={(e) => update({ configJson: { ...(draft.configJson || {}), mode: e.target.value } })}
+                    style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB', background: 'white' }}
+                  >
+                    <option value="single">مستخدم واحد</option>
+                    <option value="pool">مجموعة (Pool)</option>
+                    <option value="any">أي مستخدم</option>
+                  </select>
+
+                  <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 800 }}>
+                    <input
+                      type="checkbox"
+                      checked={delegateAllowAny}
+                      onChange={(e) => update({ configJson: { ...(draft.configJson || {}), allowAny: e.target.checked } })}
+                    />
+                    السماح لأي مستخدم بالتنفيذ (Fallback)
+                  </label>
+
+                  {(delegateMode === 'single' || delegateMode === 'pool') && (
+                    <>
+                      <label style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>مستخدمين التنفيذ (اختياري)</label>
+                      <input
+                        value={userQuery}
+                        onChange={(e) => setUserQuery(e.target.value)}
+                        style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB' }}
+                        placeholder="ابحث بالاسم أو اليوزر…"
+                      />
+
+                      <div style={{ maxHeight: 220, overflow: 'auto', border: '1px solid #E5E7EB', borderRadius: 12, background: 'white' }}>
+                        {(users || [])
+                          .filter((u: any) => {
+                            const q = userQuery.trim().toLowerCase()
+                            if (!q) return true
+                            const hay = `${u.displayName || ''} ${u.username || ''} ${u.jobTitle || ''} ${u.department || ''}`.toLowerCase()
+                            return hay.includes(q)
+                          })
+                          .slice(0, 30)
+                          .map((u: any) => {
+                            const selected = delegateUserIds.includes(String(u.id))
+                            return (
+                              <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => {
+                                  const id = String(u.id)
+                                  const current = new Set(delegateUserIds)
+                                  if (selected) current.delete(id)
+                                  else {
+                                    if (delegateMode === 'single') {
+                                      current.clear()
+                                      current.add(id)
+                                    } else {
+                                      current.add(id)
+                                    }
+                                  }
+                                  update({ configJson: { ...(draft.configJson || {}), userIds: Array.from(current) } })
+                                }}
+                                style={{
+                                  width: '100%',
+                                  textAlign: 'start',
+                                  padding: '10px 12px',
+                                  border: 'none',
+                                  borderBottom: '1px solid #F1F5F9',
+                                  background: selected ? '#ECFDF5' : 'white',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <div style={{ fontWeight: 900, color: '#0F172A' }}>{u.displayName || u.username}</div>
+                                <div style={{ fontSize: 12, color: '#64748B' }}>
+                                  @{u.username || '—'} {u.jobTitle ? `• ${u.jobTitle}` : ''} {u.department ? `• ${u.department}` : ''}
+                                </div>
+                              </button>
+                            )
+                          })}
+                      </div>
+
+                      <div style={{ color: '#64748B', fontSize: 12 }}>
+                        المختار: <span style={{ fontFamily: 'monospace' }}>{delegateUserIds.join(', ') || '—'}</span>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
 

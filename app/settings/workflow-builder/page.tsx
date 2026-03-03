@@ -51,6 +51,19 @@ export default function WorkflowBuilderHome() {
     alert(`تم. تم إنشاء: ${data.created?.length || 0} — موجود مسبقاً: ${data.ensured?.length || 0}`)
   }
 
+  const publishAllSchoolTemplates = async () => {
+    if (!confirm('نشر جميع قوالب المدارس (HR)؟')) return
+    const res = await fetch('/api/settings/workflow-builder/templates/schools/publish-all', { method: 'POST' })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || `فشل (HTTP ${res.status})`)
+      return
+    }
+    await load()
+    const okCount = (data.results || []).filter((r: any) => r.published).length
+    alert(`✅ تم نشر: ${okCount} من ${data.count || 0}`)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -59,7 +72,10 @@ export default function WorkflowBuilderHome() {
         <Card variant="default">
           <div style={{ padding: 16, display: 'grid', gap: 10 }}>
             <div style={{ fontWeight: 900 }}>قوالب جاهزة</div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+              <Button variant="outline" onClick={publishAllSchoolTemplates}>
+                نشر جميع قوالب المدارس (HR)
+              </Button>
               <Button variant="primary" onClick={createSchoolTemplates}>
                 إنشاء قوالب المدارس (HR)
               </Button>

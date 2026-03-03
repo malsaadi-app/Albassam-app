@@ -137,9 +137,9 @@ export default function WorkflowBuilderDetail() {
     load()
   }
 
-  const cloneFrom = async () => {
-    const sourceVersionId = prompt('ادخل sourceVersionId للنسخ (مؤقتاً)')
-    if (!sourceVersionId) return
+  const [cloneModal, setCloneModal] = useState(false)
+
+  const cloneFrom = async (sourceVersionId: string) => {
     const res = await fetch(`/api/settings/workflow-builder/${workflowId}/clone`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -151,6 +151,7 @@ export default function WorkflowBuilderDetail() {
       return
     }
     alert('✅ تم إنشاء نسخة Draft')
+    setCloneModal(false)
     load()
   }
 
@@ -174,8 +175,8 @@ export default function WorkflowBuilderDetail() {
               <Button variant="outline" onClick={addStep}>
                 ➕ إضافة خطوة
               </Button>
-              <Button variant="secondary" onClick={cloneFrom}>
-                📄 نسخ (مؤقت)
+              <Button variant="secondary" onClick={() => setCloneModal(true)}>
+                📄 نسخ
               </Button>
               <Button variant="primary" onClick={publish}>
                 نشر
@@ -242,6 +243,72 @@ export default function WorkflowBuilderDetail() {
             )}
           </div>
         </Card>
+        {/* Clone modal */}
+        {cloneModal && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+              zIndex: 60,
+            }}
+            onClick={() => setCloneModal(false)}
+          >
+            <div style={{ width: 'min(720px, 100%)' }} onClick={(e) => e.stopPropagation()}>
+              <Card variant="default">
+                <div style={{ padding: 16, display: 'grid', gap: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ fontWeight: 900 }}>نسخ من إصدار</div>
+                    <Button variant="outline" onClick={() => setCloneModal(false)}>
+                      إغلاق
+                    </Button>
+                  </div>
+
+                  <div style={{ color: '#64748B', fontSize: 12 }}>
+                    اختر الإصدار المصدر، وسيتم إنشاء Draft جديد داخل نفس الـWorkflow.
+                  </div>
+
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {versions
+                      .slice()
+                      .sort((a: any, b: any) => (b.version || 0) - (a.version || 0))
+                      .map((v: any) => (
+                        <div
+                          key={v.id}
+                          style={{
+                            border: '1px solid #E5E7EB',
+                            borderRadius: 14,
+                            padding: 12,
+                            background: 'white',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: 10,
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 900 }}>v{v.version} — {String(v.status || '').toUpperCase()}</div>
+                            <div style={{ color: '#64748B', fontSize: 12 }}>
+                              خطوات: {v.steps?.length || 0} • قواعد: {v.rules?.length || 0}
+                            </div>
+                          </div>
+                          <Button variant="primary" onClick={() => cloneFrom(v.id)}>
+                            نسخ هذا الإصدار
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
         <StepEditor
           open={editor.open}
           step={editor.idx === null ? null : localSteps[editor.idx]}
