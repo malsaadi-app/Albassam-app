@@ -83,6 +83,10 @@ model User {
   hrRoutingHrManagerRules HRRoutingRule[] @relation("HRRoutingHRManager")
   hrRoutingRuleUpdates    HRRoutingRule[] @relation("HRRoutingUpdater")
 
+  workflowDefsCreated WorkflowDefinition[] @relation("WorkflowDefCreatedBy")
+  workflowDefsUpdated WorkflowDefinition[] @relation("WorkflowDefUpdatedBy")
+  workflowVersionsCreated WorkflowVersion[] @relation("WorkflowVersionCreatedBy")
+
   // Maintenance routing
   maintenanceManagerSettings   MaintenanceRoutingSettings[] @relation("MaintenanceManagerUser")
   maintenanceBranchForwardings MaintenanceBranchForwarder[] @relation("MaintenanceBranchForwarderUser")
@@ -1011,6 +1015,9 @@ model Branch {
   // Transport
   transportVehicles TransportVehicle[]
 
+  // Workflow builder
+  workflowRules WorkflowRule[]
+
   @@index([name])
   @@index([type])
   @@index([status])
@@ -1640,6 +1647,89 @@ model HRRequestTypeWorkflow {
   @@index([requestType])
   @@index([reviewerUserId])
   @@index([approverUserId])
+}
+
+enum WorkflowModule {
+  HR
+  PROCUREMENT
+  MAINTENANCE
+  FINANCE
+  GENERIC
+}
+
+enum WorkflowVersionStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model WorkflowDefinition {
+  id          String         @id @default(cuid())
+  module      WorkflowModule
+  name        String
+  description String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  createdBy   String?
+  updatedBy   String?
+
+  versions WorkflowVersion[]
+
+  creator User? @relation("WorkflowDefCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updater User? @relation("WorkflowDefUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@index([module])
+}
+
+model WorkflowVersion {
+  id         String               @id @default(cuid())
+  workflowId String
+  version    Int
+  status     WorkflowVersionStatus @default(DRAFT)
+  createdAt  DateTime             @default(now())
+  publishedAt DateTime?
+  createdBy  String?
+
+  workflow WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  rules    WorkflowRule[]
+  steps    WorkflowStepDefinition[]
+
+  creator User? @relation("WorkflowVersionCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@unique([workflowId, version])
+  @@index([workflowId])
+}
+
+model WorkflowRule {
+  id                String   @id @default(cuid())
+  workflowVersionId String
+  requestType       RequestType?
+  branchId          String?
+  enabled           Boolean  @default(true)
+  createdAt         DateTime @default(now())
+
+  workflowVersion WorkflowVersion @relation(fields: [workflowVersionId], references: [id], onDelete: Cascade)
+  branch          Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([requestType])
+  @@index([branchId])
+}
+
+model WorkflowStepDefinition {
+  id                String   @id @default(cuid())
+  workflowVersionId String
+  order             Int
+  titleAr           String
+  titleEn           String?
+  stepType          String
+  configJson        Json     @default("{}")
+  requireComment    Boolean  @default(true)
+  allowConsult      Boolean  @default(true)
+  allowDelegation   Boolean  @default(true)
+
+  workflowVersion WorkflowVersion @relation(fields: [workflowVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowVersionId, order])
+  @@index([workflowVersionId])
 }
 
 model HRRoutingRule {
