@@ -79,6 +79,44 @@ function stepLabelAr(step: any): string {
   return String(step?.titleAr || 'خطوة')
 }
 
+export async function getStepDefinitionFromBuilder(params: {
+  requestType: string
+  requesterUserId: string
+  stepOrder: number
+}): Promise<{ stepType: string; titleAr: string | null; requireComment: boolean; allowConsult: boolean; allowDelegation: boolean; configJson: any } | null> {
+  const { requestType, requesterUserId, stepOrder } = params
+  const { branchId } = await getRequesterContext(requesterUserId)
+  if (!branchId) return null
+
+  const match = await prisma.workflowRule.findFirst({
+    where: {
+      enabled: true,
+      requestType,
+      branchId,
+      workflowVersion: { status: 'PUBLISHED' },
+    } as any,
+    select: { workflowVersionId: true },
+  })
+
+  if (!match) return null
+
+  const step = await prisma.workflowStepDefinition.findFirst({
+    where: { workflowVersionId: match.workflowVersionId, order: stepOrder + 1 },
+    select: { titleAr: true, stepType: true, configJson: true, requireComment: true, allowConsult: true, allowDelegation: true },
+  })
+
+  if (!step) return null
+
+  return {
+    stepType: String(step.stepType),
+    titleAr: step.titleAr ?? null,
+    requireComment: !!step.requireComment,
+    allowConsult: !!step.allowConsult,
+    allowDelegation: !!step.allowDelegation,
+    configJson: step.configJson || {},
+  }
+}
+
 export async function getApproverUserIdsForHRRequestStepFromBuilder(params: {
   requestType: string
   requesterUserId: string
@@ -88,26 +126,10 @@ export async function getApproverUserIdsForHRRequestStepFromBuilder(params: {
   const { branchId } = await getRequesterContext(requesterUserId)
   if (!branchId) return null
 
-  // Find latest published version whose rule matches requestType+branch
-  const match = await prisma.workflowRule.findFirst({
-    where: {
-      enabled: true,
-      requestType,
-      branchId,
-      workflowVersion: { status: 'PUBLISHED' },
-      workflowVersionId: undefined,
-    } as any,
-    select: { workflowVersionId: true },
-  })
+  const stepDef = await getStepDefinitionFromBuilder({ requestType, requesterUserId, stepOrder })
+  if (!stepDef) return null
 
-  if (!match) return null
-
-  const step = await prisma.workflowStepDefinition.findFirst({
-    where: { workflowVersionId: match.workflowVersionId, order: stepOrder + 1 },
-    select: { titleAr: true, stepType: true, configJson: true },
-  })
-
-  if (!step) return null
+  const step: any = { titleAr: stepDef.titleAr, stepType: stepDef.stepType, configJson: stepDef.configJson }
 
   const labelAr = stepLabelAr(step)
 

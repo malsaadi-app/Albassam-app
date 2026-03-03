@@ -9,9 +9,12 @@ import { createHRRequestAuditLog } from '@/lib/audit';
 // Validation schema
 const processStepSchema = z.object({
   action: z.enum(['approve', 'reject']),
-  comment: z.string().optional()
+  comment: z.string().optional(),
+  // set dynamically per-step (builder) later
+  _requireComment: z.boolean().optional(),
 }).superRefine((val, ctx) => {
-  if (!val.comment || val.comment.trim().length === 0) {
+  const require = val._requireComment !== false
+  if (require && (!val.comment || val.comment.trim().length === 0)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: val.action === 'reject' ? 'سبب الرفض مطلوب' : 'تعليق الموافقة مطلوب',
@@ -140,7 +143,23 @@ export async function POST(
     }
 
     const body = await request.json();
-    const validatedData = processStepSchema.parse(body);
+
+    // Determine if comment is required from Workflow Builder step definition (if published), else default true.
+    let requireComment = true
+    try {
+      const builderStep = await (await import('@/lib/hrWorkflowBuilderRouting')).getStepDefinitionFromBuilder({
+        requestType: hrRequest.type,
+        requesterUserId: hrRequest.employeeId,
+        stepOrder: currentStep.order,
+      })
+      if (builderStep && typeof builderStep.requireComment === 'boolean') {
+        requireComment = builderStep.requireComment
+      }
+    } catch {
+      // ignore
+    }
+
+    const validatedData = processStepSchema.parse({ ...body, _requireComment: requireComment });
 
     let updatedRequest;
 
