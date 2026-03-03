@@ -120,6 +120,45 @@ Status (legacy routing):
 
 # 4) Workflow Builder (new)
 
+## Procurement integration (Purchase Requests)
+- Added procurement template generator:
+  - `POST /api/settings/workflow-builder/templates/procurement/purchase-requests`
+  - Creates/ensures WorkflowDefinition: "المشتريات — طلب شراء" and always creates a new **Draft** version.
+  - Rules are created per branch + PurchaseCategory:
+    - `requestType = PURCHASE_REQUEST`
+    - `conditionsJson = { category: <PurchaseCategory> }`
+  - Default steps (v1):
+    1) `PROCUREMENT_GATEKEEPER` (branch coverage)
+    2) `SYSTEM_ROLE` (`PROCUREMENT_MANAGER`)
+    3) `WAREHOUSE_ISSUE` (optional issue from inventory)
+    4) `DELEGATE_POOL` (execution)
+
+### Builder-first routing (procurement)
+- Assignee resolution prefers Workflow Builder (Published) and falls back to legacy category workflow.
+- Entry point: `lib/procurementWorkflowRouting.ts`
+- Builder helper: `lib/procurementWorkflowBuilderRouting.ts`
+
+### Warehouse issue (inventory OUT from purchase request)
+- API:
+  - `POST /api/procurement/requests/[id]/warehouse-issue`
+- UI:
+  - In `/procurement/requests/[id]`, when the current builder step is `WAREHOUSE_ISSUE` and user is assigned, a "صرف من المخزون" panel is shown.
+- Enforces inventory policy `allowNegativeStock`.
+
+### Procurement timeline / audit
+- DB migration: `20260303123000_purchase_request_audit` adds `PurchaseRequestAuditLog`.
+- Audit API:
+  - `GET /api/procurement/requests/[id]/audit`
+- UI:
+  - `/procurement/requests/[id]` shows "🧾 سجل المعاملة" with role-like labels similar to HR.
+
+### Procurement requireComment + step titles
+- `POST /api/procurement/requests/[id]/process-step` now:
+  - Enforces `requireComment` per builder step (when published)
+  - Uses builder `titleAr` for stage naming in messages/notifications.
+
+---
+
 ## Purpose
 General workflow templates + versioning for HR (now) and procurement/maintenance later.
 
@@ -212,6 +251,34 @@ Future scope:
 - Inspections
 - Services/maintenance logs
 - Passengers (students/employees) + daily roster + check-in UI
+
+---
+
+# 5) Inventory (MVP)
+
+## Pages
+- `/inventory` (list/search)
+- `/inventory/new` (create item)
+- `/inventory/[id]` (detail + movements)
+- `/inventory/negative` (negative stock report)
+
+## API
+- `GET/POST /api/inventory/items` (POST currently ADMIN-only)
+- `PUT /api/inventory/items/[id]`
+- `GET/POST /api/inventory/movements`
+- `GET /api/inventory/items/negative`
+
+## Policy: allow/block negative stock
+- Settings:
+  - UI: `/settings/inventory`
+  - API: `GET/PUT /api/settings/inventory`
+  - DB: `InventorySettings` (single-row id=`default`)
+- Enforced in `POST /api/inventory/movements`.
+
+## Sidebar
+- Under "الخدمات المساندة":
+  - "المخازن" → `/inventory`
+  - "إعدادات المخزون" → `/settings/inventory`
 
 ---
 
