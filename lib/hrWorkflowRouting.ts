@@ -154,6 +154,25 @@ export async function getApproverUserIdsForHRRequestStep(params: {
 }): Promise<{ userIds: string[]; actor: HRWorkflowActorKind; labelAr: string }> {
   const { requestType, requesterUserId, stepOrder } = params
 
+  // Prefer Workflow Builder (Published) if a matching rule exists, fallback to legacy routing.
+  try {
+    const builder = await (await import('@/lib/hrWorkflowBuilderRouting')).getApproverUserIdsForHRRequestStepFromBuilder({
+      requestType,
+      requesterUserId,
+      stepOrder,
+    })
+    if (builder) {
+      return {
+        userIds: builder.userIds,
+        actor: 'DIRECT_MANAGER',
+        labelAr: builder.labelAr,
+      }
+    }
+  } catch (e) {
+    // never block legacy flow
+    console.warn('Builder routing failed, falling back to legacy', (e as any)?.message)
+  }
+
   const branchId = await getRequesterBranchId(requesterUserId)
 
   // Step 0
