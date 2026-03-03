@@ -34,13 +34,23 @@ export default function StockItemDetailPage() {
   }, [id])
 
   const addMovement = async () => {
+    const qty = Number(move.quantity)
+    if (!Number.isFinite(qty) || qty <= 0) {
+      alert('الكمية غير صحيحة')
+      return
+    }
+
+    if (move.movementType === 'OUT' && qty > Number(item.currentStock || 0)) {
+      if (!confirm(`الرصيد الحالي (${item.currentStock}) أقل من الكمية المطلوبة (${qty}). هل تريد المتابعة؟`)) return
+    }
+
     const res = await fetch('/api/inventory/movements', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         stockItemId: id,
         movementType: move.movementType,
-        quantity: Number(move.quantity),
+        quantity: qty,
         unitCost: move.unitCost === '' ? undefined : Number(move.unitCost),
         reference: move.reference || null,
         notes: move.notes || null,
@@ -86,7 +96,7 @@ export default function StockItemDetailPage() {
               <option value="RETURN">مرتجع</option>
               <option value="DAMAGE">تالف</option>
             </select>
-            <input value={move.quantity} onChange={(e) => setMove((p: any) => ({ ...p, quantity: e.target.value }))} inputMode="decimal" placeholder="الكمية" style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB' }} />
+            <input value={move.quantity} onChange={(e) => setMove((p: any) => ({ ...p, quantity: e.target.value }))} inputMode="decimal" placeholder="الكمية" aria-label="الكمية" style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB' }} />
             <input value={move.unitCost} onChange={(e) => setMove((p: any) => ({ ...p, unitCost: e.target.value }))} inputMode="decimal" placeholder="سعر الوحدة (اختياري)" style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB' }} />
             <input value={move.reference} onChange={(e) => setMove((p: any) => ({ ...p, reference: e.target.value }))} placeholder="مرجع (اختياري)" style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB' }} />
           </div>
