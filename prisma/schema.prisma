@@ -1695,6 +1695,7 @@ model WorkflowRule {
   requestType       String?
   branchId          String?
   enabled           Boolean  @default(true)
+  conditionsJson    Json     @default("{}")
   createdAt         DateTime @default(now())
 
   workflowVersion WorkflowVersion @relation(fields: [workflowVersionId], references: [id], onDelete: Cascade)

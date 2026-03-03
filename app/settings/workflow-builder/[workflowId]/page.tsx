@@ -52,6 +52,10 @@ export default function WorkflowBuilderDetail() {
   const [ruleRequestType, setRuleRequestType] = useState('')
   const [ruleBranchQuery, setRuleBranchQuery] = useState('')
   const [ruleSelectedBranchIds, setRuleSelectedBranchIds] = useState<string[]>([])
+  const [departments, setDepartments] = useState<any[]>([])
+  const [departmentsLoaded, setDepartmentsLoaded] = useState(false)
+  const [ruleStageId, setRuleStageId] = useState<string>('')
+  const [ruleDepartmentId, setRuleDepartmentId] = useState<string>('')
   const [dragId, setDragId] = useState<string | null>(null)
   const [editor, setEditor] = useState<{ open: boolean; idx: number | null }>({ open: false, idx: null })
 
@@ -74,6 +78,7 @@ export default function WorkflowBuilderDetail() {
       requestType: x.requestType,
       branchId: x.branchId,
       enabled: x.enabled !== false,
+      conditionsJson: x.conditionsJson || {},
     }))
     setLocalRules(r)
     setRulesDirty(false)
@@ -113,6 +118,21 @@ export default function WorkflowBuilderDetail() {
       }
     })()
   }, [requestTypesLoaded])
+
+  useEffect(() => {
+    if (departmentsLoaded) return
+    ;(async () => {
+      try {
+        const res = await fetch('/api/hr/master-data/departments')
+        if (!res.ok) return
+        const data = await res.json().catch(() => ({}))
+        setDepartments(Array.isArray(data?.departments) ? data.departments : [])
+        setDepartmentsLoaded(true)
+      } catch {
+        // ignore
+      }
+    })()
+  }, [departmentsLoaded])
 
   const saveSteps = async () => {
     if (!draft?.id) return
@@ -197,6 +217,8 @@ export default function WorkflowBuilderDetail() {
     setRuleRequestType('')
     setRuleBranchQuery('')
     setRuleSelectedBranchIds([])
+    setRuleStageId('')
+    setRuleDepartmentId('')
     setRuleModal(true)
   }
 
@@ -211,15 +233,19 @@ export default function WorkflowBuilderDetail() {
       return
     }
 
+    const cond: any = {}
+    if (ruleStageId) cond.stageId = ruleStageId
+    if (ruleDepartmentId) cond.departmentId = ruleDepartmentId
+
     setLocalRules((prev) => {
       const next = [...prev]
       for (const bid of ruleSelectedBranchIds) {
-        next.push({ requestType: rt, branchId: bid, enabled: true })
+        next.push({ requestType: rt, branchId: bid, enabled: true, conditionsJson: cond })
       }
       // dedupe
       const seen = new Set<string>()
       return next.filter((r: any) => {
-        const k = `${r.requestType}::${r.branchId}`
+        const k = `${r.requestType}::${r.branchId}::${JSON.stringify(r.conditionsJson || {})}`
         if (seen.has(k)) return false
         seen.add(k)
         return true
@@ -437,6 +463,40 @@ export default function WorkflowBuilderDetail() {
                       <option key={x} value={x}>{x}</option>
                     ))}
                   </select>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                    <div>
+                      <label style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>المرحلة (اختياري)</label>
+                      <select
+                        value={ruleStageId}
+                        onChange={(e) => setRuleStageId(e.target.value)}
+                        style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB', background: 'white', width: '100%' }}
+                      >
+                        <option value="">بدون</option>
+                        {branches
+                          .flatMap((b: any) => b.stages || [])
+                          .filter((s: any) => s && s.id && s.name)
+                          .slice(0, 200)
+                          .map((s: any) => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>القسم (اختياري)</label>
+                      <select
+                        value={ruleDepartmentId}
+                        onChange={(e) => setRuleDepartmentId(e.target.value)}
+                        style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB', background: 'white', width: '100%' }}
+                      >
+                        <option value="">بدون</option>
+                        {departments.slice(0, 300).map((d: any) => (
+                          <option key={d.id} value={d.id}>{d.nameAr || d.nameEn || d.id}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
 
                   <label style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>الفروع</label>
                   <input

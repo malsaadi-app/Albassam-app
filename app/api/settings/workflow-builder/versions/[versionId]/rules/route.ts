@@ -25,6 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ vers
       requestType: r.requestType ? String(r.requestType).trim() : null,
       branchId: r.branchId ? String(r.branchId).trim() : null,
       enabled: r.enabled !== false,
+      conditionsJson: r.conditionsJson && typeof r.conditionsJson === 'object' ? r.conditionsJson : {},
     }))
     .filter((r: any) => r.requestType && r.branchId)
 
@@ -46,6 +47,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ vers
           requestType: r.requestType,
           branchId: r.branchId,
           enabled: r.enabled,
+          conditionsJson: r.conditionsJson,
         })),
       })
     }
