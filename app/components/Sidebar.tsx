@@ -30,7 +30,8 @@ import {
   HiOutlineTruck,
   HiOutlineTag,
   HiOutlineShieldCheck,
-  HiOutlineLocationMarker
+  HiOutlineLocationMarker,
+  HiOutlineDotsHorizontal
 } from 'react-icons/hi';
 
 interface MenuItem {
@@ -185,6 +186,7 @@ export default function Sidebar() {
         { href: '/settings/locations', icon: <HiOutlineLocationMarker size={18} />, label: t('locations') },
         { href: '/settings/roles', icon: <HiOutlineShieldCheck size={18} />, label: t('rolesAndPermissions') },
         { href: '/settings/org-structure', icon: <HiOutlineUserGroup size={18} />, label: 'الهيكل التنظيمي' },
+        { href: '/settings/hr-routing-rules', icon: <HiOutlineDotsHorizontal size={18} />, label: 'HR Routing (بنين)' },
         { href: '/settings/delegations', icon: <HiOutlineUserGroup size={18} />, label: t('delegations') },
         { href: '/hr/succession', icon: <HiOutlineUserGroup size={18} />, label: t('succession') },
         { href: '/hr/positions', icon: <HiOutlineBriefcase size={18} />, label: t('positions') },

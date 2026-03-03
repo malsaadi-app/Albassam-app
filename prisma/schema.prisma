@@ -78,6 +78,11 @@ model User {
   financeRequestsFinanceMgr  FinanceRequest[]      @relation("FinanceManager")
   workflowApprovals          WorkflowApprovalLog[] @relation("WorkflowApprovals")
 
+  // HR routing rules
+  hrRoutingVpRules        HRRoutingRule[] @relation("HRRoutingVP")
+  hrRoutingHrManagerRules HRRoutingRule[] @relation("HRRoutingHRManager")
+  hrRoutingRuleUpdates    HRRoutingRule[] @relation("HRRoutingUpdater")
+
   // Maintenance routing
   maintenanceManagerSettings   MaintenanceRoutingSettings[] @relation("MaintenanceManagerUser")
   maintenanceBranchForwardings MaintenanceBranchForwarder[] @relation("MaintenanceBranchForwarderUser")
@@ -1635,6 +1640,26 @@ model HRRequestTypeWorkflow {
   @@index([requestType])
   @@index([reviewerUserId])
   @@index([approverUserId])
+}
+
+model HRRoutingRule {
+  id              String   @id @default(cuid())
+  requestType      String   @unique
+  enabled          Boolean  @default(true)
+  useStageHead     Boolean  @default(true)
+  vpUserId         String?
+  hrManagerUserId  String?
+  allowDelegation  Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  updatedBy        String?
+
+  vp         User? @relation("HRRoutingVP", fields: [vpUserId], references: [id], onDelete: SetNull)
+  hrManager  User? @relation("HRRoutingHRManager", fields: [hrManagerUserId], references: [id], onDelete: SetNull)
+  updater    User? @relation("HRRoutingUpdater", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@index([vpUserId])
+  @@index([hrManagerUserId])
 }
 
 model HRWorkflowStep {
