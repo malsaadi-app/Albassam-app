@@ -100,13 +100,53 @@ Goal:
 - Route specific HR request types via stage manager (ADMIN line) then branch VP, then HR review/final.
 
 Desired chain (example):
-requester → stage manager → branch VP → HR manager (محمد/admin) → HR executors (khalidj/mohammedz)
+requester → stage manager → branch VP → HR manager → HR execution (delegate pool)
 
-Status:
+Status (legacy routing):
 - Implemented boys-chain routing for: LEAVE + VISA_EXIT_REENTRY_SINGLE + VISA_EXIT_REENTRY_MULTI + RESIGNATION.
-- Stage manager source: Org Structure STAGE→HEAD (fallback to legacy).
+- Stage manager source: Org Structure STAGE→HEAD (fallback to legacy Stage.manager/deputy).
 - HR execution: HR manager delegates to one/pool/any user.
-- Missing: Admin UI to edit HR workflow rules (config instead of hardcoded).
+
+## Compatibility mode: Workflow Builder first
+- HR routing now prefers Workflow Builder **Published** rules (requestType+branch) and falls back to legacy routing.
+- Entry point: `lib/hrWorkflowRouting.ts` (keeps old behavior if no builder match).
+- Builder resolver: `lib/hrWorkflowBuilderRouting.ts`
+
+## Audit timeline permissions
+- Approvers in chain (VP/manager) can view audit timeline:
+  - `GET /api/hr/requests/[id]/audit`
+
+---
+
+# 4) Workflow Builder (new)
+
+## Purpose
+General workflow templates + versioning for HR (now) and procurement/maintenance later.
+
+## DB tables (migration)
+- WorkflowDefinition
+- WorkflowVersion (Draft/Published)
+- WorkflowRule (requestType+branch)
+- WorkflowStepDefinition
+
+## UI
+- `/settings/workflow-builder`
+
+## API
+- `GET/POST /api/settings/workflow-builder`
+- `GET/PUT /api/settings/workflow-builder/[workflowId]`
+- `POST /api/settings/workflow-builder/[workflowId]/clone`
+- `POST /api/settings/workflow-builder/versions/[versionId]/publish`
+- Templates:
+  - `POST /api/settings/workflow-builder/templates/schools`
+
+## Templates (HR Schools)
+- Button: "إنشاء قوالب المدارس (HR)" creates 4 Draft workflows (Arabic names).
+- Must Publish each Draft version to take effect.
+
+## Ops notes
+- Cloudflared tunnel requires `CLOUDFLARED_TOKEN` in `.env` (do NOT commit).
+- PM2 ecosystem loads `.env` at runtime to provide token/DB/etc.
 
 ---
 
