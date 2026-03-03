@@ -30,10 +30,30 @@ export function StepEditor(props: {
 }) {
   const { open, step, onClose, onSave } = props
   const [draft, setDraft] = useState<StepDraft | null>(step)
+  const [users, setUsers] = useState<any[]>([])
+  const [usersLoaded, setUsersLoaded] = useState(false)
+  const [userQuery, setUserQuery] = useState('')
 
   useEffect(() => {
     setDraft(step)
+    setUserQuery('')
   }, [step])
+
+  useEffect(() => {
+    const shouldLoad = open && !!draft && draft.stepType === 'USER'
+    if (!shouldLoad || usersLoaded) return
+    ;(async () => {
+      try {
+        const res = await fetch('/api/users')
+        if (!res.ok) return
+        const data = await res.json().catch(() => [])
+        setUsers(Array.isArray(data) ? data : [])
+        setUsersLoaded(true)
+      } catch {
+        // ignore
+      }
+    })()
+  }, [open, draft, usersLoaded])
 
   const stepType = draft?.stepType || ''
 
@@ -102,15 +122,52 @@ export function StepEditor(props: {
 
               {draft.stepType === 'USER' && (
                 <>
-                  <label style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>userId (مستخدم محدد)</label>
+                  <label style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>المستخدم</label>
+
                   <input
-                    value={userId}
-                    onChange={(e) => update({ configJson: { ...(draft.configJson || {}), userId: e.target.value } })}
+                    value={userQuery}
+                    onChange={(e) => setUserQuery(e.target.value)}
                     style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB' }}
-                    placeholder="مثال: cmm..."
+                    placeholder="ابحث بالاسم أو اليوزر…"
                   />
+
+                  <div style={{ maxHeight: 220, overflow: 'auto', border: '1px solid #E5E7EB', borderRadius: 12, background: 'white' }}>
+                    {(users || [])
+                      .filter((u: any) => {
+                        const q = userQuery.trim().toLowerCase()
+                        if (!q) return true
+                        const hay = `${u.displayName || ''} ${u.username || ''} ${u.jobTitle || ''} ${u.department || ''}`.toLowerCase()
+                        return hay.includes(q)
+                      })
+                      .slice(0, 30)
+                      .map((u: any) => {
+                        const selected = String(u.id) === userId
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => update({ configJson: { ...(draft.configJson || {}), userId: u.id } })}
+                            style={{
+                              width: '100%',
+                              textAlign: 'start',
+                              padding: '10px 12px',
+                              border: 'none',
+                              borderBottom: '1px solid #F1F5F9',
+                              background: selected ? '#EEF2FF' : 'white',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <div style={{ fontWeight: 900, color: '#0F172A' }}>{u.displayName || u.username}</div>
+                            <div style={{ fontSize: 12, color: '#64748B' }}>
+                              @{u.username || '—'} {u.jobTitle ? `• ${u.jobTitle}` : ''} {u.department ? `• ${u.department}` : ''}
+                            </div>
+                          </button>
+                        )
+                      })}
+                  </div>
+
                   <div style={{ color: '#64748B', fontSize: 12 }}>
-                    ملاحظة: لاحقًا بنستبدلها ببحث واختيار مستخدم من القائمة.
+                    userId المختار: <span style={{ fontFamily: 'monospace' }}>{userId || '—'}</span>
                   </div>
                 </>
               )}
