@@ -41,6 +41,15 @@ export default function WorkflowBuilderDetail() {
 
   const [localSteps, setLocalSteps] = useState<StepDraft[]>([])
   const [dirty, setDirty] = useState(false)
+
+  const [localRules, setLocalRules] = useState<any[]>([])
+  const [rulesDirty, setRulesDirty] = useState(false)
+  const [branches, setBranches] = useState<any[]>([])
+  const [branchesLoaded, setBranchesLoaded] = useState(false)
+  const [ruleModal, setRuleModal] = useState(false)
+  const [ruleRequestType, setRuleRequestType] = useState('')
+  const [ruleBranchQuery, setRuleBranchQuery] = useState('')
+  const [ruleSelectedBranchIds, setRuleSelectedBranchIds] = useState<string[]>([])
   const [dragId, setDragId] = useState<string | null>(null)
   const [editor, setEditor] = useState<{ open: boolean; idx: number | null }>({ open: false, idx: null })
 
@@ -58,8 +67,32 @@ export default function WorkflowBuilderDetail() {
     }))
     setLocalSteps(mapped)
     setDirty(false)
+
+    const r = (draft?.rules || []).map((x: any) => ({
+      requestType: x.requestType,
+      branchId: x.branchId,
+      enabled: x.enabled !== false,
+    }))
+    setLocalRules(r)
+    setRulesDirty(false)
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft?.id])
+
+  useEffect(() => {
+    if (branchesLoaded) return
+    ;(async () => {
+      try {
+        const res = await fetch('/api/branches')
+        if (!res.ok) return
+        const data = await res.json().catch(() => [])
+        setBranches(Array.isArray(data) ? data : data.branches || [])
+        setBranchesLoaded(true)
+      } catch {
+        // ignore
+      }
+    })()
+  }, [branchesLoaded])
 
   const saveSteps = async () => {
     if (!draft?.id) return
@@ -123,6 +156,64 @@ export default function WorkflowBuilderDetail() {
     setDragId(null)
   }
 
+  const saveRules = async () => {
+    if (!draft?.id) return
+    const res = await fetch(`/api/settings/workflow-builder/versions/${draft.id}/rules`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rules: localRules }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || 'فشل')
+      return
+    }
+    alert('✅ تم حفظ القواعد')
+    setRulesDirty(false)
+    load()
+  }
+
+  const openAddRule = () => {
+    setRuleRequestType('')
+    setRuleBranchQuery('')
+    setRuleSelectedBranchIds([])
+    setRuleModal(true)
+  }
+
+  const addRulesForBranches = () => {
+    const rt = ruleRequestType.trim()
+    if (!rt) {
+      alert('اختر نوع الطلب')
+      return
+    }
+    if (!ruleSelectedBranchIds.length) {
+      alert('اختر فرع واحد على الأقل')
+      return
+    }
+
+    setLocalRules((prev) => {
+      const next = [...prev]
+      for (const bid of ruleSelectedBranchIds) {
+        next.push({ requestType: rt, branchId: bid, enabled: true })
+      }
+      // dedupe
+      const seen = new Set<string>()
+      return next.filter((r: any) => {
+        const k = `${r.requestType}::${r.branchId}`
+        if (seen.has(k)) return false
+        seen.add(k)
+        return true
+      })
+    })
+    setRulesDirty(true)
+    setRuleModal(false)
+  }
+
+  const removeRule = (idx: number) => {
+    setLocalRules((prev) => prev.filter((_, i) => i !== idx))
+    setRulesDirty(true)
+  }
+
   const publish = async () => {
     if (!draft?.id) return
     const ok = confirm('نشر هذه النسخة؟')
@@ -182,9 +273,58 @@ export default function WorkflowBuilderDetail() {
                 نشر
               </Button>
               <Button variant={dirty ? 'primary' : 'outline'} onClick={saveSteps} disabled={!dirty}>
-                💾 حفظ الترتيب/الإعدادات
+                💾 حفظ الخطوات
+              </Button>
+              <Button variant={rulesDirty ? 'primary' : 'outline'} onClick={saveRules} disabled={!rulesDirty}>
+                💾 حفظ القواعد
               </Button>
             </div>
+          </div>
+        </Card>
+
+        <Card variant="default">
+          <div style={{ padding: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ fontWeight: 900 }}>القواعد (متى ينطبق)</div>
+              <Button variant="outline" onClick={openAddRule}>➕ إضافة قاعدة</Button>
+            </div>
+
+            {loading ? (
+              <div>جاري التحميل…</div>
+            ) : localRules.length === 0 ? (
+              <div style={{ color: '#6B7280' }}>لا توجد قواعد.</div>
+            ) : (
+              <div style={{ display: 'grid', gap: 10 }}>
+                {localRules.map((r: any, idx: number) => {
+                  const b = branches.find((x: any) => x.id === r.branchId)
+                  return (
+                    <div key={idx} style={{ border: '1px solid #E5E7EB', borderRadius: 14, padding: 12, background: 'white', display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 900 }}>{r.requestType}</div>
+                        <div style={{ color: '#64748B', fontSize: 12 }}>{b?.name || r.branchId}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 800 }}>
+                          <input
+                            type="checkbox"
+                            checked={r.enabled !== false}
+                            onChange={(e) => {
+                              const enabled = e.target.checked
+                              setLocalRules((prev) => prev.map((x, i) => (i === idx ? { ...x, enabled } : x)))
+                              setRulesDirty(true)
+                            }}
+                          />
+                          مفعّل
+                        </label>
+                        <Button variant="outline" onClick={() => removeRule(idx)}>
+                          🗑️ حذف
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </Card>
 
@@ -243,6 +383,103 @@ export default function WorkflowBuilderDetail() {
             )}
           </div>
         </Card>
+        {/* Add Rule modal */}
+        {ruleModal && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+              zIndex: 60,
+            }}
+            onClick={() => setRuleModal(false)}
+          >
+            <div style={{ width: 'min(720px, 100%)' }} onClick={(e) => e.stopPropagation()}>
+              <Card variant="default">
+                <div style={{ padding: 16, display: 'grid', gap: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ fontWeight: 900 }}>إضافة قاعدة</div>
+                    <Button variant="outline" onClick={() => setRuleModal(false)}>إغلاق</Button>
+                  </div>
+
+                  <label style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>نوع الطلب (RequestType)</label>
+                  <select
+                    value={ruleRequestType}
+                    onChange={(e) => setRuleRequestType(e.target.value)}
+                    style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB', background: 'white' }}
+                  >
+                    <option value="">اختر…</option>
+                    {[
+                      'LEAVE',
+                      'VISA_EXIT_REENTRY_SINGLE',
+                      'VISA_EXIT_REENTRY_MULTI',
+                      'RESIGNATION',
+                      'ATTENDANCE_CORRECTION',
+                      'TRANSFER',
+                      'PROMOTION',
+                      'SALARY_ADVANCE',
+                      'TRAINING',
+                    ].map((x) => (
+                      <option key={x} value={x}>{x}</option>
+                    ))}
+                  </select>
+
+                  <label style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>الفروع</label>
+                  <input
+                    value={ruleBranchQuery}
+                    onChange={(e) => setRuleBranchQuery(e.target.value)}
+                    style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB' }}
+                    placeholder="بحث باسم الفرع…"
+                  />
+
+                  <div style={{ maxHeight: 260, overflow: 'auto', border: '1px solid #E5E7EB', borderRadius: 12, background: 'white' }}>
+                    {branches
+                      .filter((b: any) => {
+                        const q = ruleBranchQuery.trim().toLowerCase()
+                        if (!q) return true
+                        return String(b.name || '').toLowerCase().includes(q)
+                      })
+                      .slice(0, 50)
+                      .map((b: any) => {
+                        const checked = ruleSelectedBranchIds.includes(String(b.id))
+                        return (
+                          <label key={b.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 12px', borderBottom: '1px solid #F1F5F9', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                const on = e.target.checked
+                                setRuleSelectedBranchIds((prev) => {
+                                  const s = new Set(prev)
+                                  if (on) s.add(String(b.id))
+                                  else s.delete(String(b.id))
+                                  return Array.from(s)
+                                })
+                              }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: 900 }}>{b.name}</div>
+                              <div style={{ color: '#64748B', fontSize: 12 }}>{b.type}</div>
+                            </div>
+                          </label>
+                        )
+                      })}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+                    <Button variant="outline" onClick={() => setRuleModal(false)}>إلغاء</Button>
+                    <Button variant="primary" onClick={addRulesForBranches}>إضافة</Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
+
         {/* Clone modal */}
         {cloneModal && (
           <div
