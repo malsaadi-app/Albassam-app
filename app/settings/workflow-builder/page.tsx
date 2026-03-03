@@ -80,6 +80,22 @@ export default function WorkflowBuilderHome() {
                 إنشاء قوالب المدارس (HR)
               </Button>
             </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  if (!confirm('إنشاء قالب المشتريات (طلب شراء)؟')) return
+                  const res = await fetch('/api/settings/workflow-builder/templates/procurement/purchase-requests', { method: 'POST' })
+                  const data = await res.json().catch(() => ({}))
+                  if (!res.ok) return alert(data.error || `فشل (HTTP ${res.status})`)
+                  await load()
+                  alert('✅ تم إنشاء قالب المشتريات (Draft)')
+                }}
+              >
+                إنشاء قالب المشتريات — طلب شراء
+              </Button>
+            </div>
           </div>
         </Card>
 

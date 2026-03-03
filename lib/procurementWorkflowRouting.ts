@@ -12,7 +12,19 @@ export async function resolveProcurementStepAssignees(opts: {
   stepIndex: number
   fallbackUserId?: string | null
 }): Promise<string[]> {
-  const { requestedByUserId, stepIndex, fallbackUserId } = opts
+  const { requestedByUserId, workflowCategory, stepIndex, fallbackUserId } = opts
+
+  // Prefer Workflow Builder (Published) if configured
+  try {
+    const builder = await (await import('@/lib/procurementWorkflowBuilderRouting')).resolveProcurementAssigneesFromBuilder({
+      requestedByUserId,
+      category: String(workflowCategory),
+      stepIndex,
+    })
+    if (builder) return builder.userIds.length ? builder.userIds : fallbackUserId ? [fallbackUserId] : []
+  } catch {
+    // ignore
+  }
 
   // Only step0 is dynamic for now.
   if (stepIndex !== 0) {
