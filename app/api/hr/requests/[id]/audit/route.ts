@@ -20,11 +20,38 @@ export async function GET(
 
     const delegated = await isDelegatedViewer(prisma, session.user.id);
 
-    const canView =
+    // Allow: admin/hr/delegated/owner OR any approver in this request's chain.
+    let canView =
       session.user.role === 'ADMIN' ||
       session.user.role === 'HR_EMPLOYEE' ||
       delegated ||
       hrRequest.employeeId === session.user.id;
+
+    if (!canView) {
+      try {
+        const wf = await prisma.hRRequestTypeWorkflow.findUnique({
+          where: { requestType: hrRequest.type as any },
+          include: { steps: { orderBy: { order: 'asc' } } },
+        });
+
+        if (wf?.steps?.length) {
+          for (const step of wf.steps) {
+            const routed = await (await import('@/lib/hrWorkflowRouting')).getApproverUserIdsForHRRequestStep({
+              requestType: hrRequest.type,
+              requesterUserId: hrRequest.employeeId,
+              stepOrder: step.order,
+            });
+
+            if (routed.userIds.includes(session.user.id)) {
+              canView = true;
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('audit canView approver check failed', (e as any)?.message)
+      }
+    }
 
     if (!canView) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
 
