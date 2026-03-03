@@ -12,9 +12,9 @@ export type BuilderRoutingResult = {
 async function getRequesterContext(requesterUserId: string) {
   const emp = await prisma.employee.findUnique({
     where: { userId: requesterUserId },
-    select: { branchId: true },
+    select: { branchId: true, stageId: true, departmentId: true },
   })
-  return { branchId: emp?.branchId || null }
+  return { branchId: emp?.branchId || null, stageId: (emp as any)?.stageId || null, departmentId: (emp as any)?.departmentId || null }
 }
 
 async function resolveStageHead(requesterUserId: string): Promise<string | null> {
@@ -85,18 +85,45 @@ export async function getStepDefinitionFromBuilder(params: {
   stepOrder: number
 }): Promise<{ stepType: string; titleAr: string | null; requireComment: boolean; allowConsult: boolean; allowDelegation: boolean; configJson: any } | null> {
   const { requestType, requesterUserId, stepOrder } = params
-  const { branchId } = await getRequesterContext(requesterUserId)
+  const { branchId, stageId, departmentId } = await getRequesterContext(requesterUserId)
   if (!branchId) return null
 
-  const match = await prisma.workflowRule.findFirst({
-    where: {
-      enabled: true,
-      requestType,
-      branchId,
-      workflowVersion: { status: 'PUBLISHED' },
-    } as any,
-    select: { workflowVersionId: true },
+  const baseWhere: any = {
+    enabled: true,
+    requestType,
+    branchId,
+    workflowVersion: { status: 'PUBLISHED' },
+  }
+
+  // Candidate rules for this requestType+branch. We'll evaluate conditions in JS.
+  const candidates = await prisma.workflowRule.findMany({
+    where: baseWhere,
+    select: { workflowVersionId: true, conditionsJson: true, createdAt: true },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
   })
+
+  const matches = (c: any) => {
+    const cond = c.conditionsJson || {}
+    if (cond.stageId && String(cond.stageId) !== String(stageId)) return false
+    if (cond.departmentId && String(cond.departmentId) !== String(departmentId)) return false
+    return true
+  }
+
+  // Most specific wins: (stage + dept) > (stage) > (dept) > (none)
+  const specificity = (c: any) => {
+    const cond = c.conditionsJson || {}
+    let s = 0
+    if (cond.stageId) s += 2
+    if (cond.departmentId) s += 1
+    return s
+  }
+
+  const filtered = candidates.filter(matches)
+  if (!filtered.length) return null
+
+  filtered.sort((a: any, b: any) => specificity(b) - specificity(a) || (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+  const match = filtered[0]
 
   if (!match) return null
 
