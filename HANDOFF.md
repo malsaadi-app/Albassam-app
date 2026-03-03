@@ -144,6 +144,26 @@ General workflow templates + versioning for HR (now) and procurement/maintenance
 - Button: "إنشاء قوالب المدارس (HR)" creates 4 Draft workflows (Arabic names).
 - Must Publish each Draft version to take effect.
 
+## How to test (HR Workflow Builder → runtime)
+1) As ADMIN:
+   - Go to `/settings/workflow-builder`
+   - Click "إنشاء قوالب المدارس (HR)" (should create 4 workflows once)
+   - Open each workflow and **Publish** the Draft version.
+2) Create test HR requests (from any employee in an ACTIVE school branch):
+   - LEAVE
+   - VISA_EXIT_REENTRY_SINGLE
+   - VISA_EXIT_REENTRY_MULTI
+   - RESIGNATION
+3) Verify routing (builder-first):
+   - Step 1: STAGE_HEAD resolves via Org Structure STAGE→HEAD
+   - Step 2: VP_EDUCATIONAL resolves via `EducationalRoutingSettings` for the branch
+   - Step 3: HR Manager (USER)
+   - Step 4: HR Execution (DELEGATE_POOL)
+   - If no Published rule exists, legacy routing should still work.
+4) Verify Timeline:
+   - Approvers (e.g., VP/Stage Head/HR) can view audit timeline on request details.
+   - Endpoint returns 200: `GET /api/hr/requests/[id]/audit`
+
 ## Ops notes
 - Cloudflared tunnel requires `CLOUDFLARED_TOKEN` in `.env` (do NOT commit).
 - PM2 ecosystem loads `.env` at runtime to provide token/DB/etc.
