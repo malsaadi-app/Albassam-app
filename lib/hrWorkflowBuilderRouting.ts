@@ -129,12 +129,35 @@ export async function getApproverUserIdsForHRRequestStepFromBuilder(params: {
   }
 
   if (step.stepType === 'DELEGATE_POOL') {
-    // For routing purposes: use HR_MANAGER system role if available, else admins.
-    const hrManagers = await prisma.user.findMany({
-      where: { systemRole: { is: { name: 'HR_MANAGER' } } },
-      select: { id: true },
-    })
-    if (hrManagers.length) return { userIds: hrManagers.map((u) => u.id), labelAr, source: 'BUILDER' }
+    const cfg: any = step.configJson || {}
+    const mode = String(cfg.mode || 'pool') // single | pool | any
+    const allowAny = cfg.allowAny !== false
+    const userIds = Array.isArray(cfg.userIds) ? cfg.userIds.map(String).filter(Boolean) : []
+
+    // If explicit users configured, honor them.
+    if (mode === 'single' && userIds.length) {
+      return { userIds: [userIds[0]], labelAr, source: 'BUILDER' }
+    }
+    if (mode === 'pool' && userIds.length) {
+      return { userIds: Array.from(new Set<string>(userIds)), labelAr, source: 'BUILDER' }
+    }
+
+    // Mode 'any': allow any HR employee (and admins) to process.
+    if (mode === 'any') {
+      const hrEmployees = await prisma.user.findMany({ where: { role: 'HR_EMPLOYEE' }, select: { id: true } })
+      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
+      const ids = [...hrEmployees.map((u) => u.id), ...admins.map((u) => u.id)]
+      return { userIds: [...new Set(ids)], labelAr, source: 'BUILDER' }
+    }
+
+    // Fallback (no explicit users): use HR_MANAGER system role if available, else admins.
+    if (allowAny) {
+      const hrManagers = await prisma.user.findMany({
+        where: { systemRole: { is: { name: 'HR_MANAGER' } } },
+        select: { id: true },
+      })
+      if (hrManagers.length) return { userIds: hrManagers.map((u) => u.id), labelAr, source: 'BUILDER' }
+    }
 
     const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
     return { userIds: admins.map((u) => u.id), labelAr, source: 'BUILDER' }
