@@ -32,7 +32,7 @@ export default function WorkflowBuilderHome() {
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
-      alert(data.error || 'فشل')
+      alert(data.error || `فشل (HTTP ${res.status})`)
       return
     }
     setName('')
@@ -44,7 +44,7 @@ export default function WorkflowBuilderHome() {
     const res = await fetch('/api/settings/workflow-builder/templates/schools', { method: 'POST' })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
-      alert(data.error || 'فشل')
+      alert(data.error || `فشل (HTTP ${res.status})`)
       return
     }
     await load()

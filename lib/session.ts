@@ -30,7 +30,9 @@ export const sessionOptions: SessionOptions = {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7 // 7 days in seconds
+    // Allow session to work across subdomains (e.g. app. and p.)
+    ...(process.env.NODE_ENV === 'production' ? { domain: '.albassam-app.com' } : {}),
+    maxAge: 60 * 60 * 24 * 7, // 7 days in seconds
   },
   ttl: 60 * 60 * 24 * 7 // 7 days in seconds
 }
