@@ -21,6 +21,7 @@ const STEP_TYPES = [
   { value: 'SYSTEM_ROLE', label: 'دور نظام (SYSTEM_ROLE)' },
   { value: 'USER', label: 'مستخدم محدد (USER)' },
   { value: 'DELEGATE_POOL', label: 'تنفيذ/توزيع (DELEGATE_POOL)' },
+  { value: 'WAREHOUSE_ISSUE', label: 'صرف من المخزون (WAREHOUSE_ISSUE)' },
 ]
 
 export function StepEditor(props: {

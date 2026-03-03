@@ -82,7 +82,8 @@ export async function POST() {
     // Steps (v1):
     // 1) Gatekeeper (branch coverage)
     // 2) Procurement Review (SYSTEM_ROLE)
-    // 3) Execution (DELEGATE_POOL)
+    // 3) Warehouse Issue (WAREHOUSE_ISSUE) - optional stock issue
+    // 4) Execution (DELEGATE_POOL)
     await tx.workflowStepDefinition.createMany({
       data: [
         {
@@ -110,6 +111,17 @@ export async function POST() {
         {
           workflowVersionId: version.id,
           order: 3,
+          titleAr: 'صرف من المخزون (إن وجد)',
+          titleEn: 'Warehouse Issue',
+          stepType: 'WAREHOUSE_ISSUE',
+          configJson: { mode: 'pool', allowAny: true },
+          requireComment: true,
+          allowConsult: false,
+          allowDelegation: true,
+        },
+        {
+          workflowVersionId: version.id,
+          order: 4,
           titleAr: 'تنفيذ المشتريات/المخزن',
           titleEn: 'Procurement Execution',
           stepType: 'DELEGATE_POOL',

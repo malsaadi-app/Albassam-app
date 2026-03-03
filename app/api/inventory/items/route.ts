@@ -21,7 +21,9 @@ const createSchema = z.object({
 export async function GET(request: NextRequest) {
   const session = await getSession(await cookies())
   if (!session.user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
-  if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+  const sr = session.user.systemRole?.name
+  const can = session.user.role === 'ADMIN' || sr === 'PROCUREMENT_MANAGER' || sr === 'WAREHOUSE_KEEPER' || sr === 'WAREHOUSE_MANAGER'
+  if (!can) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
 
   const { searchParams } = new URL(request.url)
   const q = (searchParams.get('q') || '').trim()
@@ -48,6 +50,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getSession(await cookies())
   if (!session.user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+  // Create/update items remains ADMIN-only for now
   if (session.user.role !== 'ADMIN') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
 
   const body = await request.json().catch(() => ({}))

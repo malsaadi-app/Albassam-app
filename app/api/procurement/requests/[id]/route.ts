@@ -49,23 +49,62 @@ export async function GET(
       );
     }
 
-    // Check permissions
-    if (
-      session.user.role !== 'ADMIN' && 
-      purchaseRequest.requestedById !== session.user.id
-    ) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+    // Check permissions (admin OR requester OR current step assignee)
+    if (session.user.role !== 'ADMIN' && purchaseRequest.requestedById !== session.user.id) {
+      try {
+        const { resolveProcurementStepAssignees } = await import('@/lib/procurementWorkflowRouting')
+        const workflow = await prisma.procurementCategoryWorkflow.findUnique({
+          where: { category: purchaseRequest.category },
+          include: { steps: { orderBy: { order: 'asc' } } },
+        })
+        const stepIndex = purchaseRequest.currentWorkflowStep ?? 0
+        const fallbackUserId = workflow?.steps?.[stepIndex]?.userId
+        const allowed = await resolveProcurementStepAssignees({
+          requestedByUserId: purchaseRequest.requestedById,
+          workflowCategory: purchaseRequest.category,
+          stepIndex,
+          fallbackUserId: fallbackUserId || null,
+        })
+        if (!allowed.includes(session.user.id)) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        }
+      } catch {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
+
+    // Builder step context (if published)
+    let builderStep: any = null
+    let canWarehouseIssue = false
+    try {
+      const { getProcurementStepDefinitionFromBuilder, resolveProcurementAssigneesFromBuilder } = await import('@/lib/procurementWorkflowBuilderRouting')
+      const stepIndex = purchaseRequest.currentWorkflowStep ?? 0
+      builderStep = await getProcurementStepDefinitionFromBuilder({
+        requestType: 'PURCHASE_REQUEST',
+        requestedByUserId: purchaseRequest.requestedById,
+        category: String(purchaseRequest.category),
+        stepIndex,
+      })
+      if (builderStep?.stepType === 'WAREHOUSE_ISSUE') {
+        const ass = await resolveProcurementAssigneesFromBuilder({
+          requestedByUserId: purchaseRequest.requestedById,
+          category: String(purchaseRequest.category),
+          stepIndex,
+        })
+        canWarehouseIssue = (ass?.userIds || []).includes(session.user.id) || session.user.role === 'ADMIN'
+      }
+    } catch {
+      // ignore
     }
 
     return NextResponse.json({
       request: {
         ...purchaseRequest,
         items: JSON.parse(purchaseRequest.items),
-        attachments: purchaseRequest.attachments ? JSON.parse(purchaseRequest.attachments) : []
-      }
+        attachments: purchaseRequest.attachments ? JSON.parse(purchaseRequest.attachments) : [],
+      },
+      builderStep,
+      canWarehouseIssue,
     });
   } catch (error) {
     console.error('Error fetching purchase request:', error);

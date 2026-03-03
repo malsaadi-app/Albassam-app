@@ -98,7 +98,26 @@ export async function resolveProcurementAssigneesFromBuilder(params: {
     return { userIds: id ? [String(id)] : [], labelAr }
   }
 
-  if (step.stepType === 'DELEGATE_POOL') {
+  if (step.stepType === 'WAREHOUSE_ISSUE') {
+    // Who can issue from warehouse: use DELEGATE_POOL-like config.
+    const cfg: any = step.configJson || {}
+    const mode = String(cfg.mode || 'pool')
+    const allowAny = cfg.allowAny !== false
+    const userIds = Array.isArray(cfg.userIds) ? cfg.userIds.map(String).filter(Boolean) : []
+
+    if (mode === 'single' && userIds.length) return { userIds: [userIds[0]], labelAr }
+    if (mode === 'pool' && userIds.length) return { userIds: Array.from(new Set<string>(userIds)), labelAr }
+
+    if (allowAny) {
+      const users = await prisma.user.findMany({ where: { systemRole: { is: { name: 'WAREHOUSE_KEEPER' } } }, select: { id: true } })
+      if (users.length) return { userIds: users.map((u) => u.id), labelAr }
+    }
+
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
+    return { userIds: admins.map((u) => u.id), labelAr }
+  }
+
+  if (step.stepType === 'DELEGATE_POOL') { 
     const cfg: any = step.configJson || {}
     const mode = String(cfg.mode || 'pool')
     const allowAny = cfg.allowAny !== false

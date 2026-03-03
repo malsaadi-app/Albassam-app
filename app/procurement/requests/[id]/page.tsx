@@ -119,6 +119,11 @@ export default function PurchaseRequestDetailsPage() {
   const [approvalNotes, setApprovalNotes] = useState('');
   const [rejectReason, setRejectReason] = useState('');
 
+  const [stockQuery, setStockQuery] = useState('');
+  const [stockResults, setStockResults] = useState<any[]>([]);
+  const [issueLines, setIssueLines] = useState<Array<{ stockItemId: string; itemName: string; quantity: number }>>([]);
+  const [issueComment, setIssueComment] = useState('');
+
   useEffect(() => {
     fetchRequest();
   }, [id]);
@@ -130,7 +135,7 @@ export default function PurchaseRequestDetailsPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setRequest(data.request);
+        setRequest({ ...data.request, _builderStep: data.builderStep, _canWarehouseIssue: data.canWarehouseIssue } as any);
       } else {
         setError(data.error || 'حدث خطأ');
       }
@@ -192,6 +197,46 @@ export default function PurchaseRequestDetailsPage() {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const searchStock = async () => {
+    const q = stockQuery.trim();
+    if (!q) {
+      setStockResults([]);
+      return;
+    }
+    const res = await fetch(`/api/inventory/items?q=${encodeURIComponent(q)}`);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) setStockResults(Array.isArray(data.items) ? data.items : []);
+  };
+
+  const addIssueLine = (item: any) => {
+    setIssueLines((prev) => {
+      if (prev.some((l) => l.stockItemId === item.id)) return prev;
+      return [...prev, { stockItemId: item.id, itemName: item.itemName, quantity: 1 }];
+    });
+  };
+
+  const submitWarehouseIssue = async () => {
+    if (issueLines.length === 0) return alert('اختر صنف واحد على الأقل');
+
+    const res = await fetch(`/api/procurement/requests/${id}/warehouse-issue`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        comment: issueComment,
+        lines: issueLines.map((l) => ({ stockItemId: l.stockItemId, quantity: Number(l.quantity) })),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return alert(data.error || 'فشل');
+
+    alert('✅ تم الصرف وتحديث الطلب');
+    setIssueLines([]);
+    setIssueComment('');
+    setStockQuery('');
+    setStockResults([]);
+    await fetchRequest();
   };
 
   const handleReject = async () => {
@@ -471,6 +516,78 @@ export default function PurchaseRequestDetailsPage() {
               </div>
             )}
           </Card>
+
+          {/* Warehouse Issue (Builder) */}
+          {(request as any)._canWarehouseIssue && (
+            <Card variant="default" style={{ borderLeft: '4px solid #F59E0B' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#92400E', marginBottom: '12px' }}>
+                🏬 صرف من المخزون
+              </h3>
+              <p style={{ fontSize: '12px', color: '#64748B', marginBottom: 10 }}>
+                هذه الخطوة مبنية من Workflow Builder (WAREHOUSE_ISSUE). اختر الأصناف من المخزون وسجل الصرف.
+              </p>
+
+              <div style={{ display: 'grid', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <input
+                    value={stockQuery}
+                    onChange={(e) => setStockQuery(e.target.value)}
+                    placeholder="ابحث في المخزون (كود/اسم)…"
+                    style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB', flex: 1, minWidth: 220 }}
+                  />
+                  <Button variant="outline" onClick={searchStock}>بحث</Button>
+                </div>
+
+                {stockResults.length > 0 && (
+                  <div style={{ maxHeight: 220, overflow: 'auto', border: '1px solid #E5E7EB', borderRadius: 12, background: 'white' }}>
+                    {stockResults.slice(0, 30).map((i: any) => (
+                      <button
+                        key={i.id}
+                        type="button"
+                        onClick={() => addIssueLine(i)}
+                        style={{ width: '100%', textAlign: 'start', padding: '10px 12px', border: 'none', borderBottom: '1px solid #F1F5F9', background: 'white', cursor: 'pointer' }}
+                      >
+                        <div style={{ fontWeight: 900, color: '#0F172A' }}>{i.itemName}</div>
+                        <div style={{ fontSize: 12, color: '#64748B' }}>{i.itemCode} • الرصيد: {i.currentStock} • {i.unit}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {issueLines.length > 0 && (
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {issueLines.map((l, idx) => (
+                      <div key={l.stockItemId} style={{ border: '1px solid #E5E7EB', borderRadius: 12, padding: 10, display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center', background: 'white' }}>
+                        <div style={{ fontWeight: 900 }}>{l.itemName}</div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <input
+                            value={l.quantity}
+                            onChange={(e) => setIssueLines((prev) => prev.map((x, i) => (i === idx ? { ...x, quantity: Number(e.target.value) } : x)))}
+                            inputMode="decimal"
+                            style={{ padding: 10, borderRadius: 10, border: '1px solid #E5E7EB', width: 110 }}
+                            placeholder="الكمية"
+                          />
+                          <Button variant="outline" onClick={() => setIssueLines((prev) => prev.filter((_, i) => i !== idx))}>حذف</Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <Textarea
+                  value={issueComment}
+                  onChange={(e) => setIssueComment((e.target as any).value)}
+                  placeholder="تعليق (حسب سياسة الخطوة)"
+                />
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button variant="warning" onClick={submitWarehouseIssue} disabled={actionLoading}>
+                    تسجيل الصرف
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {/* Attachments */}
           {request.attachments && (
