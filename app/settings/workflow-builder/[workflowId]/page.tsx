@@ -47,6 +47,8 @@ export default function WorkflowBuilderDetail() {
   const [branches, setBranches] = useState<any[]>([])
   const [branchesLoaded, setBranchesLoaded] = useState(false)
   const [ruleModal, setRuleModal] = useState(false)
+  const [requestTypes, setRequestTypes] = useState<string[]>([])
+  const [requestTypesLoaded, setRequestTypesLoaded] = useState(false)
   const [ruleRequestType, setRuleRequestType] = useState('')
   const [ruleBranchQuery, setRuleBranchQuery] = useState('')
   const [ruleSelectedBranchIds, setRuleSelectedBranchIds] = useState<string[]>([])
@@ -86,13 +88,31 @@ export default function WorkflowBuilderDetail() {
         const res = await fetch('/api/branches')
         if (!res.ok) return
         const data = await res.json().catch(() => [])
-        setBranches(Array.isArray(data) ? data : data.branches || [])
+        const arr = Array.isArray(data) ? data : data.branches || []
+        // Exclude QA branches in Workflow Builder UX
+        setBranches(arr.filter((b: any) => !String(b.name || '').includes('QA')))
         setBranchesLoaded(true)
       } catch {
         // ignore
       }
     })()
   }, [branchesLoaded])
+
+  useEffect(() => {
+    if (requestTypesLoaded) return
+    ;(async () => {
+      try {
+        const res = await fetch('/api/hr/request-types')
+        if (!res.ok) return
+        const data = await res.json().catch(() => ({}))
+        const types = Array.isArray(data?.types) ? data.types.map(String) : []
+        setRequestTypes(types)
+        setRequestTypesLoaded(true)
+      } catch {
+        // ignore
+      }
+    })()
+  }, [requestTypesLoaded])
 
   const saveSteps = async () => {
     if (!draft?.id) return
@@ -413,17 +433,7 @@ export default function WorkflowBuilderDetail() {
                     style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB', background: 'white' }}
                   >
                     <option value="">اختر…</option>
-                    {[
-                      'LEAVE',
-                      'VISA_EXIT_REENTRY_SINGLE',
-                      'VISA_EXIT_REENTRY_MULTI',
-                      'RESIGNATION',
-                      'ATTENDANCE_CORRECTION',
-                      'TRANSFER',
-                      'PROMOTION',
-                      'SALARY_ADVANCE',
-                      'TRAINING',
-                    ].map((x) => (
+                    {requestTypes.map((x) => (
                       <option key={x} value={x}>{x}</option>
                     ))}
                   </select>
