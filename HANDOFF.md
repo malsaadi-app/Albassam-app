@@ -168,6 +168,29 @@ General workflow templates + versioning for HR (now) and procurement/maintenance
 - Cloudflared tunnel requires `CLOUDFLARED_TOKEN` in `.env` (do NOT commit).
 - PM2 ecosystem loads `.env` at runtime to provide token/DB/etc.
 
+## How to test (Ops: tunnel + auth + impersonation)
+### A) Tunnel / public health
+1) `curl -s -o /dev/null -w "%{http_code}\n" https://app.albassam-app.com/api/health` → expect `200`.
+2) If `530`, check tunnel:
+   - `pm2 list` (cloudflared should be online)
+   - Ensure `.env` contains `CLOUDFLARED_TOKEN` (do NOT commit)
+   - `pm2 restart cloudflared --update-env`
+
+### B) Session cookie across subdomains
+1) Login on `https://app.albassam-app.com`.
+2) Open `https://app.albassam-app.com/api/auth/me` → expect `200` and user payload.
+3) If using other subdomain (e.g. `p.albassam-app.com`), confirm the same session works.
+   - Cookie domain in production is `.albassam-app.com`.
+
+### C) Admin impersonation
+1) As ADMIN go to `/hr/employees` and click "🔄 دخول" on any employee.
+2) Expect redirect to `/dashboard` as target user.
+3) Confirm state via `GET /api/auth/me`:
+   - `isImpersonating: true`
+   - `user.id` should be the target user.
+4) Revert:
+   - Call `POST /api/auth/revert-impersonation` (or use UI if present) and verify `isImpersonating: false`.
+
 ---
 
 # 3) Transport module (paused until org structure + HR routing are finished)
