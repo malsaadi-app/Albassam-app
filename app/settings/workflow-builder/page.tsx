@@ -39,6 +39,18 @@ export default function WorkflowBuilderHome() {
     await load()
   }
 
+  const createSchoolTemplates = async () => {
+    if (!confirm('إنشاء قوالب المدارس (HR)؟')) return
+    const res = await fetch('/api/settings/workflow-builder/templates/schools', { method: 'POST' })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || 'فشل')
+      return
+    }
+    await load()
+    alert(`تم. تم إنشاء: ${data.created?.length || 0} — موجود مسبقاً: ${data.ensured?.length || 0}`)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -46,7 +58,18 @@ export default function WorkflowBuilderHome() {
 
         <Card variant="default">
           <div style={{ padding: 16, display: 'grid', gap: 10 }}>
-            <div style={{ fontWeight: 900 }}>إنشاء Workflow جديد</div>
+            <div style={{ fontWeight: 900 }}>قوالب جاهزة</div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button variant="primary" onClick={createSchoolTemplates}>
+                إنشاء قوالب المدارس (HR)
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        <Card variant="default">
+          <div style={{ padding: 16, display: 'grid', gap: 10 }}>
+            <div style={{ fontWeight: 900 }}>إنشاء Workflow جديد (يدوي)</div>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم" style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB' }} />
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button variant="primary" onClick={create}>
