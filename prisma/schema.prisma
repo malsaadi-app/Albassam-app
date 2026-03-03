@@ -1649,26 +1649,16 @@ model HRRequestTypeWorkflow {
   @@index([approverUserId])
 }
 
-enum WorkflowModule {
-  HR
-  PROCUREMENT
-  MAINTENANCE
-  FINANCE
-  GENERIC
-}
-
-enum WorkflowVersionStatus {
-  DRAFT
-  PUBLISHED
-}
+// NOTE: Workflow Builder tables are stored as TEXT columns in the DB (see migrations).
+// We model them as String here to avoid relying on PostgreSQL enum types.
 
 model WorkflowDefinition {
-  id          String         @id @default(cuid())
-  module      WorkflowModule
+  id          String   @id @default(cuid())
+  module      String
   name        String
   description String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   createdBy   String?
   updatedBy   String?
 
@@ -1681,13 +1671,13 @@ model WorkflowDefinition {
 }
 
 model WorkflowVersion {
-  id         String               @id @default(cuid())
-  workflowId String
-  version    Int
-  status     WorkflowVersionStatus @default(DRAFT)
-  createdAt  DateTime             @default(now())
+  id          String   @id @default(cuid())
+  workflowId  String
+  version     Int
+  status      String   @default("DRAFT")
+  createdAt   DateTime @default(now())
   publishedAt DateTime?
-  createdBy  String?
+  createdBy   String?
 
   workflow WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   rules    WorkflowRule[]
@@ -1702,7 +1692,7 @@ model WorkflowVersion {
 model WorkflowRule {
   id                String   @id @default(cuid())
   workflowVersionId String
-  requestType       RequestType?
+  requestType       String?
   branchId          String?
   enabled           Boolean  @default(true)
   createdAt         DateTime @default(now())
