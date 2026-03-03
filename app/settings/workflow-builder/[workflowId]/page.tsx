@@ -196,6 +196,8 @@ export default function WorkflowBuilderDetail() {
     setDragId(null)
   }
 
+  const [ruleWarnings, setRuleWarnings] = useState<string[]>([])
+
   const saveRules = async () => {
     if (!draft?.id) return
     const res = await fetch(`/api/settings/workflow-builder/versions/${draft.id}/rules`, {
@@ -208,6 +210,7 @@ export default function WorkflowBuilderDetail() {
       alert(data.error || 'فشل')
       return
     }
+    setRuleWarnings(Array.isArray(data.warnings) ? data.warnings : [])
     alert('✅ تم حفظ القواعد')
     setRulesDirty(false)
     load()
@@ -334,6 +337,17 @@ export default function WorkflowBuilderDetail() {
               <div style={{ fontWeight: 900 }}>القواعد (متى ينطبق)</div>
               <Button variant="outline" onClick={openAddRule}>➕ إضافة قاعدة</Button>
             </div>
+
+            {ruleWarnings.length > 0 && (
+              <div style={{ border: '1px solid #F59E0B', background: '#FFFBEB', color: '#92400E', borderRadius: 14, padding: 12, marginBottom: 10 }}>
+                <div style={{ fontWeight: 900, marginBottom: 6 }}>تنبيهات</div>
+                <ul style={{ margin: 0, paddingInlineStart: 18 }}>
+                  {ruleWarnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {loading ? (
               <div>جاري التحميل…</div>

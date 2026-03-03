@@ -29,14 +29,27 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ vers
     }))
     .filter((r: any) => r.requestType && r.branchId)
 
-  // Deduplicate by (requestType, branchId)
+  // Deduplicate by (requestType, branchId, conditionsJson)
   const seen = new Set<string>()
   const deduped = normalized.filter((r: any) => {
-    const k = `${r.requestType}::${r.branchId}`
+    const k = `${r.requestType}::${r.branchId}::${JSON.stringify(r.conditionsJson || {})}`
     if (seen.has(k)) return false
     seen.add(k)
     return true
   })
+
+  // Warnings: multiple rules with same requestType+branch and empty conditions (can be surprising)
+  const warnings: string[] = []
+  const key2 = new Map<string, number>()
+  for (const r of deduped) {
+    const k = `${r.requestType}::${r.branchId}`
+    key2.set(k, (key2.get(k) || 0) + 1)
+  }
+  for (const [k, count] of key2.entries()) {
+    if (count > 1) {
+      warnings.push(`يوجد أكثر من قاعدة لنفس (نوع الطلب + الفرع): ${k}. سيتم اختيار الأكثر تحديدًا حسب (المرحلة/القسم) ثم الأحدث.`)
+    }
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.workflowRule.deleteMany({ where: { workflowVersionId: versionId } })
@@ -53,5 +66,5 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ vers
     }
   })
 
-  return NextResponse.json({ ok: true, count: deduped.length })
+  return NextResponse.json({ ok: true, count: deduped.length, warnings })
 }
