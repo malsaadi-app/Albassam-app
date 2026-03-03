@@ -42,7 +42,7 @@ export default function WorkflowBuilderDetail() {
     if (!draft?.id) return
     const ok = confirm('نشر هذه النسخة؟')
     if (!ok) return
-    const res = await fetch(`/api/settings/workflow-builder/${draft.id}/publish`, { method: 'POST' })
+    const res = await fetch(`/api/settings/workflow-builder/versions/${draft.id}/publish`, { method: 'POST' })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
       alert(data.error || 'فشل')

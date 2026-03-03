@@ -1,3 +1,9 @@
+const dotenv = require('dotenv');
+
+// Load runtime secrets/config from repo-local .env (NOT committed)
+// Next.js (next start) does NOT automatically load .env at runtime.
+dotenv.config({ path: '/data/.openclaw/workspace/albassam-tasks/.env' });
+
 module.exports = {
   apps: [
     {
@@ -10,8 +16,9 @@ module.exports = {
       watch: false,
       max_memory_restart: '500M',
       env: {
+        ...process.env,
         NODE_ENV: 'production',
-        PORT: 3000
+        PORT: 3000,
       },
       error_file: '/tmp/albassam-app-error.log',
       out_file: '/tmp/albassam-app-out.log',
@@ -20,7 +27,7 @@ module.exports = {
       autorestart: true,
       max_restarts: 10,
       min_uptime: '10s',
-      restart_delay: 4000
+      restart_delay: 4000,
     },
     {
       name: 'cloudflared',
@@ -40,7 +47,7 @@ module.exports = {
       restart_delay: 4000,
       error_file: '/tmp/cloudflared-error.log',
       out_file: '/tmp/cloudflared-out.log',
-      merge_logs: true
-    }
-  ]
+      merge_logs: true,
+    },
+  ],
 };

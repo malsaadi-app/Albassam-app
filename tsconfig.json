@@ -38,8 +38,9 @@
     ".next_run3/types/**/*.ts",
     ".next_run4/types/**/*.ts",
     ".next_run5/types/**/*.ts",
+    ".next_run6/types/**/*.ts",
     "next-env.d.ts",
-    ".next_run6/types/**/*.ts"
+    ".next_run7/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
