@@ -24,7 +24,7 @@
 **Next milestone checklist (order):**
 1) ✅ Org structure: coverageScope UI (BRANCH / MULTI_BRANCH / ALL) + branch picker.
 2) ✅ Org structure: ADMIN assignments UI (teacher stage(s)) on employee page (basic).
-3) ⏳ HR routing rules: implement per-request-type routing + **admin UI to edit**.
+3) ✅ HR routing rules: implement per-request-type routing + admin UI to edit (boys first).
 4) Security P0: tighten uploads (`/api/upload`) + private files.
 5) Resume Transport module.
 
