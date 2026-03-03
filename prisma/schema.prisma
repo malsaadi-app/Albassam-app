@@ -86,6 +86,7 @@ model User {
   workflowDefsCreated WorkflowDefinition[] @relation("WorkflowDefCreatedBy")
   workflowDefsUpdated WorkflowDefinition[] @relation("WorkflowDefUpdatedBy")
   workflowVersionsCreated WorkflowVersion[] @relation("WorkflowVersionCreatedBy")
+  inventorySettingsUpdates InventorySettings[] @relation("InventorySettingsUpdater")
 
   // Maintenance routing
   maintenanceManagerSettings   MaintenanceRoutingSettings[] @relation("MaintenanceManagerUser")
@@ -1931,6 +1932,15 @@ model StockMovement {
   @@index([movementType])
   @@index([createdAt])
   @@index([goodsReceiptId])
+}
+
+model InventorySettings {
+  id                String   @id @default("default")
+  allowNegativeStock Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?
+
+  updater User? @relation(fields: [updatedBy], references: [id], onDelete: SetNull, name: "InventorySettingsUpdater")
 }
 
 enum StockMovementType {

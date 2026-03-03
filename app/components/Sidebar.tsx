@@ -147,7 +147,10 @@ export default function Sidebar() {
         { href: '/support-services/transport/drivers', icon: <HiOutlineTruck size={18} />, label: 'النقل — السائقين' },
         { href: '/support-services/transport/vehicles', icon: <HiOutlineTruck size={18} />, label: 'النقل — المركبات' },
         ...(userRole === 'ADMIN'
-          ? [{ href: '/inventory', icon: <HiOutlineCube size={18} />, label: 'المخازن' }]
+          ? [
+              { href: '/inventory', icon: <HiOutlineCube size={18} />, label: 'المخازن' },
+              { href: '/settings/inventory', icon: <HiOutlineCog size={18} />, label: 'إعدادات المخزون' },
+            ]
           : []),
       ]
     },

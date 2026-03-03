@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
     unitCost: body.unitCost !== undefined ? Number(body.unitCost) : undefined,
   })
 
-  const result = await prisma.$transaction(async (tx) => {
+  try {
+    const result = await prisma.$transaction(async (tx) => {
     const item = await tx.stockItem.findUnique({ where: { id: data.stockItemId } })
     if (!item) throw new Error('Stock item not found')
 
@@ -56,6 +57,21 @@ export async function POST(request: NextRequest) {
     if (data.movementType === 'IN' || data.movementType === 'RETURN') delta = qty
     else if (data.movementType === 'OUT' || data.movementType === 'DAMAGE') delta = -qty
     else if (data.movementType === 'ADJUSTMENT') delta = qty // adjustment is direct delta
+
+    // Update stock item summary
+    const newStock = Number(item.currentStock) + delta
+
+    // Enforce setting (optional): block negative stock when disabled
+    const settings = await tx.inventorySettings.upsert({
+      where: { id: 'default' },
+      create: { id: 'default' },
+      update: {},
+      select: { allowNegativeStock: true },
+    })
+
+    if (!settings.allowNegativeStock && newStock < 0) {
+      throw new Error('NEGATIVE_STOCK_NOT_ALLOWED')
+    }
 
     const movement = await tx.stockMovement.create({
       data: {
@@ -68,9 +84,6 @@ export async function POST(request: NextRequest) {
         movedBy: session.user!.displayName || session.user!.username || session.user!.id,
       },
     })
-
-    // Update stock item summary
-    const newStock = Number(item.currentStock) + delta
     const unitCost = data.unitCost !== undefined ? data.unitCost : Number(item.unitCost)
     const totalValue = Math.max(0, newStock) * unitCost
 
@@ -84,8 +97,15 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return { movement, item: updated }
-  })
+      return { movement, item: updated }
+    })
 
-  return NextResponse.json({ ok: true, ...result })
+    return NextResponse.json({ ok: true, ...result })
+  } catch (e: any) {
+    const msg = String(e?.message || '')
+    if (msg.includes('NEGATIVE_STOCK_NOT_ALLOWED')) {
+      return NextResponse.json({ error: 'لا يمكن الصرف لأن الرصيد غير كافٍ (تم تعطيل السماح بالسالب)' }, { status: 400 })
+    }
+    throw e
+  }
 }
