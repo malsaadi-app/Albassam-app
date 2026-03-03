@@ -203,6 +203,17 @@ export default function WorkflowBuilderDetail() {
     setDragId(String(idx))
   }
 
+  const moveStep = (fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return
+    setLocalSteps((prev) => {
+      const next = [...prev]
+      const [moved] = next.splice(fromIdx, 1)
+      next.splice(toIdx, 0, moved)
+      return next
+    })
+    setDirty(true)
+  }
+
   const onDrop = (targetIdx: number) => {
     if (dragId === null) return
     const fromIdx = Number(dragId)
@@ -210,13 +221,7 @@ export default function WorkflowBuilderDetail() {
       setDragId(null)
       return
     }
-    setLocalSteps((prev) => {
-      const next = [...prev]
-      const [moved] = next.splice(fromIdx, 1)
-      next.splice(targetIdx, 0, moved)
-      return next
-    })
-    setDirty(true)
+    moveStep(fromIdx, targetIdx)
     setDragId(null)
   }
 
@@ -448,6 +453,20 @@ export default function WorkflowBuilderDetail() {
                     </div>
 
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <Button
+                        variant="outline"
+                        onClick={() => moveStep(idx, Math.max(0, idx - 1))}
+                        disabled={idx === 0}
+                      >
+                        ⬆️
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => moveStep(idx, Math.min(localSteps.length - 1, idx + 1))}
+                        disabled={idx === localSteps.length - 1}
+                      >
+                        ⬇️
+                      </Button>
                       <Button
                         variant="outline"
                         onClick={() => setEditor({ open: true, idx })}
