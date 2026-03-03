@@ -40,7 +40,10 @@ export default function InventoryPage() {
           <div style={{ fontSize: 22, fontWeight: 900 }}>المخزون</div>
           <div style={{ color: '#64748B', fontSize: 12 }}>إدارة الأصناف + الأرصدة + حركات الصرف/الإضافة</div>
         </div>
-        <Link href="/inventory/new"><Button variant="primary">➕ إضافة صنف</Button></Link>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link href="/inventory/negative"><Button variant="outline">⚠️ أرصدة سالبة</Button></Link>
+          <Link href="/inventory/new"><Button variant="primary">➕ إضافة صنف</Button></Link>
+        </div>
       </div>
 
       <Card variant="default">
