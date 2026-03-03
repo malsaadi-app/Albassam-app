@@ -122,6 +122,18 @@ export async function getApproverUserIdsForHRRequestStepFromBuilder(params: {
     return { userIds: id ? [id] : [], labelAr, source: 'BUILDER' }
   }
 
+  if (step.stepType === 'SYSTEM_ROLE') {
+    const cfg: any = step.configJson || {}
+    const roleName = String(cfg.systemRoleName || '').trim()
+    if (!roleName) return { userIds: [], labelAr, source: 'BUILDER' }
+
+    const users = await prisma.user.findMany({
+      where: { systemRole: { is: { name: roleName } } },
+      select: { id: true },
+    })
+    return { userIds: users.map((u) => u.id), labelAr, source: 'BUILDER' }
+  }
+
   if (step.stepType === 'USER') {
     const cfg: any = step.configJson || {}
     const id = cfg.userId

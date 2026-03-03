@@ -18,6 +18,7 @@ export type StepDraft = {
 const STEP_TYPES = [
   { value: 'STAGE_HEAD', label: 'اعتماد مسؤول المرحلة (STAGE_HEAD)' },
   { value: 'VP_EDUCATIONAL', label: 'اعتماد نائب الرئيس للشؤون التعليمية (VP_EDUCATIONAL)' },
+  { value: 'SYSTEM_ROLE', label: 'دور نظام (SYSTEM_ROLE)' },
   { value: 'USER', label: 'مستخدم محدد (USER)' },
   { value: 'DELEGATE_POOL', label: 'تنفيذ/توزيع (DELEGATE_POOL)' },
 ]
@@ -32,6 +33,8 @@ export function StepEditor(props: {
   const [draft, setDraft] = useState<StepDraft | null>(step)
   const [users, setUsers] = useState<any[]>([])
   const [usersLoaded, setUsersLoaded] = useState(false)
+  const [roles, setRoles] = useState<any[]>([])
+  const [rolesLoaded, setRolesLoaded] = useState(false)
   const [userQuery, setUserQuery] = useState('')
 
   useEffect(() => {
@@ -55,7 +58,28 @@ export function StepEditor(props: {
     })()
   }, [open, draft, usersLoaded])
 
+  useEffect(() => {
+    const shouldLoad = open && !!draft && draft.stepType === 'SYSTEM_ROLE'
+    if (!shouldLoad || rolesLoaded) return
+    ;(async () => {
+      try {
+        const res = await fetch('/api/settings/roles')
+        if (!res.ok) return
+        const data = await res.json().catch(() => ({}))
+        setRoles(Array.isArray(data?.roles) ? data.roles : [])
+        setRolesLoaded(true)
+      } catch {
+        // ignore
+      }
+    })()
+  }, [open, draft, rolesLoaded])
+
   const stepType = draft?.stepType || ''
+
+  const systemRoleName = useMemo(() => {
+    if (stepType !== 'SYSTEM_ROLE') return ''
+    return String((draft?.configJson || {})?.systemRoleName || '')
+  }, [draft, stepType])
 
   const userId = useMemo(() => {
     if (stepType !== 'USER') return ''
@@ -85,8 +109,16 @@ export function StepEditor(props: {
   const save = () => {
     // normalize config
     const cfg = { ...(draft.configJson || {}) }
+    if (draft.stepType === 'SYSTEM_ROLE') {
+      cfg.systemRoleName = String(cfg.systemRoleName || '').trim()
+    }
     if (draft.stepType === 'USER') {
       cfg.userId = String(cfg.userId || '').trim()
+    }
+    if (draft.stepType === 'DELEGATE_POOL') {
+      cfg.mode = String(cfg.mode || 'pool')
+      cfg.allowAny = cfg.allowAny !== false
+      if (Array.isArray(cfg.userIds)) cfg.userIds = cfg.userIds.map(String).filter(Boolean)
     }
     onSave({ ...draft, configJson: cfg })
   }
@@ -135,6 +167,25 @@ export function StepEditor(props: {
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
+
+              {draft.stepType === 'SYSTEM_ROLE' && (
+                <>
+                  <label style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>الدور</label>
+                  <select
+                    value={systemRoleName}
+                    onChange={(e) => update({ configJson: { ...(draft.configJson || {}), systemRoleName: e.target.value } })}
+                    style={{ padding: 12, borderRadius: 12, border: '1px solid #E5E7EB', background: 'white' }}
+                  >
+                    <option value="">اختر دور…</option>
+                    {roles.filter((r: any) => r.isActive !== false).map((r: any) => (
+                      <option key={r.id} value={r.name}>{r.nameAr || r.name}</option>
+                    ))}
+                  </select>
+                  <div style={{ color: '#64748B', fontSize: 12 }}>
+                    systemRoleName: <span style={{ fontFamily: 'monospace' }}>{systemRoleName || '—'}</span>
+                  </div>
+                </>
+              )}
 
               {draft.stepType === 'USER' && (
                 <>
