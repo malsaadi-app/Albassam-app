@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { getSession } from '@/lib/session';
 
 const leaveSchema = z.object({
-  employeeId: z.string().min(1),
+  // employeeId must be derived from the current session (prevent spoofing)
   type: z.enum(['ANNUAL', 'SICK', 'CASUAL', 'MATERNITY', 'HAJJ', 'UNPAID']),
   startDate: z.string(),
   endDate: z.string(),
@@ -112,6 +112,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = leaveSchema.parse(body);
 
+    // Resolve current employee from session (prevents employeeId spoofing)
+    const employee = await prisma.employee.findFirst({
+      where: { userId: session.user.id }
+    });
+
+    if (!employee) {
+      return NextResponse.json(
+        { error: 'لا يوجد سجل موظف لهذا المستخدم' },
+        { status: 404 }
+      );
+    }
+
     const startDate = new Date(validatedData.startDate);
     const endDate = new Date(validatedData.endDate);
 
@@ -128,8 +140,8 @@ export async function POST(request: NextRequest) {
 
     // Check leave balance for annual and casual leaves
     if (validatedData.type === 'ANNUAL' || validatedData.type === 'CASUAL') {
-      const balance = await prisma.leaveBalance.findUnique({
-        where: { employeeId: validatedData.employeeId }
+      const balance = await prisma.leaveBalance.findFirst({
+        where: { employeeId: employee.id, year: new Date().getFullYear() }
       });
 
       if (balance) {
@@ -151,6 +163,7 @@ export async function POST(request: NextRequest) {
     const leave = await prisma.leave.create({
       data: {
         ...validatedData,
+        employeeId: employee.id,
         startDate,
         endDate,
         days,

@@ -63,7 +63,8 @@ export async function GET(request: NextRequest) {
     // Calculate used and pending days from HR requests
     const leaveRequests = await prisma.hRRequest.findMany({
       where: {
-        employeeId: session.user.id,
+        // HRRequest.employeeId references Employee.id (not User.id)
+        employeeId: employee.id,
         type: 'LEAVE',
         startDate: {
           gte: new Date(currentYear, 0, 1), // Jan 1st
