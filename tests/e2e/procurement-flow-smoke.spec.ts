@@ -33,18 +33,10 @@ test('Procurement smoke: create request then gatekeeper approves step0', async (
   await qtyInput.fill('1')
 
   // Submit
-  const dialogPromise = page.waitForEvent('dialog').then(async (d) => {
-    const m = d.message();
-    await d.accept();
-    return m;
-  }).catch(() => null)
-
   await page.getByRole('button', { name: /إنشاء الطلب|إرسال|حفظ|Submit|تقديم/i }).click()
-  const msg = await dialogPromise
-  expect(msg || '').not.toEqual('')
 
-  // Now login as Asma and approve first step via approvals page (best-effort)
-  await page.getByRole('button', { name: /تسجيل الخروج/ }).click()
+  // Success path: redirected to request details page
+  await expect(page).toHaveURL(/\/procurement\/requests\/[a-z0-9_-]+/i)
 
-  // NOTE: Asma account not provided as QA user; this is a placeholder smoke to be expanded.
+  // NOTE: gatekeeper approval step can be expanded later once QA accounts for approvers are available.
 })
