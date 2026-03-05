@@ -1345,7 +1345,6 @@ model AttendanceRecord {
   location  String?
   date      DateTime
   status    AttendanceStatus @default(PRESENT)
-  minutesLate Int @default(0)
   notes     String?
 
   // GPS & Branch/Stage tracking
