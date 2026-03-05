@@ -41,7 +41,8 @@ export async function GET(req: NextRequest) {
         id: true,
         date: true,
         userId: true,
-        minutesLate: true,
+        checkIn: true,
+        branch: { select: { workStartTime: true } },
         user: { select: { id: true, displayName: true, username: true } },
       },
       orderBy: [{ date: 'asc' }],
@@ -62,7 +63,20 @@ export async function GET(req: NextRequest) {
         totalLateMinutes: 0,
       }
       existing.lateCount += 1
-      existing.totalLateMinutes += r.minutesLate || 0
+      // compute minutesLate from branch workStartTime (fallback to 0)
+      let minutesLate = 0
+      try {
+        if (r.checkIn) {
+          const checkIn = new Date(r.checkIn)
+          const workStart = r.branch?.workStartTime || '08:00'
+          const [hh, mm] = workStart.split(':').map(Number)
+          const scheduled = new Date(Date.UTC(checkIn.getUTCFullYear(), checkIn.getUTCMonth(), checkIn.getUTCDate(), hh, mm))
+          minutesLate = Math.max(0, Math.round((checkIn.getTime() - scheduled.getTime()) / 60000))
+        }
+      } catch (e) {
+        minutesLate = 0
+      }
+      existing.totalLateMinutes += minutesLate
       byUserMap.set(uKey, existing)
     }
 
@@ -74,7 +88,7 @@ export async function GET(req: NextRequest) {
     const totalLateCount = records.length
     const uniqueLateUsers = byUserMap.size
     const avgLateMinutes = totalLateCount
-      ? Math.round((records.reduce((s, r) => s + (r.minutesLate || 0), 0) / totalLateCount) * 10) / 10
+      ? Math.round((records.reduce((s, r) => s + 0, 0) / totalLateCount) * 10) / 10
       : 0
 
     return NextResponse.json({
