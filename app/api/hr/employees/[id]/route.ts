@@ -97,6 +97,9 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    // Debug log: record incoming update attempts (useful for diagnosing save failures)
+    console.log('[employee.update] incoming update for id=', id, 'by user=', session.user?.username || session.user?.id, 'body=', JSON.stringify(body));
+
     const updateData: any = {};
 
     // Map fields from form
