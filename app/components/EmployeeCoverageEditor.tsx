@@ -11,6 +11,8 @@ export default function EmployeeCoverageEditor({ assignmentId, branches }: Props
     // TODO: load existing assignment via API
   },[assignmentId]);
 
+  const [selectedOrgUnit, setSelectedOrgUnit] = useState<string | null>(branches && branches[0] ? branches[0].id : null);
+
   const save = async (val: any) => {
     // if we have an assignmentId, update via settings endpoint; otherwise create under employee
     if (assignmentId) {
@@ -23,7 +25,7 @@ export default function EmployeeCoverageEditor({ assignmentId, branches }: Props
       const empId = parts.includes('employees') ? parts[parts.indexOf('employees') + 1] : '';
       const payload = typeof val === 'string' ? { coverageScope: val } : { coverageScope: val.mode, coverageBranchIds: val.branches };
       // require user to pick an orgUnit first — for now, try to pick first orgUnit from branches prop
-      const orgUnitId = props?.defaultOrgUnitId || (branches && branches[0] && branches[0].id) || null;
+      const orgUnitId = (branches && branches[0] && branches[0].id) || null;
       if (!orgUnitId) return { error: 'No org unit selected' };
       const res = await fetch(`/api/hr/employees/${empId}/org-assignments/create`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ orgUnitId, ...payload }) });
       return res.json();
@@ -32,6 +34,16 @@ export default function EmployeeCoverageEditor({ assignmentId, branches }: Props
 
   return (
     <div>
+      {!assignmentId && (
+        <div style={{ marginBottom: 10 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>اختر وحدة (قسم/مرحلة) للتغطية</label>
+          <select value={selectedOrgUnit || ''} onChange={(e)=>setSelectedOrgUnit(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #E5E7EB' }}>
+            <option value="">— اختر وحدة —</option>
+            {branches.map(b => (<option key={b.id} value={b.id}>{b.name}</option>))}
+          </select>
+        </div>
+      )}
+
       <CoverageScopeSelector value={value} onChange={(v)=>{ setValue(v); save(v); }} branches={branches} />
     </div>
   );
