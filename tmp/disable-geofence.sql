@@ -1,0 +1,1 @@
+UPDATE "AttendanceSettings" SET "enableGeofencing" = false;
