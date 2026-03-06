@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import ReactSelect from 'react-select';
+import dynamic from 'next/dynamic';
+const EmployeeCoverageEditor = dynamic(() => import('@/components/EmployeeCoverageEditor'), { ssr: false });
 
 type OrgUnitRow = { id: string; name: string; type: string; parentId: string | null };
 
@@ -345,6 +347,12 @@ export default function EmployeeDetailPage() {
             </h3>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
+              {/* Coverage editor (multi-branch supervisor support) */}
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 8 }}>نطاق التغطية (CoverageScope)</div>
+                <EmployeeCoverageEditor assignmentId={orgAssignments[0]?.id || ''} branches={orgUnits.map(u=>({ id: u.id, name: u.name }))} />
+              </div>
+
               <div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 8 }}>المرحلة الأساسية (Legacy)</div>
                 <select
