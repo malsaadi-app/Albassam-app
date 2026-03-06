@@ -57,3 +57,5 @@ scripts/test-employee-api.sh
 # Local-only scripts/tests
 scripts/debug-latest-procurement.ts
 tests/e2e/procurement-flow-smoke.spec.ts
+.deploy_key
+.deploy_key.pub

@@ -113,9 +113,12 @@ export default function NewPurchaseRequestPage() {
           quantity: item.quantity,
           unit: item.unit,
           specifications: item.specifications || null,
-          estimatedPrice: item.estimatedPrice ? parseFloat(String(item.estimatedPrice)) : null
+          estimatedPrice: item.estimatedPrice !== '' && item.estimatedPrice !== null && item.estimatedPrice !== undefined
+            ? parseFloat(String(item.estimatedPrice))
+            : 0
         })),
-        attachments: attachments.length > 0 ? JSON.stringify(attachments) : null
+        // API expects an array; server will stringify if needed
+        attachments: attachments
       };
 
       const response = await fetch('/api/procurement/requests', {
@@ -140,9 +143,14 @@ export default function NewPurchaseRequestPage() {
   };
 
   const totalEstimated = items.reduce((sum, item) => {
-    const price = item.estimatedPrice ? parseFloat(String(item.estimatedPrice)) : 0;
+    const price = item.estimatedPrice !== '' && item.estimatedPrice !== null && item.estimatedPrice !== undefined
+      ? parseFloat(String(item.estimatedPrice))
+      : 0;
     return sum + (price * item.quantity);
   }, 0);
+
+  const budgetValue = estimatedBudget ? parseFloat(estimatedBudget) : null;
+  const budgetTooLow = budgetValue !== null && !Number.isNaN(budgetValue) && budgetValue < totalEstimated;
 
   return (
     <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
@@ -217,14 +225,21 @@ export default function NewPurchaseRequestPage() {
             </div>
 
             <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-              <Input
-                label="الميزانية المقدرة (ر.س)"
-                type="number"
-                step="0.01"
-                value={estimatedBudget}
-                onChange={(e) => setEstimatedBudget(e.target.value)}
-                placeholder="0.00"
-              />
+              <div>
+                <Input
+                  label="الميزانية المقدرة (ر.س)"
+                  type="number"
+                  step="0.01"
+                  value={estimatedBudget}
+                  onChange={(e) => setEstimatedBudget(e.target.value)}
+                  placeholder="0.00"
+                />
+                {budgetTooLow && (
+                  <div style={{ marginTop: 8, color: '#B45309', fontWeight: 700, fontSize: 13 }}>
+                    ⚠️ الميزانية أقل من إجمالي البنود. حدّث الميزانية أو عدّل البنود.
+                  </div>
+                )}
+              </div>
 
               <Input
                 label="التاريخ المطلوب"

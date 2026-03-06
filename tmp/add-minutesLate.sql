@@ -1,0 +1,1 @@
+ALTER TABLE "AttendanceRecord" ADD COLUMN IF NOT EXISTS "minutesLate" integer DEFAULT 0;

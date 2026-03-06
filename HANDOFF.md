@@ -317,3 +317,23 @@ When you change anything meaningful (behavior, DB schema, routing rules, permiss
 - `npx prisma generate`
 - `npx prisma migrate deploy`
 - Mention migration id in `HANDOFF.md`
+
+---
+
+# 2026-03-05 (hotfix)
+
+What I changed:
+- Quick fix to API `app/api/hr/attendance/late-summary/route.ts` to avoid TypeScript build failure caused by referencing a non-existent `minutesLate` field on `AttendanceRecord`.
+
+Why:
+- `AttendanceRecord` model doesn't store `minutesLate`; build failed during CI/production build. To restore production build quickly I removed the invalid select and guarded usage.
+
+How to test:
+- `npx tsc -p tsconfig.json --noEmit`
+- `npm run build`
+- Restart PM2 and confirm `/api/health` returns 200
+
+Notes:
+- This is a behavioral fix to make the build succeed. The endpoint currently reports zero average late minutes until a proper computation (based on checkIn vs work start time or a stored minutesLate) is implemented.
+- If you want accurate late minutes in the summary, add computed logic: fetch branch/stage attendance settings or store minutesLate at record creation time and update this route accordingly.
+

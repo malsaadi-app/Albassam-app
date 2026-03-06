@@ -278,12 +278,24 @@ export async function POST(request: NextRequest) {
       // If checking in AFTER the late threshold, mark as LATE
       const status = now > lateThreshold ? 'LATE' : 'PRESENT';
 
+      // compute minutesLate to store (align using UTC date parts)
+      let minutesLate = 0;
+      try {
+        const checkInDate = new Date(now);
+        const [sh, sm] = workStartTime.split(':').map(Number);
+        const scheduledUTC = new Date(Date.UTC(checkInDate.getUTCFullYear(), checkInDate.getUTCMonth(), checkInDate.getUTCDate(), sh, sm));
+        minutesLate = Math.max(0, Math.round((checkInDate.getTime() - scheduledUTC.getTime()) / 60000));
+      } catch (e) {
+        minutesLate = 0;
+      }
+
       const record = await prisma.attendanceRecord.create({
         data: {
           userId: session.user.id,
           checkIn: now,
           date: today,
           status,
+          minutesLate,
           location: location || null,
           latitude: userLat,
           longitude: userLon,
