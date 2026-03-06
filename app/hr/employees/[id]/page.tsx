@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import ReactSelect from 'react-select';
-import dynamic from 'next/dynamic';
-const EmployeeCoverageEditor = dynamic(() => import('@/components/EmployeeCoverageEditor'), { ssr: false });
+import EmployeeCoverageEditor from '../../../components/EmployeeCoverageEditor';
 
 type OrgUnitRow = { id: string; name: string; type: string; parentId: string | null };
 
@@ -79,13 +78,27 @@ export default function EmployeeDetailPage() {
     }
   }, [params.id]);
 
+  const [branchType, setBranchType] = useState<string | null>(null);
+
   useEffect(() => {
     if (!params.id) return;
     if (!employee?.branchId) return;
+    fetchBranchInfo();
     fetchOrgStructure();
     fetchOrgAssignments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id, employee?.branchId]);
+
+  const fetchBranchInfo = async () => {
+    try {
+      const res = await fetch(`/api/branches/${employee.branchId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setBranchType(data.branch?.type || null);
+    } catch (e) {
+      console.error('Error fetching branch info', e);
+    }
+  };
 
   const fetchUserRole = async () => {
     try {
@@ -221,6 +234,8 @@ export default function EmployeeDetailPage() {
     .filter((u) => u.type === 'DEPARTMENT' || u.type === 'SUB_DEPARTMENT')
     .map((u) => ({ value: u.id, label: u.name }));
 
+  const isSchoolBranch = branchType === 'SCHOOL';
+
   return (
     <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
       <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
@@ -353,36 +368,40 @@ export default function EmployeeDetailPage() {
                 <EmployeeCoverageEditor assignmentId={orgAssignments[0]?.id || ''} branches={orgUnits.map(u=>({ id: u.id, name: u.name }))} />
               </div>
 
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 8 }}>المرحلة الأساسية (Legacy)</div>
-                <select
-                  value={primaryStageId}
-                  onChange={(e) => setPrimaryStageId(e.target.value)}
-                  style={{ width: '100%', padding: '10px 10px', borderRadius: 12, border: '1px solid #E5E7EB', background: 'white' }}
-                >
-                  <option value="">— بدون —</option>
-                  {stageOptions.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                <div style={{ color: '#6B7280', fontSize: 12, marginTop: 6 }}>
-                  ملاحظة: هذا الحقل للتوافق مع النظام القديم. التبعيات الفعلية متعددة المراحل تكون تحت "مراحل المعلم".
-                </div>
-              </div>
+              {isSchoolBranch && (
+                <>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 8 }}>المرحلة الأساسية (Legacy)</div>
+                    <select
+                      value={primaryStageId}
+                      onChange={(e) => setPrimaryStageId(e.target.value)}
+                      style={{ width: '100%', padding: '10px 10px', borderRadius: 12, border: '1px solid #E5E7EB', background: 'white' }}
+                    >
+                      <option value="">— بدون —</option>
+                      {stageOptions.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    <div style={{ color: '#6B7280', fontSize: 12, marginTop: 6 }}>
+                      ملاحظة: هذا الحقل للتوافق مع النظام القديم. التبعيات الفعلية متعددة المراحل تكون تحت "مراحل المعلم".
+                    </div>
+                  </div>
 
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 8 }}>مراحل المعلم (ADMIN line) — متعدد</div>
-                <ReactSelect
-                  isMulti
-                  isRtl
-                  placeholder="اختر المراحل…"
-                  options={stageOptions}
-                  value={adminStageUnitIds.map((id) => stageOptions.find((o) => o.value === id)).filter(Boolean) as any}
-                  onChange={(vals) => setAdminStageUnitIds((vals || []).map((v: any) => v.value))}
-                />
-              </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 8 }}>مراحل المعلم (ADMIN line) — متعدد</div>
+                    <ReactSelect
+                      isMulti
+                      isRtl
+                      placeholder="اختر المراحل…"
+                      options={stageOptions}
+                      value={adminStageUnitIds.map((id) => stageOptions.find((o) => o.value === id)).filter(Boolean) as any}
+                      onChange={(vals) => setAdminStageUnitIds((vals || []).map((v: any) => v.value))}
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 8 }}>الأقسام (FUNCTIONAL line) — متعدد</div>
