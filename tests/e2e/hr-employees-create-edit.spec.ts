@@ -109,6 +109,13 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
     try {
       details = await createRes.text()
     } catch {}
+    // Save diagnostic to file for easier debugging
+    try {
+      const fs = require('fs')
+      const out = `STATUS: ${createRes.status()}\nHEADERS: ${JSON.stringify(createRes.headers())}\nBODY: ${details}`
+      fs.writeFileSync('test-results/hr-employees-create-edit-diagnostics.txt', out)
+    } catch (e) {}
+
     const msg = `Create employee failed: HTTP ${createRes.status()} ${details}`
     throw new Error(msg)
   }
