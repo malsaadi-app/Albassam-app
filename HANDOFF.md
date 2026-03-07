@@ -337,3 +337,7 @@ Notes:
 - This is a behavioral fix to make the build succeed. The endpoint currently reports zero average late minutes until a proper computation (based on checkIn vs work start time or a stored minutesLate) is implemented.
 - If you want accurate late minutes in the summary, add computed logic: fetch branch/stage attendance settings or store minutesLate at record creation time and update this route accordingly.
 
+
+## Work started: Org Structure V2
+- Started implementation: coverageScope UI + ADMIN assignments UI.
+- Started by: assistant (automated).
