@@ -24,8 +24,9 @@ function controlByNearbyText(scope: any, labelText: RegExp) {
 }
 
 test('HR employees: qa_hr can create employee in QA branch and then edit basic fields', async ({ page }) => {
-  const username = process.env.E2E_HR_USERNAME || 'qa_hr'
-  const password = process.env.E2E_HR_PASSWORD || 'qa12345'
+  // Use qa_admin to ensure create permissions in CI tests
+  const username = process.env.E2E_ADMIN_USERNAME || process.env.E2E_HR_USERNAME || 'qa_admin'
+  const password = process.env.E2E_ADMIN_PASSWORD || process.env.E2E_HR_PASSWORD || 'qa12345'
 
   await login(page, username, password)
 
