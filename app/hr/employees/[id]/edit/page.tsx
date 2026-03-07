@@ -77,7 +77,9 @@ export default function EditEmployeePage() {
     education: '',
     specialization: '',
     certifications: '',
-    emergencyLeaveBalance: 0
+    emergencyLeaveBalance: 0,
+    annualLeaveTotal: 30,
+    annualLeaveUsed: 0
   });
 
   useEffect(() => {
@@ -99,6 +101,10 @@ export default function EditEmployeePage() {
       setFormData(prev => ({ ...prev, stageId: '' }));
     }
   }, [formData.branchId]);
+
+  // determine selected branch type (SCHOOL / COMPANY)
+  const selectedBranchType = branches.find(b => b.id === formData.branchId)?.type || '';
+
 
   const fetchSystemRoles = async () => {
     try {
@@ -223,7 +229,9 @@ export default function EditEmployeePage() {
           })(),
           specialization: data.specialization || '',
           certifications: data.certifications || '',
-          emergencyLeaveBalance: data.leaveBalance?.emergencyRemaining || 0
+          emergencyLeaveBalance: data.leaveBalance?.emergencyRemaining || 0,
+          annualLeaveTotal: data.leaveBalance?.annualTotal || 30,
+          annualLeaveUsed: data.leaveBalance?.annualUsed || 0
         });
       }
     } catch (error) {
@@ -417,7 +425,7 @@ export default function EditEmployeePage() {
                   </option>
                 ))}
               </Select>
-              {formData.branchId && stages.length > 0 && (
+              {selectedBranchType === 'SCHOOL' && stages.length > 0 && (
                 <Select
                   label="المرحلة الدراسية"
                   value={formData.stageId}
@@ -427,6 +435,22 @@ export default function EditEmployeePage() {
                   {stages.map((stage) => (
                     <option key={stage.id} value={stage.id}>
                       {stage.name}
+                    </option>
+                  ))}
+                </Select>
+              )}
+
+              {/* If branch is COMPANY, show department picker (legacy department field) */}
+              {selectedBranchType === 'COMPANY' && (
+                <Select
+                  label="القسم (للشركات)"
+                  value={formData.departmentId}
+                  onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
+                >
+                  <option value="">اختر القسم...</option>
+                  {departments.filter(d => d.isActive).map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.nameAr}
                     </option>
                   ))}
                 </Select>
@@ -574,6 +598,33 @@ export default function EditEmployeePage() {
                 label="الشهادات"
                 value={formData.certifications}
                 onChange={(e) => setFormData({ ...formData, certifications: e.target.value })}
+              />
+            </div>
+          </Card>
+
+          {/* Leave Balance */}
+          <Card variant="default" style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', marginBottom: '20px' }}>
+              🧾 رصيد الإجازات
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+              <Input
+                label="إجمالي الإجازات السنوية (يوم)"
+                type="number"
+                value={formData.annualLeaveTotal}
+                onChange={(e) => setFormData({ ...formData, annualLeaveTotal: parseInt(e.target.value || '0', 10) })}
+              />
+              <Input
+                label="المستهلَكة من الإجازة السنوية (يوم)"
+                type="number"
+                value={formData.annualLeaveUsed}
+                onChange={(e) => setFormData({ ...formData, annualLeaveUsed: parseInt(e.target.value || '0', 10) })}
+              />
+              <Input
+                label="إجمالي الإجازات الطارئة المتبقية (يوم)"
+                type="number"
+                value={formData.emergencyLeaveBalance}
+                onChange={(e) => setFormData({ ...formData, emergencyLeaveBalance: parseInt(e.target.value || '0', 10) })}
               />
             </div>
           </Card>
