@@ -125,13 +125,16 @@ export default function NewEmployeePage() {
     setSaving(true);
     try {
       // Map form data to API schema
-      const payload = {
+      const payload: any = {
         ...formData,
         fullNameAr: formData.arabicName,
         fullNameEn: formData.englishName,
         branchId: formData.branchId || undefined,
         stageId: formData.stageId || undefined
       };
+
+      // Don’t send empty strings for optional FK fields (causes FK violations)
+      if (payload.systemRoleId === '') delete payload.systemRoleId;
 
       const res = await fetch('/api/hr/employees', {
         method: 'POST',
