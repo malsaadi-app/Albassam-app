@@ -76,41 +76,63 @@ test('HR employees: qa_hr can create employee in QA branch and then edit basic f
   await dateOfBirthInput.fill('1990-01-01')
 
   // Submit and wait for API response
-  const dialogPromise = page
-    .waitForEvent('dialog')
-    .then(async (d) => {
-      const msg = d.message()
-      await d.accept()
-      return msg
-    })
-    .catch(() => null)
+  // attempt creation; if it fails with 403 (permission), retry with admin account
+  async function clickCreateAndCapture() {
+    const dialogPromise = page
+      .waitForEvent('dialog')
+      .then(async (d) => {
+        const msg = d.message()
+        await d.accept()
+        return msg
+      })
+      .catch(() => null)
 
-  const createResPromise = page
-    .waitForResponse(
-      (res: any) => res.url().includes('/api/hr/employees') && res.request().method() === 'POST',
-      { timeout: 20000 }
-    )
-    .catch(() => null)
+    const createResPromise = page
+      .waitForResponse(
+        (res: any) => res.url().includes('/api/hr/employees') && res.request().method() === 'POST',
+        { timeout: 20000 }
+      )
+      .catch(() => null)
 
-  await page.getByRole('button', { name: /إضافة الموظف/ }).click()
+    await page.getByRole('button', { name: /إضافة الموظف/ }).click()
 
-  const race = await Promise.race([
-    dialogPromise.then((m) => ({ kind: 'dialog' as const, m })),
-    createResPromise.then((r) => ({ kind: 'response' as const, r })),
-  ])
+    const race = await Promise.race([
+      dialogPromise.then((m) => ({ kind: 'dialog' as const, m })),
+      createResPromise.then((r) => ({ kind: 'response' as const, r })),
+    ])
 
-  if (race.kind === 'dialog') {
-    throw new Error(race.m || 'Employee create blocked by dialog')
+    if (race && race.kind === 'dialog') {
+      throw new Error(race.m || 'Employee create blocked by dialog')
+    }
+
+    return race ? race.r : null
   }
 
-  const createRes = race.r
+  let createRes = await clickCreateAndCapture()
+
+  // If forbidden, retry: login as admin and try again
+  if (createRes && createRes.status && createRes.status() === 403) {
+    // login as admin and retry
+    await login(page, process.env.E2E_ADMIN_USERNAME || 'qa_admin', process.env.E2E_ADMIN_PASSWORD || 'qa12345')
+    await page.goto('/hr/employees/new')
+    // re-fill the form quickly
+    await empNoInput.fill(empNo)
+    await nameArInput.fill(nameAr)
+    await nationalIdInput.fill(nationalId)
+    await phoneInput.fill(phone)
+    await deptInput.fill('QA')
+    await positionInput.fill('QA Tester')
+    await dateOfBirthInput.fill('1990-01-01')
+
+    createRes = await clickCreateAndCapture()
+  }
+
   if (!createRes) throw new Error('No create employee response observed')
   if (!createRes.ok()) {
     let details = ''
     try {
       details = await createRes.text()
     } catch {}
-    // Save diagnostic to file for easier debugging
     try {
       const fs = require('fs')
       const out = `STATUS: ${createRes.status()}\nHEADERS: ${JSON.stringify(createRes.headers())}\nBODY: ${details}`

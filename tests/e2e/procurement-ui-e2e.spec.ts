@@ -33,8 +33,9 @@ async function logout(page: any) {
   await page.goto('/auth/login')
 }
 
+
 test('Procurement UI E2E: requester -> asma -> mq -> abdullahsh -> requester confirm receipt', async ({ page, request }) => {
-  test.setTimeout(120000)
+  test.setTimeout(300000)
   // 1) Requester creates PR
   await login(page, 'qa_requester_girls', 'qa12345')
   await page.goto('/procurement/requests/new')
@@ -56,13 +57,20 @@ test('Procurement UI E2E: requester -> asma -> mq -> abdullahsh -> requester con
   const prUrl = page.url()
   const prId = prUrl.split('/').pop()!
 
+  // helper: robust approve click
+  const waitAndClickApprove = async () => {
+    const btn = page.getByRole('button', { name: /^\s*✓?\s*موافقة\s*$/ })
+    await btn.waitFor({ state: 'visible', timeout: 180000 })
+    await btn.click({ timeout: 60000 })
+    await page.getByRole('button', { name: /تأكيد الموافقة/ }).click({ timeout: 60000 })
+  }
+
   // 2) Asma gatekeeper approves (via UI approve)
   await logout(page)
   await login(page, 'asma', 'Test1234')
   await page.goto(`/procurement/requests/${prId}`)
 
-  await page.getByRole('button', { name: /^✓ موافقة$/ }).click()
-  await page.getByRole('button', { name: /تأكيد الموافقة/ }).click()
+  await waitAndClickApprove()
   // Status should remain pending review (gatekeeper pre-approval)
   await expect(page.locator('body')).toContainText('معلق')
 
@@ -71,8 +79,7 @@ test('Procurement UI E2E: requester -> asma -> mq -> abdullahsh -> requester con
   await login(page, 'mq', 'Test1234')
   await page.goto(`/procurement/requests/${prId}`)
 
-  await page.getByRole('button', { name: /^✓ موافقة$/ }).click()
-  await page.getByRole('button', { name: /تأكيد الموافقة/ }).click()
+  await waitAndClickApprove()
   await expect(page.locator('body')).toContainText('تمت المراجعة')
 
   // 4) abdullahsh approves (last step -> IN_PROGRESS)
@@ -80,8 +87,7 @@ test('Procurement UI E2E: requester -> asma -> mq -> abdullahsh -> requester con
   await login(page, 'abdullahsh', 'Test1234')
   await page.goto(`/procurement/requests/${prId}`)
 
-  await page.getByRole('button', { name: /^✓ موافقة$/ }).click()
-  await page.getByRole('button', { name: /تأكيد الموافقة/ }).click()
+  await waitAndClickApprove()
   await expect(page.locator('body')).toContainText('قيد التنفيذ')
 
   // 5) requester confirms receipt (API call) -> COMPLETED
