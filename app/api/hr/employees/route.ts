@@ -164,8 +164,19 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getSession(await cookies());
 
-    // Allow HR employees to create employees as well (UI permits HR_EMPLOYEE)
+    // Debug: log session for failed POST attempts (temporary)
+    console.log('POST /api/hr/employees session:', JSON.stringify(session?.user));
+
+    // If missing/forbidden, write diagnostics to disk for offline inspection (temporary)
     if (!session.user || (session.user.role !== 'ADMIN' && session.user.role !== 'HR_EMPLOYEE')) {
+      try {
+        const fs = require('fs')
+        const path = '/data/.openclaw/workspace/albassam-tasks/test-results/session-diagnostics.json'
+        fs.writeFileSync(path, JSON.stringify({ session: session?.user || null, at: new Date().toISOString() }))
+      } catch (e) {
+        console.error('Failed to write session diagnostics:', e)
+      }
+      console.log('Authorization failed for user:', session?.user?.username);
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 
