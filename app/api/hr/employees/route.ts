@@ -164,8 +164,12 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getSession(await cookies());
 
+    // Debug: log session for failed POST attempts (temporary)
+    console.log('POST /api/hr/employees session:', JSON.stringify(session?.user));
+
     // Allow HR employees to create employees as well (UI permits HR_EMPLOYEE)
     if (!session.user || (session.user.role !== 'ADMIN' && session.user.role !== 'HR_EMPLOYEE')) {
+      console.log('Authorization failed for user:', session?.user?.username);
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 
