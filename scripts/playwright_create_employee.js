@@ -18,12 +18,15 @@ const { chromium } = require('playwright');
   await page.goto(`${base}/hr/employees/new`, { waitUntil: 'networkidle' });
   await page.waitForSelector('form', { timeout: 10000 });
 
-  // Fill form basic required fields
-  // We'll find inputs by nearby labels using placeholders/order
+  // Fill form basic required fields with unique values
+  const ts = Date.now().toString().slice(-6);
+  const empNumber = `PROD-${ts}`;
+  const generatedNationalId = String(9000000000 + (Date.now() % 1000000000)).slice(0,10);
+
   const basicInputs = await page.locator('h3', { hasText: '📋 البيانات الأساسية' }).locator('..').locator('input');
-  await basicInputs.nth(0).fill('TEST-PLAY-001'); // employeeNumber
-  await basicInputs.nth(1).fill('موظف اختبار PLAY'); // arabicName
-  await basicInputs.nth(3).fill(String(9000000000 + (Date.now() % 1000000)).slice(0,10)); // nationalId
+  await basicInputs.nth(0).fill(empNumber); // employeeNumber
+  await basicInputs.nth(1).fill(`موظف اختبار PROD ${ts}`); // arabicName
+  await basicInputs.nth(3).fill(generatedNationalId); // nationalId
 
   const contactSection = page.locator('h3', { hasText: '📞 معلومات الاتصال' }).locator('..');
   await contactSection.locator('input').first().fill('0555551234');
