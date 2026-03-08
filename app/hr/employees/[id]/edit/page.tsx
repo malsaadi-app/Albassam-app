@@ -111,6 +111,11 @@ export default function EditEmployeePage() {
 
   // determine selected branch type (SCHOOL / COMPANY)
   const selectedBranchType = branches.find(b => b.id === formData.branchId)?.type || '';
+  
+  // Debug logging
+  if (typeof window !== 'undefined') {
+    console.log('[ORG DEBUG] branchId:', formData.branchId, 'type:', selectedBranchType, 'orgUnits:', orgUnits.length);
+  }
 
 
   const fetchSystemRoles = async () => {
@@ -252,13 +257,16 @@ export default function EditEmployeePage() {
   const fetchOrgStructure = async (branchId: string) => {
     if (!branchId) return;
     try {
+      console.log('[ORG] Fetching org structure for branchId:', branchId);
       const res = await fetch(`/api/settings/org-structure?branchId=${branchId}`);
       const data = await res.json().catch(() => ({}));
+      console.log('[ORG] Response status:', res.status, 'Units count:', (data.units || []).length);
       if (res.ok) {
         setOrgUnits(data.units || []);
+        console.log('[ORG] Set orgUnits:', (data.units || []).length, 'units');
       }
     } catch (e) {
-      console.error('Error fetching org structure', e);
+      console.error('[ORG] Error fetching org structure', e);
     }
   };
 
@@ -312,6 +320,7 @@ export default function EditEmployeePage() {
   // Load org structure when branchId changes
   useEffect(() => {
     if (formData.branchId && !loading) {
+      console.log('[ORG] Loading org structure for branchId:', formData.branchId);
       fetchOrgStructure(formData.branchId);
       fetchOrgAssignments();
     }
@@ -492,7 +501,7 @@ export default function EditEmployeePage() {
               <Select
                 label="الفرع"
                 value={formData.branchId}
-                onChange={(e) => setFormData({ ...formData, branchId: e.target.value, stageId: '' })}
+                onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
               >
                 <option value="">اختر الفرع...</option>
                 {branches.map((branch) => (
@@ -501,20 +510,8 @@ export default function EditEmployeePage() {
                   </option>
                 ))}
               </Select>
-              {selectedBranchType === 'SCHOOL' && stages.length > 0 && (
-                <Select
-                  label="المرحلة الدراسية"
-                  value={formData.stageId}
-                  onChange={(e) => setFormData({ ...formData, stageId: e.target.value })}
-                >
-                  <option value="">اختر المرحلة...</option>
-                  {stages.map((stage) => (
-                    <option key={stage.id} value={stage.id}>
-                      {stage.name}
-                    </option>
-                  ))}
-                </Select>
-              )}
+
+              {/* المرحلة الدراسية: تم نقلها إلى قسم "التبعيات التنظيمية" (multi-select) */}
 
               {/* If branch is COMPANY, show department picker (legacy department field) */}
               {selectedBranchType === 'COMPANY' && (
@@ -710,6 +707,9 @@ export default function EditEmployeePage() {
             <Card variant="default" style={{ marginBottom: '24px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', marginBottom: '20px' }}>
                 🏢 التبعيات التنظيمية
+                <span style={{ fontSize: '12px', fontWeight: '400', color: '#6B7280', marginRight: '8px' }}>
+                  (Branch: {formData.branchId?.substring(0, 8)}... | Units: {orgUnits.length})
+                </span>
               </h3>
               
               <div style={{ display: 'grid', gap: '20px' }}>
