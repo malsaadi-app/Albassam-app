@@ -35,6 +35,7 @@ export default function EmployeeDetailPage() {
   // org structure data for this employee branch
   const [orgUnits, setOrgUnits] = useState<OrgUnitRow[]>([]);
   const [orgAssignments, setOrgAssignments] = useState<OrgAssignmentRow[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
 
   // editable selections
   const [adminStageUnitIds, setAdminStageUnitIds] = useState<string[]>([]);
@@ -73,6 +74,7 @@ export default function EmployeeDetailPage() {
 
   useEffect(() => {
     fetchUserRole();
+    fetchBranches();
     if (params.id) {
       fetchEmployee();
     }
@@ -88,6 +90,20 @@ export default function EmployeeDetailPage() {
     fetchOrgAssignments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id, employee?.branchId]);
+
+  const fetchBranches = async () => {
+    try {
+      const res = await fetch('/api/branches');
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : data.branches || [];
+        setBranches(list.filter((b: any) => b.status === 'ACTIVE').map((b: any) => ({ id: b.id, name: b.name })));
+      }
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+      setBranches([]);
+    }
+  };
 
   const fetchBranchInfo = async () => {
     try {
@@ -365,7 +381,7 @@ export default function EmployeeDetailPage() {
               {/* Coverage editor (multi-branch supervisor support) */}
               <div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 8 }}>نطاق التغطية (CoverageScope)</div>
-                <EmployeeCoverageEditor assignmentId={orgAssignments[0]?.id || ''} branches={orgUnits.map(u=>({ id: u.id, name: u.name }))} />
+                <EmployeeCoverageEditor assignmentId={orgAssignments[0]?.id || ''} branches={branches} />
               </div>
 
               {isSchoolBranch && (
