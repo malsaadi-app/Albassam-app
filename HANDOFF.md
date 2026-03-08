@@ -387,7 +387,36 @@ Expected: `{"status":"ok",...}`
 - Field: `role` (OrgAssignmentRole: HEAD | SUPERVISOR | MEMBER)
 
 **Next steps:**
-1. Add authentication checks to route handlers (currently public)
-2. Implement UI for ADMIN assignments (teachers to stages)
-3. Test end-to-end from UI → API → DB
+1. ✅ Add authentication checks to route handlers (DONE: commit ac499cf)
+2. ✅ Implement UI for ADMIN assignments (DONE: commit 75a8408 - added to edit page)
+3. Test end-to-end from UI → API → DB (IN PROGRESS)
 4. Add validation for coverage scope + branch IDs consistency
+
+## 2026-03-08 (continued): Org assignments UI added to employee edit page ✅
+
+**What changed:**
+- Added "التبعيات التنظيمية" section to `/hr/employees/[id]/edit` page
+- Shows for SCHOOL branches when org structure exists
+- Features:
+  - **Admin stage assignments (multi-select):** for teachers (position contains "معلم" OR has specialization)
+  - **Functional department assignments (multi-select):** for all employees
+  - Separate save button for org assignments (doesn't trigger full employee save)
+  - Auto-loads org structure when branchId changes
+  - Uses same API endpoint: `/api/hr/employees/:id/org-assignments` (PUT)
+- UI components:
+  - ReactSelect with RTL support
+  - Filtered options (STAGE for admin, DEPARTMENT/SUB_DEPARTMENT for functional)
+  - Helper text explaining each section
+- Benefits:
+  - Users can now set org assignments when editing employee data (no need to switch to detail page)
+  - Better UX for new employee creation workflow
+  - Consistent with design from employee detail page
+
+**How to test:**
+1. Go to: https://app.albassam-app.com/hr/employees/[id]/edit
+2. For a teacher employee (position contains "معلم"), you should see "مراحل المعلم" multi-select
+3. All employees see "الأقسام (FUNCTIONAL line)" multi-select
+4. Select stages/departments
+5. Click "💾 حفظ التبعيات التنظيمية"
+6. Verify success message
+7. Refresh page and confirm selections persist
