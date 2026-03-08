@@ -88,9 +88,43 @@ Under `app/api/settings/org-structure/*`:
 Auth note:
 - Org structure APIs allow **legacy ADMIN** OR **RBAC superadmin**.
 
-## Remaining work (agreed)
-1) coverageScope UI for HEAD/SUPERVISOR.
-2) ADMIN assignments UI for teachers (stages).
+## 2026-03-09: Org Structure V2 — COMPLETED ✅
+
+**Status:** Ready to merge
+
+**What was delivered:**
+1. ✅ API endpoints (POST/PUT/GET/PATCH) with authentication
+2. ✅ Coverage scope UI (BRANCH/MULTI_BRANCH/ALL) with branch picker
+3. ✅ ADMIN assignments UI in employee edit page (stages + departments multi-select)
+4. ✅ Fixed duplicate stage field (removed from job data section)
+5. ✅ Added stages to all school branches
+6. ✅ Added org structure to institutes and companies
+7. ✅ Comprehensive audit and data validation
+
+**Key commits:**
+- b7efc1e: Complete Org Structure V2 assignments API
+- ac499cf: Add auth checks to assignments API
+- 75a8408: Add org structure assignments to employee edit page
+- 887adc4: Fix branch picker (use actual branches instead of orgUnits)
+- c3668a0: Remove duplicate stage field from employee edit
+- 9652a24: Show stages for all employees & remove debug info
+
+**Testing:**
+- ✅ API endpoints tested (auth, CRUD operations)
+- ✅ UI tested on multiple browsers
+- ✅ Data persistence verified
+- ✅ All school branches have complete org structure (stages + departments)
+- ✅ Institutes and companies have department structure
+
+**Known limitations:**
+- Role selection (HEAD/SUPERVISOR/MEMBER) is currently fixed to MEMBER
+- Permissions system not yet integrated (planned for next phase)
+
+**Next steps:**
+1. Merge to main
+2. Implement comprehensive Permissions System
+3. Link org roles (HEAD/SUPERVISOR/MEMBER) to permissions
+4. Add role selection UI during assignments
 
 ---
 
