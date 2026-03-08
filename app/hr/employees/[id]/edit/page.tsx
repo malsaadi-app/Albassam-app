@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Input, Select } from '@/components/ui/Input';
+import ReactSelect from 'react-select';
 
 export default function EditEmployeePage() {
   const params = useParams();
@@ -17,6 +18,12 @@ export default function EditEmployeePage() {
   const [stages, setStages] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [jobTitles, setJobTitles] = useState<any[]>([]);
+  
+  // Org Structure (للتبعيات التنظيمية)
+  const [orgUnits, setOrgUnits] = useState<any[]>([]);
+  const [adminStageUnitIds, setAdminStageUnitIds] = useState<string[]>([]);
+  const [functionalUnitIds, setFunctionalUnitIds] = useState<string[]>([]);
+  const [savingOrg, setSavingOrg] = useState(false);
 
   // قوائم ثابتة
   const educationLevels = [
@@ -240,6 +247,75 @@ export default function EditEmployeePage() {
       setLoading(false);
     }
   };
+
+  // Fetch org structure for current employee's branch
+  const fetchOrgStructure = async (branchId: string) => {
+    if (!branchId) return;
+    try {
+      const res = await fetch(`/api/settings/org-structure?branchId=${branchId}`);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setOrgUnits(data.units || []);
+      }
+    } catch (e) {
+      console.error('Error fetching org structure', e);
+    }
+  };
+
+  // Fetch employee org assignments
+  const fetchOrgAssignments = async () => {
+    if (!params.id) return;
+    try {
+      const res = await fetch(`/api/hr/employees/${params.id}/org-assignments`);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const list = data.assignments || [];
+        const adminStages = list.filter((a: any) => a.assignmentType === 'ADMIN' && a.role === 'MEMBER').map((a: any) => a.orgUnitId);
+        const functional = list.filter((a: any) => a.assignmentType === 'FUNCTIONAL' && a.role === 'MEMBER').map((a: any) => a.orgUnitId);
+        setAdminStageUnitIds(adminStages);
+        setFunctionalUnitIds(functional);
+      }
+    } catch (e) {
+      console.error('Error fetching org assignments', e);
+    }
+  };
+
+  // Save org assignments
+  const saveOrgAssignments = async () => {
+    if (!params.id) return;
+    try {
+      setSavingOrg(true);
+      const res = await fetch(`/api/hr/employees/${params.id}/org-assignments`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminStageUnitIds,
+          functionalUnitIds,
+          primaryStageId: formData.stageId || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'فشل حفظ التبعيات');
+        return;
+      }
+      alert('✅ تم حفظ التبعيات بنجاح');
+      fetchOrgAssignments();
+    } catch (e) {
+      console.error(e);
+      alert('فشل حفظ التبعيات');
+    } finally {
+      setSavingOrg(false);
+    }
+  };
+
+  // Load org structure when branchId changes
+  useEffect(() => {
+    if (formData.branchId && !loading) {
+      fetchOrgStructure(formData.branchId);
+      fetchOrgAssignments();
+    }
+  }, [formData.branchId, loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -628,6 +704,85 @@ export default function EditEmployeePage() {
               />
             </div>
           </Card>
+
+          {/* Org Structure Assignments */}
+          {selectedBranchType === 'SCHOOL' && orgUnits.length > 0 && (
+            <Card variant="default" style={{ marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', marginBottom: '20px' }}>
+                🏢 التبعيات التنظيمية
+              </h3>
+              
+              <div style={{ display: 'grid', gap: '20px' }}>
+                {/* Admin Stage Assignments (for teachers) */}
+                {(formData.position?.includes('معلم') || formData.specialization) && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                      مراحل المعلم (ADMIN line) — متعدد
+                    </label>
+                    <ReactSelect
+                      isMulti
+                      isRtl
+                      placeholder="اختر المراحل…"
+                      options={orgUnits
+                        .filter((u) => u.type === 'STAGE' && u.isActive)
+                        .map((u) => ({ value: u.id, label: u.name }))}
+                      value={adminStageUnitIds.map((id) => {
+                        const unit = orgUnits.find((u) => u.id === id);
+                        return unit ? { value: id, label: unit.name } : null;
+                      }).filter(Boolean) as any}
+                      onChange={(vals) => setAdminStageUnitIds((vals || []).map((v: any) => v.value))}
+                      styles={{
+                        control: (base) => ({ ...base, borderRadius: 12, borderColor: '#E5E7EB', minHeight: 44 }),
+                        menu: (base) => ({ ...base, zIndex: 60 }),
+                      }}
+                    />
+                    <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '6px' }}>
+                      المعلم يمكن أن يُعيّن لعدة مراحل (مثل: معلم للمرحلة الابتدائية والمتوسطة).
+                    </div>
+                  </div>
+                )}
+
+                {/* Functional Department Assignments */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                    الأقسام (FUNCTIONAL line) — متعدد
+                  </label>
+                  <ReactSelect
+                    isMulti
+                    isRtl
+                    placeholder="اختر الأقسام…"
+                    options={orgUnits
+                      .filter((u) => (u.type === 'DEPARTMENT' || u.type === 'SUB_DEPARTMENT') && u.isActive)
+                      .map((u) => ({ value: u.id, label: u.name }))}
+                    value={functionalUnitIds.map((id) => {
+                      const unit = orgUnits.find((u) => u.id === id);
+                      return unit ? { value: id, label: unit.name } : null;
+                    }).filter(Boolean) as any}
+                    onChange={(vals) => setFunctionalUnitIds((vals || []).map((v: any) => v.value))}
+                    styles={{
+                      control: (base) => ({ ...base, borderRadius: 12, borderColor: '#E5E7EB', minHeight: 44 }),
+                      menu: (base) => ({ ...base, zIndex: 60 }),
+                    }}
+                  />
+                  <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '6px' }}>
+                    ربط الموظف بأقسام (مثل: قسم التربية الإسلامية). لا يُغيّر تعيين المشرف/المدير.
+                  </div>
+                </div>
+
+                {/* Save Org Assignments Button */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={saveOrgAssignments}
+                    loading={savingOrg}
+                  >
+                    💾 حفظ التبعيات التنظيمية
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
