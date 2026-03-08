@@ -454,3 +454,160 @@ Expected: `{"status":"ok",...}`
 5. Click "💾 حفظ التبعيات التنظيمية"
 6. Verify success message
 7. Refresh page and confirm selections persist
+
+## 2026-03-09: Permissions System - Phase 1 COMPLETED ✅
+
+**Status:** Permission-driven UI system implemented
+
+**What was delivered:**
+
+### 1. Database & Seed Data ✅
+- **8 System Roles** with Arabic/English names:
+  - SUPER_ADMIN (مدير النظام) - 28 permissions (all)
+  - HR_MANAGER (مدير الموارد البشرية) - 17 permissions
+  - BRANCH_MANAGER (مدير الفرع) - 15 permissions
+  - DEPT_HEAD (مدير القسم/المرحلة) - 14 permissions
+  - SUPERVISOR (مشرف القسم) - 9 permissions
+  - STAGE_SECRETARY (سكرتير المرحلة) - 5 permissions 🆕
+  - TEACHER (معلم) - 3 permissions
+  - EMPLOYEE (موظف) - 3 permissions
+
+- **28 Permissions** across 6 modules:
+  - **employees** (6): view, view_team 🆕, create, edit, delete, view_salary
+  - **org** (4): view, manage, assign, view_team
+  - **hr** (4): view_requests, approve_requests, manage_leaves, submit_request
+  - **attendance** (4): view, view_team 🆕, manage, export 🆕
+  - **tasks** (4): view 🆕, create 🆕, assign 🆕, manage 🆕
+  - **procurement** (3): view, create, approve
+  - **settings** (3): view, manage, manage_roles
+
+- **94 Role-Permission Links** created
+
+### 2. Permission-Driven UI System ✅
+
+**Core Files:**
+- `lib/navigation-config.js` - Centralized navigation config with permission mapping
+- `hooks/usePermissions.js` - Permission checking and UI filtering hook
+- `components/DynamicSidebar.jsx` - Auto-generated sidebar based on permissions
+
+**Key Features:**
+- ✅ **Automatic UI filtering** - sidebar items appear/hide based on user permissions
+- ✅ **Zero manual updates** - adding new permission automatically updates UI
+- ✅ **Configuration-based** - no code changes needed for new pages
+- ✅ **Multiple protection levels**:
+  - Page-level protection (`withPermission` HOC)
+  - Component-level protection (`PermissionGuard`)
+  - Element-level conditional rendering
+- ✅ **Server-side support** - API route protection helpers
+- ✅ **Data filtering** - scope data to org structure (team-scoped permissions)
+
+### 3. Team-Scoped Permissions ✅
+
+**Concept:** Permission + Org Structure = Accessible Data
+
+**Example:**
+- DEPT_HEAD with `attendance.view_team` permission:
+  - ✅ Can view: employees in their assigned org unit (stage/department)
+  - ❌ Cannot view: employees in other org units
+  - Determined by `OrgUnitAssignment` where `role = 'HEAD'`
+
+**Implementation:**
+```javascript
+// Server-side data filtering
+const accessibleEmployees = await getAccessibleEmployees(userId);
+const attendance = await prisma.attendance.findMany({
+  where: { employeeId: { in: accessibleEmployees } }
+});
+```
+
+### 4. Documentation ✅
+- `PERMISSIONS-USAGE-EXAMPLES.md` - Comprehensive guide with examples:
+  - Page protection patterns
+  - Conditional UI rendering
+  - Data filtering strategies
+  - Adding new permissions workflow
+  - Server-side API protection
+
+### 5. Role Highlights ✅
+
+**DEPT_HEAD (مدير المرحلة/القسم):**
+- View team employee data (basic info only)
+- View/export team attendance records
+- Create and assign tasks to team members
+- View HR requests
+- Create procurement requests
+- **Scope:** Limited to assigned org unit (stage/department)
+
+**STAGE_SECRETARY (سكرتير المرحلة):**
+- View team employee data (basic info)
+- View/export team attendance records
+- View assigned tasks
+- Submit personal HR requests
+- **Scope:** Limited to assigned stage
+
+### 6. Workflow for Adding New Permission ✅
+
+1. Add permission to `scripts/seed-permissions.js`
+2. Add to role assignments in same file
+3. Add navigation item to `lib/navigation-config.js`
+4. Add permission-module mapping
+5. Protect page with `withPermission(Page, 'permission.name')`
+6. Run seed: `node scripts/seed-permissions.js`
+
+**Result:** Page automatically appears in sidebar for authorized users! 🚀
+
+### What's NOT included (deferred to Phase 2):
+
+- ⏳ Role selection UI in org assignments (currently defaults to MEMBER)
+- ⏳ Session integration (loading user permissions into session)
+- ⏳ Actual data filtering implementation in all API routes
+- ⏳ Tasks module implementation
+- ⏳ Reports module
+- ⏳ Role management UI improvements
+
+### Technical Details:
+
+**Seed Script:**
+- Path: `scripts/seed-permissions.js`
+- Creates/updates roles and permissions
+- Upsert logic (idempotent)
+- Can be re-run safely
+
+**Permission Check Flow:**
+1. User logs in → session includes user.permissions array
+2. UI renders → `usePermissions()` hook filters navigation
+3. Sidebar built → only shows accessible items
+4. User clicks page → route protection checks permission
+5. API called → server-side permission check + data filtering
+
+**Permission Types:**
+- **Global permissions** (e.g., `employees.view`) - access all data
+- **Team-scoped permissions** (e.g., `employees.view_team`) - access team data only
+- **Personal permissions** (e.g., `hr.submit_request`) - own data only
+
+### Next Steps (Phase 2):
+
+1. Integrate permissions into NextAuth session
+2. Implement role selection UI in org assignments
+3. Add data filtering middleware for all API routes
+4. Build tasks module UI
+5. Add permission audit logging
+6. Implement role management improvements in `/settings/roles`
+7. Add bulk permission assignment tools
+8. Performance testing with large user base
+
+### Commit:
+- `08f9a1a` - feat: Add permission-driven UI system
+
+### Branch:
+- `feat/permissions-system` (pushed to GitHub)
+
+---
+
+**User Feedback:**
+- User requested stage head (مدير المرحلة) permissions
+- User requested stage secretary (سكرتير المرحلة) role
+- User confirmed: permissions should filter UI automatically
+- User goal: "نظام صلاحيات محكم و متطور ينعكس منها اللي يظهر للموظف بالواجهه الخاصه فيه مباشره بدون اكواد"
+
+**Status:** ✅ Phase 1 complete - permission system foundation ready
