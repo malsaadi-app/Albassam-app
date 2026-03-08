@@ -1,10 +1,22 @@
-import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { getSession } from '@/lib/session';
+import { prisma } from '@/lib/db';
+import { isSuperAdmin } from '@/lib/permissions';
 
 // GET assignments for an orgUnit
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
+    // Auth check
+    const session = await getSession(await cookies());
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const isAdmin = session.user.role === 'ADMIN' || (await isSuperAdmin(session.user.id));
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const orgUnitId = searchParams.get('orgUnitId');
     
@@ -25,9 +37,19 @@ export async function GET(req: Request) {
 }
 
 // Save new assignments (create HEAD, SUPERVISOR, MEMBER records)
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   console.log('[assignments/POST] received request');
   try {
+    // Auth check
+    const session = await getSession(await cookies());
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const isAdmin = session.user.role === 'ADMIN' || (await isSuperAdmin(session.user.id));
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await req.json();
     console.log('[assignments/POST] body:', JSON.stringify(body));
     
@@ -109,14 +131,24 @@ export async function POST(req: Request) {
 }
 
 // PUT is alias for POST (create/replace assignments)
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
   console.log('[assignments/PUT] delegating to POST');
   return POST(req);
 }
 
 // PATCH for updating coverage scope on existing assignment
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
   try {
+    // Auth check
+    const session = await getSession(await cookies());
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const isAdmin = session.user.role === 'ADMIN' || (await isSuperAdmin(session.user.id));
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await req.json();
     // expected: { assignmentId, coverageScope, coverageBranchIds }
     const { assignmentId, coverageScope, coverageBranchIds } = body;
