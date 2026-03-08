@@ -319,12 +319,13 @@ export default function EditEmployeePage() {
 
   // Load org structure when branchId changes
   useEffect(() => {
-    if (formData.branchId && !loading) {
+    if (formData.branchId && !loading && params.id) {
       console.log('[ORG] Loading org structure for branchId:', formData.branchId);
+      console.log('[ORG] Position:', formData.position, 'Specialization:', formData.specialization);
       fetchOrgStructure(formData.branchId);
       fetchOrgAssignments();
     }
-  }, [formData.branchId, loading]);
+  }, [formData.branchId, loading, params.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -707,18 +708,14 @@ export default function EditEmployeePage() {
             <Card variant="default" style={{ marginBottom: '24px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', marginBottom: '20px' }}>
                 🏢 التبعيات التنظيمية
-                <span style={{ fontSize: '12px', fontWeight: '400', color: '#6B7280', marginRight: '8px' }}>
-                  (Branch: {formData.branchId?.substring(0, 8)}... | Units: {orgUnits.length})
-                </span>
               </h3>
               
               <div style={{ display: 'grid', gap: '20px' }}>
-                {/* Admin Stage Assignments (for teachers) */}
-                {(formData.position?.includes('معلم') || formData.specialization) && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
-                      مراحل المعلم (ADMIN line) — متعدد
-                    </label>
+                {/* Admin Stage Assignments */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                    المراحل (ADMIN line) — متعدد
+                  </label>
                     <ReactSelect
                       isMulti
                       isRtl
@@ -736,11 +733,10 @@ export default function EditEmployeePage() {
                         menu: (base) => ({ ...base, zIndex: 60 }),
                       }}
                     />
-                    <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '6px' }}>
-                      المعلم يمكن أن يُعيّن لعدة مراحل (مثل: معلم للمرحلة الابتدائية والمتوسطة).
-                    </div>
+                  <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '6px' }}>
+                    الموظف يمكن أن يُعيّن لعدة مراحل (مثل: معلم للمرحلة الابتدائية والمتوسطة).
                   </div>
-                )}
+                </div>
 
                 {/* Functional Department Assignments */}
                 <div>
