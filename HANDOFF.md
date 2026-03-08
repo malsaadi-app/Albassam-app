@@ -341,3 +341,53 @@ Notes:
 ## Work started: Org Structure V2
 - Started implementation: coverageScope UI + ADMIN assignments UI.
 - Started by: assistant (automated).
+
+## 2026-03-08: Org Structure V2 — Assignments API completed ✅
+
+**What changed:**
+- Fixed 405 Method Not Allowed error for POST/PUT requests to `/api/settings/org-structure/assignments`
+- Added POST, PUT, and GET handlers to `app/api/settings/org-structure/assignments/route.ts`:
+  - `POST`: Creates new org unit assignments (HEAD, SUPERVISOR, MEMBER) with coverage scope support
+  - `PUT`: Alias for POST (creates/replaces assignments)
+  - `GET`: Retrieves active assignments for an orgUnit
+  - `PATCH`: Updates coverage scope on existing assignment (already existed)
+- Fixed schema field names: `active` (not `isActive`), `BRANCH` (not `FULL_BRANCH`)
+- Added `assignmentType` field (required by schema) set to `ADMIN` for all assignments
+
+**Root cause:**
+- Route handlers for POST/PUT were missing entirely in the route file
+- Schema fields were incorrectly referenced (isActive → active, FULL_BRANCH → BRANCH)
+- assignmentType enum value was missing from create operations
+
+**How to test:**
+1. POST request to create assignments:
+```bash
+curl -X POST http://localhost:3000/api/settings/org-structure/assignments \
+  -H "Content-Type: application/json" \
+  -d '{"orgUnitId":"<id>","headEmployeeId":"<id>","supervisorEmployeeId":"<id>","memberEmployeeIds":["<id>"],"headCoverageScope":"BRANCH","supervisorCoverageScope":"MULTI_BRANCH","supervisorCoverageBranchIds":["<id>"]}'
+```
+Expected: `{"ok":true}` with HTTP 200
+
+2. GET request to retrieve assignments:
+```bash
+curl "http://localhost:3000/api/settings/org-structure/assignments?orgUnitId=<id>"
+```
+Expected: `{"assignments":[...]}`
+
+3. Public URL test:
+```bash
+curl "https://app.albassam-app.com/api/health"
+```
+Expected: `{"status":"ok",...}`
+
+**DB schema reference:**
+- Field: `active` (Boolean, default: true)
+- Field: `assignmentType` (OrgAssignmentType: ADMIN | FUNCTIONAL)
+- Field: `coverageScope` (OrgCoverageScope: BRANCH | MULTI_BRANCH | ALL)
+- Field: `role` (OrgAssignmentRole: HEAD | SUPERVISOR | MEMBER)
+
+**Next steps:**
+1. Add authentication checks to route handlers (currently public)
+2. Implement UI for ADMIN assignments (teachers to stages)
+3. Test end-to-end from UI → API → DB
+4. Add validation for coverage scope + branch IDs consistency
