@@ -25,6 +25,8 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [searchValue, setSearchValue] = useState<string>('');
+  const [filteredOptions, setFilteredOptions] = useState<any[]>([]);
 
   // Fetch all employees for selection
   useEffect(() => {
@@ -158,6 +160,69 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
       // Normal selection
       setSelectedEmployees(values.filter((v: string) => v !== '__select_all__'));
     }
+  };
+
+  // Custom MenuList with Select Search Results button
+  const MenuList = (props: any) => {
+    const visibleOptions = props.children?.filter((child: any) => 
+      child && child.props && child.props.data && child.props.data.value !== '__select_all__'
+    ) || [];
+    
+    const visibleCount = visibleOptions.length;
+    const hasSearch = searchValue && searchValue.trim().length > 0;
+    
+    return (
+      <components.MenuList {...props}>
+        {hasSearch && visibleCount > 0 && (
+          <div style={{ 
+            padding: '0.5rem 0.75rem',
+            borderBottom: '2px solid #e2e8f0',
+            marginBottom: '0.5rem',
+            background: 'linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%)',
+            position: 'sticky',
+            top: 0,
+            zIndex: 10
+          }}>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const visibleIds = visibleOptions.map((opt: any) => opt.props.data.value);
+                setSelectedEmployees(visibleIds);
+              }}
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '0.95rem',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <span>⚡</span>
+              <span>تحديد نتائج البحث ({visibleCount} موظف)</span>
+            </button>
+          </div>
+        )}
+        {props.children}
+      </components.MenuList>
+    );
   };
 
   // Custom Option component with checkbox
@@ -303,10 +368,21 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
           </label>
           <ReactSelect
             isMulti
-            components={{ Option }}
+            components={{ Option, MenuList }}
             options={employeeOptions}
             value={employeeOptions.filter(opt => selectedEmployees.includes(opt.value) && opt.value !== '__select_all__')}
             onChange={handleSelectChange}
+            onInputChange={(value, action) => {
+              if (action.action === 'input-change') {
+                setSearchValue(value);
+              }
+            }}
+            filterOption={(option, searchText) => {
+              if (option.value === '__select_all__') {
+                return !searchText || searchText.trim().length === 0;
+              }
+              return option.label.toLowerCase().includes(searchText.toLowerCase());
+            }}
             placeholder={loading ? '⏳ جاري تحميل الموظفين...' : '🔍 ابحث واختر عدة موظفين... (القائمة تبقى مفتوحة)'}
             noOptionsMessage={() => loading ? '⏳ جاري التحميل...' : availableEmployees.length === 0 ? '✅ كل الموظفين معينون لهذا الدور' : 'لا توجد نتائج'}
             loadingMessage={() => '⏳ جاري البحث...'}
@@ -314,7 +390,7 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
             isDisabled={saving || loading}
             menuPlacement="auto"
             menuPosition="fixed"
-            maxMenuHeight={400}
+            maxMenuHeight={450}
             hideSelectedOptions={false}
             closeMenuOnSelect={false}
             isSearchable={true}
