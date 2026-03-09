@@ -339,31 +339,47 @@ export default function WorkflowBuilderDetail() {
 
         {error && <div style={{ marginBottom: 12, color: '#991B1B' }}>{error}</div>}
 
-        <Card variant="default">
-          <div style={{ padding: 16, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontWeight: 900 }}>الإصدار الحالي</div>
-              <div style={{ color: '#6B7280', fontSize: 12 }}>Draft: {draft?.version ?? '-'}</div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <Button variant="outline" onClick={load}>
-                تحديث
-              </Button>
-              <Button variant="outline" onClick={addStep}>
-                ➕ إضافة خطوة
-              </Button>
-              <Button variant="secondary" onClick={() => setCloneModal(true)}>
-                📄 نسخ
-              </Button>
-              <Button variant="primary" onClick={publish}>
-                نشر
-              </Button>
-              <Button variant={dirty ? 'primary' : 'outline'} onClick={saveSteps} disabled={!dirty}>
-                💾 حفظ الخطوات
-              </Button>
-              <Button variant={rulesDirty ? 'primary' : 'outline'} onClick={saveRules} disabled={!rulesDirty}>
-                💾 حفظ القواعد
-              </Button>
+        <Card variant="default" style={{ borderRadius: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: 'none', marginBottom: 20 }}>
+          <div style={{ 
+            padding: 24,
+            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 6 }}>
+                  الإصدار الحالي
+                </div>
+                <div style={{ 
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontSize: 28,
+                  fontWeight: '900'
+                }}>
+                  Draft: {draft?.version ?? '-'}
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <Button variant="outline" onClick={load} style={{ borderRadius: 12 }}>
+                  🔄 تحديث
+                </Button>
+                <Button variant="outline" onClick={addStep} style={{ borderRadius: 12 }}>
+                  ➕ إضافة خطوة
+                </Button>
+                <Button variant="secondary" onClick={() => setCloneModal(true)} style={{ borderRadius: 12 }}>
+                  📄 نسخ
+                </Button>
+                <Button variant="primary" onClick={publish} style={{ borderRadius: 12 }}>
+                  🚀 نشر
+                </Button>
+                <Button variant={dirty ? 'primary' : 'outline'} onClick={saveSteps} disabled={!dirty} style={{ borderRadius: 12 }}>
+                  💾 حفظ الخطوات
+                </Button>
+                <Button variant={rulesDirty ? 'primary' : 'outline'} onClick={saveRules} disabled={!rulesDirty} style={{ borderRadius: 12 }}>
+                  💾 حفظ القواعد
+                </Button>
+              </div>
             </div>
           </div>
         </Card>
@@ -425,15 +441,44 @@ export default function WorkflowBuilderDetail() {
           </div>
         </Card>
 
-        <Card variant="default">
-          <div style={{ padding: 16 }}>
-            <div style={{ fontWeight: 900, marginBottom: 10 }}>الخطوات</div>
+        <Card variant="default" style={{ borderRadius: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: 'none' }}>
+          <div style={{ padding: 24 }}>
+            <div style={{ 
+              fontSize: 20, 
+              fontWeight: '900', 
+              marginBottom: 20,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10
+            }}>
+              🔗 الخطوات ({localSteps.length})
+            </div>
             {loading ? (
-              <div>جاري التحميل…</div>
+              <div style={{ textAlign: 'center', padding: 60, color: '#6B7280' }}>
+                <div style={{ fontSize: 48, marginBottom: 16, animation: 'spin 2s linear infinite' }}>⏳</div>
+                <div style={{ fontSize: 16, fontWeight: '600' }}>جاري التحميل...</div>
+              </div>
             ) : localSteps.length === 0 ? (
-              <div style={{ color: '#6B7280' }}>لا يوجد خطوات.</div>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: 60,
+                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+                borderRadius: 16,
+                border: '2px dashed #E5E7EB'
+              }}>
+                <div style={{ fontSize: 56, marginBottom: 16 }}>📝</div>
+                <div style={{ color: '#6B7280', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
+                  لا يوجد خطوات
+                </div>
+                <div style={{ color: '#9CA3AF', fontSize: 14 }}>
+                  اضغط "إضافة خطوة +" للبدء
+                </div>
+              </div>
             ) : (
-              <div style={{ display: 'grid', gap: 10 }}>
+              <div style={{ display: 'grid', gap: 16 }}>
                 {localSteps.map((s: any, idx: number) => (
                   <div
                     key={idx}
@@ -442,22 +487,66 @@ export default function WorkflowBuilderDetail() {
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => onDrop(idx)}
                     style={{
-                      border: '1px solid #E5E7EB',
-                      borderRadius: 14,
-                      padding: 12,
-                      background: 'white',
+                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)',
+                      borderRadius: 16,
+                      padding: 20,
+                      border: '1px solid rgba(102, 126, 234, 0.2)',
                       display: 'flex',
                       justifyContent: 'space-between',
-                      gap: 12,
+                      gap: 16,
                       alignItems: 'center',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      cursor: 'grab',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                      position: 'relative' as any,
+                      overflow: 'hidden' as any
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'
+                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.2)'
+                      e.currentTarget.style.borderColor = 'rgba(102, 126, 234, 0.4)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0) scale(1)'
+                      e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.05)'
+                      e.currentTarget.style.borderColor = 'rgba(102, 126, 234, 0.2)'
                     }}
                   >
-                    <div style={{ display: 'grid', gap: 4 }}>
-                      <div style={{ fontWeight: 900 }}>
-                        <span style={{ cursor: 'grab', marginInlineEnd: 8 }}>⠿</span>
-                        {idx + 1}. {s.titleAr}
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', flex: 1 }}>
+                      <div style={{
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        width: 44,
+                        height: 44,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 18,
+                        fontWeight: '900',
+                        boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                        flexShrink: 0
+                      }}>
+                        {idx + 1}
                       </div>
-                      <div style={{ color: '#6B7280', fontSize: 12 }}>{s.stepType}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '800', fontSize: 16, color: '#111827', marginBottom: 6 }}>
+                          <span style={{ cursor: 'grab', marginInlineEnd: 8, opacity: 0.5 }}>⠿</span>
+                          {s.titleAr}
+                        </div>
+                        <div style={{ 
+                          fontSize: 13, 
+                          color: '#6B7280',
+                          background: 'rgba(255,255,255,0.9)',
+                          padding: '4px 12px',
+                          borderRadius: 8,
+                          display: 'inline-block',
+                          fontWeight: '600',
+                          border: '1px solid rgba(102, 126, 234, 0.1)'
+                        }}>
+                          {s.stepType}
+                        </div>
+                      </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -465,6 +554,7 @@ export default function WorkflowBuilderDetail() {
                         variant="outline"
                         onClick={() => moveStep(idx, Math.max(0, idx - 1))}
                         disabled={idx === 0}
+                        style={{ borderRadius: 10, minWidth: 44, height: 44, padding: '0 12px' }}
                       >
                         ⬆️
                       </Button>
@@ -472,20 +562,23 @@ export default function WorkflowBuilderDetail() {
                         variant="outline"
                         onClick={() => moveStep(idx, Math.min(localSteps.length - 1, idx + 1))}
                         disabled={idx === localSteps.length - 1}
+                        style={{ borderRadius: 10, minWidth: 44, height: 44, padding: '0 12px' }}
                       >
                         ⬇️
                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => setEditor({ open: true, idx })}
+                        style={{ borderRadius: 10, minWidth: 44, height: 44, padding: '0 12px' }}
                       >
-                        ✏️ تعديل
+                        ✏️
                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => removeStep(idx)}
+                        style={{ borderRadius: 10, minWidth: 44, height: 44, padding: '0 12px', color: '#ef4444', borderColor: '#fecaca' }}
                       >
-                        🗑️ حذف
+                        🗑️
                       </Button>
                     </div>
                   </div>
