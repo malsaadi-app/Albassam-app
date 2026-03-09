@@ -7,12 +7,20 @@ const globalForPrisma = global as unknown as {
 
 // Create Prisma client with optimized configuration
 function createPrismaClient() {
+  // Build DATABASE_URL with proper parameters for pooling
+  const dbUrl = new URL(process.env.DATABASE_URL!);
+  
+  // Add pgbouncer mode for transaction pooling
+  if (!dbUrl.searchParams.has('pgbouncer')) {
+    dbUrl.searchParams.append('pgbouncer', 'true');
+  }
+  
   const client = new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
     errorFormat: 'minimal',
     datasources: {
       db: {
-        url: process.env.DATABASE_URL,
+        url: dbUrl.toString(),
       },
     },
   });
