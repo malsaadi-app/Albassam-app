@@ -13,7 +13,7 @@ function requireUser(session: Awaited<ReturnType<typeof getSession>>) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const cookieStore = await cookies()
   const session = await getSession(cookieStore)
   const unauthorized = requireUser(session)
@@ -24,12 +24,46 @@ export async function GET() {
 
   const user = session.user!
 
-  const tasks = await prisma.task.findMany({
-    where: isAdmin(user.role)
+  // Get view parameter (my / team / all)
+  const { searchParams } = new URL(req.url)
+  const view = searchParams.get('view') || 'my' // default: my tasks
+
+  // Build where clause based on view
+  let where: any = {}
+
+  if (view === 'my') {
+    // My tasks: tasks I own or am assigned to
+    where = {
+      OR: [
+        { ownerId: user.id },
+        { assignees: { some: { userId: user.id } } }
+      ]
+    }
+  } else if (view === 'team') {
+    // Team tasks: tasks I can see but don't own/assigned
+    if (isAdmin(user.role)) {
+      where = {
+        AND: [
+          { isPrivate: false },
+          { ownerId: { not: user.id } },
+          { NOT: { assignees: { some: { userId: user.id } } } }
+        ]
+      }
+    } else {
+      // Non-admins see no team tasks
+      where = { id: 'impossible-id-no-results' }
+    }
+  } else {
+    // All tasks (admin only)
+    where = isAdmin(user.role)
       ? {
           OR: [{ isPrivate: false }, { isPrivate: true, ownerId: user.id }]
         }
-      : { ownerId: user.id },
+      : { ownerId: user.id }
+  }
+
+  const tasks = await prisma.task.findMany({
+    where,
     include: {
       owner: {
         select: { username: true }

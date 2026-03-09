@@ -91,6 +91,7 @@ export default function TasksPage() {
   const [showNewTaskForm, setShowNewTaskForm] = useState(false);
   const [showEditTaskForm, setShowEditTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [view, setView] = useState<'my' | 'team'>('my');
   const [filter, setFilter] = useState<'ALL' | 'NEW' | 'IN_PROGRESS' | 'ON_HOLD' | 'DONE'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'TRANSACTIONS' | 'HR'>('ALL');
 
@@ -112,9 +113,13 @@ export default function TasksPage() {
     fetchTemplates();
   }, []);
 
+  useEffect(() => {
+    fetchTasks();
+  }, [view]);
+
   const fetchTasks = async () => {
     try {
-      const res = await fetch('/api/tasks');
+      const res = await fetch(`/api/tasks?view=${view}`);
       if (res.status === 401) {
         router.push('/');
         return;
@@ -361,6 +366,85 @@ export default function TasksPage() {
           }
         />
 
+        {/* View Tabs */}
+        <div style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: '8px',
+          marginBottom: '24px',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+          display: 'flex',
+          gap: '8px'
+        }}>
+          <button
+            onClick={() => setView('my')}
+            style={{
+              flex: 1,
+              padding: '14px 24px',
+              background: view === 'my' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'transparent',
+              color: view === 'my' ? 'white' : '#6B7280',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '16px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            <span style={{ fontSize: '20px' }}>👤</span>
+            <span>مهامي</span>
+            <span style={{
+              background: view === 'my' ? 'rgba(255, 255, 255, 0.3)' : '#E5E7EB',
+              color: view === 'my' ? 'white' : '#374151',
+              padding: '2px 10px',
+              borderRadius: '12px',
+              fontSize: '13px',
+              fontWeight: '700'
+            }}>
+              {tasks.length}
+            </span>
+          </button>
+
+          {user?.role === 'ADMIN' && (
+            <button
+              onClick={() => setView('team')}
+              style={{
+                flex: 1,
+                padding: '14px 24px',
+                background: view === 'team' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'transparent',
+                color: view === 'team' ? 'white' : '#6B7280',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '16px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>👥</span>
+              <span>مهام الفريق</span>
+              <span style={{
+                background: view === 'team' ? 'rgba(255, 255, 255, 0.3)' : '#E5E7EB',
+                color: view === 'team' ? 'white' : '#374151',
+                padding: '2px 10px',
+                borderRadius: '12px',
+                fontSize: '13px',
+                fontWeight: '700'
+              }}>
+                {view === 'team' ? tasks.length : 0}
+              </span>
+            </button>
+          )}
+        </div>
+
         {/* Statistics */}
         <div style={{
           display: 'grid',
@@ -429,12 +513,17 @@ export default function TasksPage() {
         {filteredTasks.length === 0 ? (
           <Card variant="default">
             <div style={{ padding: '60px 40px', textAlign: 'center' }}>
-              <div style={{ fontSize: '80px', marginBottom: '24px' }}>📭</div>
+              <div style={{ fontSize: '80px', marginBottom: '24px' }}>
+                {view === 'my' ? '📭' : '👥'}
+              </div>
               <h3 style={{ fontSize: '24px', color: '#111827', fontWeight: '800', marginBottom: '12px' }}>
-                لا توجد مهام
+                {view === 'my' ? 'لا توجد مهام شخصية' : 'لا توجد مهام للفريق'}
               </h3>
               <p style={{ fontSize: '16px', color: '#6B7280', fontWeight: '500' }}>
-                قم بإنشاء مهمة جديدة للبدء
+                {view === 'my' 
+                  ? 'قم بإنشاء مهمة جديدة للبدء'
+                  : 'جميع مهام الفريق مكتملة أو لا توجد مهام عامة حالياً'
+                }
               </p>
             </div>
           </Card>
