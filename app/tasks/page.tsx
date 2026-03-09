@@ -450,12 +450,12 @@ export default function TasksPage() {
           )}
         </div>
 
-        {/* Statistics - Clickable Filters */}
+        {/* Main Status Cards - 2x2 Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gridTemplateColumns: 'repeat(2, 1fr)',
           gap: '12px',
-          marginBottom: '24px'
+          marginBottom: '16px'
         }}>
           {/* All Tasks */}
           <button
@@ -556,34 +556,49 @@ export default function TasksPage() {
               {tasks.filter(t => t.status === 'ON_HOLD').length}
             </div>
           </button>
+        </div>
 
-          {/* Done */}
+        {/* Pending Requests Card - Full Width */}
+        <div style={{ marginBottom: '16px' }}>
+          <PendingRequestsCard />
+        </div>
+
+        {/* Completed Tasks - Small Card at Bottom */}
+        <div style={{ marginBottom: '24px' }}>
           <button
             onClick={() => setFilter('DONE')}
             style={{
+              width: '100%',
               background: filter === 'DONE' ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : 'white',
-              color: filter === 'DONE' ? 'white' : '#374151',
-              border: filter === 'DONE' ? 'none' : '2px solid #E5E7EB',
-              borderRadius: '12px',
-              padding: '14px',
+              color: filter === 'DONE' ? 'white' : '#6B7280',
+              border: filter === 'DONE' ? 'none' : '1px solid #E5E7EB',
+              borderRadius: '10px',
+              padding: '10px 16px',
               cursor: 'pointer',
               textAlign: 'right',
               transition: 'all 0.3s ease',
-              boxShadow: filter === 'DONE' ? '0 8px 20px rgba(16, 185, 129, 0.3)' : '0 2px 6px rgba(0, 0, 0, 0.08)',
-              transform: filter === 'DONE' ? 'translateY(-2px)' : 'translateY(0)'
+              boxShadow: filter === 'DONE' ? '0 4px 12px rgba(16, 185, 129, 0.2)' : '0 1px 3px rgba(0, 0, 0, 0.05)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
             }}
           >
-            <div style={{ fontSize: '20px', marginBottom: '6px' }}>✅</div>
-            <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px', opacity: filter === 'DONE' ? 1 : 0.7 }}>
-              مكتمل
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ fontSize: '16px' }}>✅</div>
+              <div style={{ fontSize: '13px', fontWeight: '600', opacity: filter === 'DONE' ? 1 : 0.7 }}>
+                المهام المكتملة
+              </div>
             </div>
-            <div style={{ fontSize: '24px', fontWeight: '800' }}>
+            <div style={{ 
+              fontSize: '18px', 
+              fontWeight: '800',
+              background: filter === 'DONE' ? 'rgba(255, 255, 255, 0.2)' : '#F3F4F6',
+              padding: '4px 12px',
+              borderRadius: '8px'
+            }}>
               {tasks.filter(t => t.status === 'DONE').length}
             </div>
           </button>
-
-          {/* Pending Requests Card */}
-          <PendingRequestsCard />
         </div>
 
         {/* Category Filter Only */}
