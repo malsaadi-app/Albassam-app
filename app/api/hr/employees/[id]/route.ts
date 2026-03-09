@@ -120,7 +120,8 @@ export async function PUT(
     if (body.hireDate) updateData.hireDate = new Date(body.hireDate);
     if (body.position !== undefined) updateData.position = body.position;
     if (body.department !== undefined) updateData.department = body.department;
-    if (body.departmentId !== undefined) updateData.departmentId = body.departmentId || null;
+    // departmentId ignored - we use OrgUnit assignments instead
+    // if (body.departmentId !== undefined) updateData.departmentId = body.departmentId || null;
     if (body.jobTitleId !== undefined) updateData.jobTitleId = body.jobTitleId || null;
     if (body.systemRoleId !== undefined) updateData.systemRoleId = body.systemRoleId || null;
     if (body.status) updateData.status = body.status;
