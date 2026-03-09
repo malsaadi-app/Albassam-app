@@ -377,7 +377,7 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
         
         <div style={{ marginBottom: '1rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#4a5568' }}>
-            اختر الموظفين (القائمة تبقى مفتوحة)
+            ابحث عن الموظفين (القائمة تبقى مفتوحة)
           </label>
           <ReactSelect
             isMulti
@@ -396,7 +396,7 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
               }
               return option.label.toLowerCase().includes(searchText.toLowerCase());
             }}
-            placeholder={loading ? '⏳ جاري تحميل الموظفين...' : '🔍 ابحث واختر عدة موظفين... (القائمة تبقى مفتوحة)'}
+            placeholder={loading ? '⏳ جاري تحميل الموظفين...' : '🔍 ابحث بالاسم أو الرقم الوظيفي...'}
             noOptionsMessage={() => loading ? '⏳ جاري التحميل...' : availableEmployees.length === 0 ? '✅ كل الموظفين معينون لهذا الدور' : 'لا توجد نتائج'}
             loadingMessage={() => '⏳ جاري البحث...'}
             isLoading={loading}
@@ -408,6 +408,7 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
             closeMenuOnSelect={false}
             isSearchable={true}
             isClearable={false}
+            controlShouldRenderValue={false}
             styles={{
               control: (base, state) => ({
                 ...base,
@@ -512,6 +513,77 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
             }}
           />
         </div>
+
+        {/* عرض الموظفين المحددين */}
+        {selectedEmployees.length > 0 && (
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+              border: '2px solid #0ea5e9',
+              borderRadius: '0.75rem',
+              padding: '1rem'
+            }}>
+              <div style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#0369a1', marginBottom: '0.75rem' }}>
+                ✨ الموظفون المحددون ({selectedEmployees.length}):
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {selectedEmployees.map(empId => {
+                  const emp = availableEmployees.find(e => e.id === empId);
+                  if (!emp) return null;
+                  return (
+                    <div
+                      key={empId}
+                      style={{
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      <span>{emp.fullNameAr}</span>
+                      <button
+                        onClick={() => {
+                          setSelectedEmployees(prev => prev.filter(id => id !== empId));
+                        }}
+                        style={{
+                          background: 'rgba(255,255,255,0.2)',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '20px',
+                          height: '20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          color: 'white',
+                          fontSize: '0.75rem',
+                          fontWeight: 'bold',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
+                          e.currentTarget.style.transform = 'scale(1.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         <button
           onClick={handleAddEmployees}
