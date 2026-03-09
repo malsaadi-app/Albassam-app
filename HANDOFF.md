@@ -770,3 +770,65 @@ const { hasPermission } = usePermissions();
 
 **Status:** ✅ Phase 2 complete - permissions flow end-to-end
 **Next:** Phase 3 - Apply to all API routes + testing + role selection UI
+
+### Role Employee Management UI ✅
+
+**Added to:** `/settings/roles/[id]`
+
+**Features:**
+1. **View Employees Section:**
+   - Shows all employees currently assigned to the role
+   - Displays: name, employee number, position, department
+   - Card-based layout with hover effects
+   - Empty state with helpful message
+
+2. **Add Employees Section:**
+   - Multi-select dropdown (ReactSelect) to add multiple employees
+   - Search and filter employees by name/number/position
+   - Filters out employees already assigned to the role
+   - Shows count of selected employees
+   - Bulk add with single click
+
+3. **Remove Employees:**
+   - Trash icon on each employee card
+   - Confirmation dialog before removal
+   - Loading state during removal
+
+4. **API Integration:**
+   - `POST /api/settings/roles/[id]/employees` - Add employees
+   - `DELETE /api/settings/roles/[id]/employees` - Remove employees
+   - `GET /api/settings/roles/[id]/employees` - Fetch employees
+   - Updates `Employee.systemRoleId` field
+   - Returns updated employee list after each operation
+
+5. **UX Features:**
+   - Real-time updates (no page refresh needed)
+   - Loading states (saving, removing)
+   - Success/error alerts
+   - Optimistic UI updates
+   - Beautiful gradient theme matching roles page
+   - Full RTL support
+
+**Technical Implementation:**
+- Component: `RoleEmployeesManager.tsx` (client-side)
+- API: `/api/settings/roles/[id]/employees/route.ts`
+- Auth: ADMIN role required
+- Database: Updates `Employee.systemRoleId` via `updateMany()`
+
+**User Flow:**
+1. Admin opens role detail page
+2. Sees current employees assigned to role
+3. Selects multiple employees from dropdown
+4. Clicks "Add" → employees immediately assigned
+5. To remove: clicks trash icon → confirms → employee removed
+6. Changes reflected instantly in employee records
+
+**Benefits:**
+- ✅ Centralized role management
+- ✅ Bulk operations (save time)
+- ✅ No need to edit each employee individually
+- ✅ Clear visibility of role assignments
+- ✅ Instant feedback
+
+**Commit:** `cd4c78b` - feat: Add employee management to roles page
+
