@@ -482,12 +482,12 @@ export default function EditEmployeePage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
               <Select
                 label="القسم"
-                value={formData.departmentId}
-                onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
               >
                 <option value="">اختر القسم...</option>
                 {departments.filter(d => d.isActive).map((dept) => (
-                  <option key={dept.id} value={dept.id}>
+                  <option key={dept.id} value={dept.nameAr}>
                     {dept.nameAr}
                   </option>
                 ))}
@@ -529,12 +529,12 @@ export default function EditEmployeePage() {
               {selectedBranchType === 'COMPANY' && (
                 <Select
                   label="القسم (للشركات)"
-                  value={formData.departmentId}
-                  onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
+                  value={formData.department}
+                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                 >
                   <option value="">اختر القسم...</option>
                   {departments.filter(d => d.isActive).map((dept) => (
-                    <option key={dept.id} value={dept.id}>
+                    <option key={dept.id} value={dept.nameAr}>
                       {dept.nameAr}
                     </option>
                   ))}
