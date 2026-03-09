@@ -413,11 +413,8 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
       ) : (
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-          gap: '1rem',
-          '@media (max-width: 640px)': {
-            gridTemplateColumns: '1fr'
-          }
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', 
+          gap: '1rem'
         }}>
           {employees.map((emp, idx) => (
             <div
