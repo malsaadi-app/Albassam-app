@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useI18n } from '@/lib/useI18n';
+import { AttendanceQuickWidget } from '@/components/AttendanceQuickWidget';
 import { 
   HiOutlineHome, 
   HiOutlineClipboardList, 
@@ -513,6 +514,11 @@ export default function Sidebar() {
             </div>
           ))}
         </nav>
+
+        {/* Attendance Quick Widget */}
+        <div style={{ padding: '0 16px 16px' }}>
+          <AttendanceQuickWidget />
+        </div>
 
         {/* Footer */}
         <div style={{
