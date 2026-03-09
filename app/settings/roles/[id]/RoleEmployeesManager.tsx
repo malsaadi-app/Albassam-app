@@ -130,12 +130,12 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
   );
 
   // Add "Select All" option at the beginning
-  const selectAllOption = {
+  const selectAllOption: { value: string; label: string } = {
     value: '__select_all__',
     label: '✨ اختيار الكل'
   };
   
-  const employeeOptions = [
+  const employeeOptions: Array<{ value: string; label: string }> = [
     selectAllOption,
     ...availableEmployees.map(emp => ({
       value: emp.id,
