@@ -10,6 +10,7 @@ import { Stats } from '@/components/ui/Stats';
 import { Badge } from '@/components/ui/Badge';
 import { Input, Textarea, Select } from '@/components/ui/Input';
 import { type ChecklistItem } from './ChecklistEditor';
+import ReactSelect from 'react-select';
 
 // Dynamic imports for heavy components (lazy loading)
 const TaskAttachments = dynamic(() => import('./TaskAttachments'), {
@@ -61,6 +62,12 @@ type User = {
 type AvailableUser = {
   id: string;
   username: string;
+  displayName: string;
+  employee: {
+    fullNameAr: string;
+    employeeNumber: string;
+    position: string;
+  } | null;
 };
 
 type TaskTemplate = {
@@ -651,16 +658,66 @@ export default function TasksPage() {
 
               {/* Owner (Admin only) */}
               {user?.role === 'ADMIN' && users.length > 0 && (
-                <Select
-                  label="إحالة المهمة إلى"
-                  value={newTask.ownerId}
-                  onChange={(e) => setNewTask({ ...newTask, ownerId: e.target.value })}
-                >
-                  <option value="">أنا (المدير)</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.username}</option>
-                  ))}
-                </Select>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '8px'
+                  }}>
+                    إحالة المهمة إلى
+                  </label>
+                  <ReactSelect
+                    instanceId="new-task-owner"
+                    placeholder="اختر موظف..."
+                    isClearable
+                    isSearchable
+                    options={[
+                      { value: '', label: 'أنا (المدير)' },
+                      ...users.map((u) => ({
+                        value: u.id,
+                        label: u.employee?.fullNameAr || u.displayName || u.username,
+                        subtitle: u.employee ? `${u.employee.position} - ${u.employee.employeeNumber}` : u.username
+                      }))
+                    ]}
+                    value={
+                      newTask.ownerId 
+                        ? { 
+                            value: newTask.ownerId, 
+                            label: users.find(u => u.id === newTask.ownerId)?.employee?.fullNameAr || 
+                                   users.find(u => u.id === newTask.ownerId)?.displayName || 
+                                   users.find(u => u.id === newTask.ownerId)?.username || 
+                                   newTask.ownerId 
+                          }
+                        : { value: '', label: 'أنا (المدير)' }
+                    }
+                    onChange={(selected) => {
+                      setNewTask({ ...newTask, ownerId: selected?.value || '' });
+                    }}
+                    formatOptionLabel={({ label, subtitle }: any) => (
+                      <div>
+                        <div style={{ fontWeight: '600', color: '#111827' }}>{label}</div>
+                        {subtitle && <div style={{ fontSize: '12px', color: '#6B7280' }}>{subtitle}</div>}
+                      </div>
+                    )}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        minHeight: '44px',
+                        borderRadius: '8px',
+                        borderColor: '#D1D5DB',
+                        '&:hover': { borderColor: '#9CA3AF' }
+                      }),
+                      menu: (base) => ({
+                        ...base,
+                        zIndex: 9999,
+                        borderRadius: '8px',
+                        overflow: 'hidden'
+                      })
+                    }}
+                  />
+                </div>
               )}
 
               {/* Private checkbox */}
@@ -781,15 +838,60 @@ export default function TasksPage() {
 
               {/* Owner (Admin only) */}
               {user?.role === 'ADMIN' && users.length > 0 && (
-                <Select
-                  label="إحالة المهمة إلى"
-                  value={editingTask.ownerId}
-                  onChange={(e) => setEditingTask({ ...editingTask, ownerId: e.target.value })}
-                >
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.username}</option>
-                  ))}
-                </Select>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '8px'
+                  }}>
+                    إحالة المهمة إلى
+                  </label>
+                  <ReactSelect
+                    instanceId="edit-task-owner"
+                    placeholder="اختر موظف..."
+                    isSearchable
+                    options={users.map((u) => ({
+                      value: u.id,
+                      label: u.employee?.fullNameAr || u.displayName || u.username,
+                      subtitle: u.employee ? `${u.employee.position} - ${u.employee.employeeNumber}` : u.username
+                    }))}
+                    value={{
+                      value: editingTask.ownerId,
+                      label: users.find(u => u.id === editingTask.ownerId)?.employee?.fullNameAr || 
+                             users.find(u => u.id === editingTask.ownerId)?.displayName || 
+                             users.find(u => u.id === editingTask.ownerId)?.username || 
+                             editingTask.ownerId
+                    }}
+                    onChange={(selected) => {
+                      if (selected) {
+                        setEditingTask({ ...editingTask, ownerId: selected.value });
+                      }
+                    }}
+                    formatOptionLabel={({ label, subtitle }: any) => (
+                      <div>
+                        <div style={{ fontWeight: '600', color: '#111827' }}>{label}</div>
+                        {subtitle && <div style={{ fontSize: '12px', color: '#6B7280' }}>{subtitle}</div>}
+                      </div>
+                    )}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        minHeight: '44px',
+                        borderRadius: '8px',
+                        borderColor: '#D1D5DB',
+                        '&:hover': { borderColor: '#9CA3AF' }
+                      }),
+                      menu: (base) => ({
+                        ...base,
+                        zIndex: 9999,
+                        borderRadius: '8px',
+                        overflow: 'hidden'
+                      })
+                    }}
+                  />
+                </div>
               )}
 
               {/* Private checkbox (Admin only) */}

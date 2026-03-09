@@ -41,7 +41,18 @@ export async function GET() {
   // Get all users for admin to assign tasks
   const users = isAdmin(user.role) 
     ? await prisma.user.findMany({
-        select: { id: true, username: true }
+        select: { 
+          id: true, 
+          username: true,
+          displayName: true,
+          employee: {
+            select: {
+              fullNameAr: true,
+              employeeNumber: true,
+              position: true
+            }
+          }
+        }
       })
     : []
 
