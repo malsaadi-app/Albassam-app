@@ -94,6 +94,7 @@ export default function TasksPage() {
   const [view, setView] = useState<'my' | 'team'>('my');
   const [filter, setFilter] = useState<'ALL' | 'NEW' | 'IN_PROGRESS' | 'ON_HOLD' | 'DONE'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'TRANSACTIONS' | 'HR'>('ALL');
+  const [taskCounts, setTaskCounts] = useState({ my: 0, team: 0 });
 
   // New task form state
   const [newTask, setNewTask] = useState({
@@ -128,6 +129,9 @@ export default function TasksPage() {
       setTasks(data.tasks);
       setUser(data.user);
       setUsers(data.users || []);
+      if (data.counts) {
+        setTaskCounts(data.counts);
+      }
     } catch (error) {
       console.error('Error fetching tasks:', error);
     } finally {
@@ -405,7 +409,7 @@ export default function TasksPage() {
               fontSize: '13px',
               fontWeight: '700'
             }}>
-              {tasks.length}
+              {taskCounts.my}
             </span>
           </button>
 
@@ -439,7 +443,7 @@ export default function TasksPage() {
                 fontSize: '13px',
                 fontWeight: '700'
               }}>
-                {view === 'team' ? tasks.length : 0}
+                {taskCounts.team}
               </span>
             </button>
           )}

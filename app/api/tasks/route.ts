@@ -108,12 +108,38 @@ export async function GET(req: Request) {
       })
     : []
 
+  // Calculate separate counts for tabs (independent of current view)
+  const myTasksCount = await prisma.task.count({
+    where: {
+      OR: [
+        { ownerId: user.id },
+        { assignees: { some: { userId: user.id } } }
+      ]
+    }
+  })
+
+  const teamTasksCount = isAdmin(user.role)
+    ? await prisma.task.count({
+        where: {
+          AND: [
+            { isPrivate: false },
+            { ownerId: { not: user.id } },
+            { NOT: { assignees: { some: { userId: user.id } } } }
+          ]
+        }
+      })
+    : 0
+
   return NextResponse.json({ 
     tasks, 
     users,
     user: {
       username: user.username,
       role: user.role
+    },
+    counts: {
+      my: myTasksCount,
+      team: teamTasksCount
     }
   })
 }
