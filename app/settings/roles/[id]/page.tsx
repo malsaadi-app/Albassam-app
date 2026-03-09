@@ -79,6 +79,7 @@ export default async function RoleDetailPage(props: { params: Promise<{ id: stri
         {/* Back Button */}
         <Link
           href="/settings/roles"
+          className="back-button"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -93,18 +94,16 @@ export default async function RoleDetailPage(props: { params: Promise<{ id: stri
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             transition: 'all 0.2s'
           }}
-          onMouseEnter={(e: any) => {
-            e.currentTarget.style.background = 'white';
-            e.currentTarget.style.transform = 'translateX(4px)';
-          }}
-          onMouseLeave={(e: any) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
-            e.currentTarget.style.transform = 'translateX(0)';
-          }}
         >
           <span style={{ fontSize: '1.25rem' }}>←</span>
           <span>رجوع إلى الأدوار والصلاحيات</span>
         </Link>
+        <style>{`
+          .back-button:hover {
+            background: white !important;
+            transform: translateX(4px) !important;
+          }
+        `}</style>
 
         {/* Header */}
         <div style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
