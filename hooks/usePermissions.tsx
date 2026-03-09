@@ -56,13 +56,34 @@ export function usePermissions(): UsePermissionsReturn {
   useEffect(() => {
     // Fetch session from API
     fetch('/api/auth/session')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          // Session invalid or expired - redirect to login
+          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+          return null;
+        }
+        return res.json();
+      })
       .then(data => {
-        setSession(data);
+        if (!data || !data.user) {
+          // No user in session - redirect to login
+          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+          setSession(null);
+        } else {
+          setSession(data);
+        }
         setLoading(false);
       })
       .catch(error => {
         console.error('Error fetching session:', error);
+        // On error, redirect to login
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
         setLoading(false);
       });
   }, []);
