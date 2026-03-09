@@ -20,6 +20,11 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
+// Auto-connect on module load to prevent "Engine not connected" errors
+prisma.$connect().catch((err) => {
+  console.error('Failed to connect to database:', err);
+});
+
 // Graceful shutdown on SIGINT/SIGTERM
 if (process.env.NODE_ENV === 'production') {
   process.on('SIGINT', async () => {
