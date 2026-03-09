@@ -594,35 +594,68 @@ export default function AttendanceDashboard() {
             </Link>
 
             {(canViewAll) && (
-              <Link
-                href="/hr/attendance/reports"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  background: '#F3F4F6',
-                  padding: '16px',
-                  borderRadius: '12px',
-                  textDecoration: 'none',
-                  color: '#111827',
-                  transition: 'all 0.2s',
-                  border: '2px solid transparent'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#E5E7EB';
-                  e.currentTarget.style.borderColor = '#667eea';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#F3F4F6';
-                  e.currentTarget.style.borderColor = 'transparent';
-                }}
-              >
-                <span style={{ fontSize: '24px' }}>📊</span>
-                <div>
-                  <div style={{ fontWeight: '600', fontSize: '14px' }}>التقارير</div>
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>تقارير مفصلة</div>
-                </div>
-              </Link>
+              <>
+                <Link
+                  href="/hr/attendance/reports"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    background: '#F3F4F6',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    textDecoration: 'none',
+                    color: '#111827',
+                    transition: 'all 0.2s',
+                    border: '2px solid transparent'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#E5E7EB';
+                    e.currentTarget.style.borderColor = '#667eea';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#F3F4F6';
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                >
+                  <span style={{ fontSize: '24px' }}>📊</span>
+                  <div>
+                    <div style={{ fontWeight: '600', fontSize: '14px' }}>التقارير</div>
+                    <div style={{ fontSize: '12px', color: '#6B7280' }}>تقارير مفصلة</div>
+                  </div>
+                </Link>
+
+                <a
+                  href="/api/attendance/export"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    textDecoration: 'none',
+                    color: 'white',
+                    transition: 'all 0.2s',
+                    border: '2px solid transparent',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(16, 185, 129, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <span style={{ fontSize: '24px' }}>📥</span>
+                  <div>
+                    <div style={{ fontWeight: '600', fontSize: '14px' }}>تصدير Excel</div>
+                    <div style={{ fontSize: '12px', opacity: 0.9 }}>تحميل التقرير</div>
+                  </div>
+                </a>
+              </>
             )}
           </div>
         </div>
