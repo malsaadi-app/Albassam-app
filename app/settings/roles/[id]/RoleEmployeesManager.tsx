@@ -164,26 +164,32 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
 
   // Custom MenuList with Select Search Results button
   const MenuList = (props: any) => {
+    // Get all visible options (excluding "Select All")
     const visibleOptions = props.children?.filter((child: any) => 
       child && child.props && child.props.data && child.props.data.value !== '__select_all__'
     ) || [];
     
     const visibleCount = visibleOptions.length;
-    const hasSearch = searchValue && searchValue.trim().length > 0;
+    const totalCount = availableEmployees.length;
+    
+    // Show button if filtered results are less than total (means search is active)
+    const hasSearch = visibleCount < totalCount && visibleCount > 0;
     
     return (
       <components.MenuList {...props}>
-        {hasSearch && visibleCount > 0 && (
+        {hasSearch && (
           <div style={{ 
-            padding: '0.5rem 0.75rem',
-            borderBottom: '2px solid #e2e8f0',
+            padding: '0.75rem',
+            borderBottom: '3px solid #667eea',
             marginBottom: '0.5rem',
-            background: 'linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%)',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             position: 'sticky',
             top: 0,
-            zIndex: 10
+            zIndex: 999,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
           }}>
             <button
+              type="button"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -192,31 +198,38 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
               }}
               style={{
                 width: '100%',
-                padding: '0.75rem 1rem',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.5rem',
-                fontSize: '0.95rem',
+                padding: '1rem 1.25rem',
+                background: 'white',
+                color: '#667eea',
+                border: '2px solid white',
+                borderRadius: '0.75rem',
+                fontSize: '1rem',
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '0.5rem'
+                gap: '0.75rem',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                touchAction: 'manipulation'
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.02)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+              onTouchStart={(e) => {
+                e.currentTarget.style.transform = 'scale(0.98)';
               }}
-              onMouseLeave={(e) => {
+              onTouchEnd={(e) => {
                 e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              <span>⚡</span>
-              <span>تحديد نتائج البحث ({visibleCount} موظف)</span>
+              <span style={{ fontSize: '1.5rem' }}>☑️</span>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.05rem', fontWeight: 'bold' }}>
+                  تحديد نتائج البحث
+                </div>
+                <div style={{ fontSize: '0.875rem', color: '#764ba2', marginTop: '0.25rem' }}>
+                  ({visibleCount} من {totalCount} موظف)
+                </div>
+              </div>
             </button>
           </div>
         )}
