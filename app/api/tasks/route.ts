@@ -33,6 +33,24 @@ export async function GET() {
     include: {
       owner: {
         select: { username: true }
+      },
+      assignees: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              employee: {
+                select: {
+                  fullNameAr: true,
+                  employeeNumber: true,
+                  position: true
+                }
+              }
+            }
+          }
+        }
       }
     },
     orderBy: { createdAt: 'desc' }
@@ -73,7 +91,8 @@ const CreateBody = z.object({
   status: z.nativeEnum(TaskStatus).optional(),
   isPrivate: z.boolean().optional(),
   ownerId: z.string().optional(),
-  checklist: z.string().optional().nullable()
+  checklist: z.string().optional().nullable(),
+  assigneeIds: z.array(z.string()).optional()
 })
 
 export async function POST(req: Request) {
@@ -109,7 +128,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
   }
 
-  const { title, description, category, status, isPrivate, ownerId, checklist } = parsed.data
+  const { title, description, category, status, isPrivate, ownerId, checklist, assigneeIds } = parsed.data
 
   // Admin can assign to anyone, employees can only create for themselves
   const finalOwnerId = (isAdmin(user.role) && ownerId) ? ownerId : user.id
@@ -130,6 +149,30 @@ export async function POST(req: Request) {
     }
   })
 
+  // Add assignees if provided
+  if (assigneeIds && assigneeIds.length > 0 && isAdmin(user.role)) {
+    await prisma.taskAssignee.createMany({
+      data: assigneeIds.map(userId => ({
+        taskId: newTask.id,
+        userId
+      })),
+      skipDuplicates: true
+    })
+
+    // Send notifications to all assignees
+    for (const assigneeId of assigneeIds) {
+      if (assigneeId !== user.id) {
+        await sendTelegramNotification({
+          type: 'TASK_ASSIGNED',
+          userId: assigneeId,
+          taskTitle: title,
+          taskId: newTask.id,
+          assignedBy: user.username
+        }).catch(err => console.error('Failed to send notification:', err));
+      }
+    }
+  }
+
   // Log activity
   await prisma.activityLog.create({
     data: {
@@ -140,20 +183,21 @@ export async function POST(req: Request) {
         title, 
         category, 
         status: status ?? TaskStatus.NEW,
-        owner: finalOwnerId !== user.id ? finalOwnerId : null
+        owner: finalOwnerId !== user.id ? finalOwnerId : null,
+        assignees: assigneeIds || []
       })
     }
   })
 
-  // Send Telegram notification if task is assigned to another user
-  if (finalOwnerId !== user.id) {
+  // Send Telegram notification if task is assigned to owner (backward compatibility)
+  if (finalOwnerId !== user.id && (!assigneeIds || !assigneeIds.includes(finalOwnerId))) {
     await sendTelegramNotification({
       type: 'TASK_ASSIGNED',
       userId: finalOwnerId,
       taskTitle: title,
       taskId: newTask.id,
       assignedBy: user.username
-    });
+    }).catch(err => console.error('Failed to send notification:', err));
   }
 
   // If form post, redirect back to /tasks

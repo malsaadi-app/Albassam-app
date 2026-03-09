@@ -101,6 +101,7 @@ export default function TasksPage() {
     isPrivate: false,
     ownerId: '',
   });
+  const [newTaskAssignees, setNewTaskAssignees] = useState<string[]>([]);
   const [newTaskChecklist, setNewTaskChecklist] = useState<ChecklistItem[]>([]);
   const [editTaskChecklist, setEditTaskChecklist] = useState<ChecklistItem[]>([]);
 
@@ -169,6 +170,7 @@ export default function TasksPage() {
       const payload = {
         ...newTask,
         checklist: newTaskChecklist.length > 0 ? JSON.stringify(newTaskChecklist) : null,
+        assigneeIds: newTaskAssignees,
       };
 
       const res = await fetch('/api/tasks', {
@@ -187,6 +189,7 @@ export default function TasksPage() {
           isPrivate: false,
           ownerId: '',
         });
+        setNewTaskAssignees([]);
         setNewTaskChecklist([]);
         fetchTasks();
       }
@@ -656,7 +659,7 @@ export default function TasksPage() {
                 onChange={setNewTaskChecklist}
               />
 
-              {/* Owner (Admin only) */}
+              {/* Assignees (Admin only) - Multi-Select */}
               {user?.role === 'ADMIN' && users.length > 0 && (
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{
@@ -666,34 +669,28 @@ export default function TasksPage() {
                     color: '#374151',
                     marginBottom: '8px'
                   }}>
-                    إحالة المهمة إلى
+                    إحالة المهمة إلى (يمكن اختيار أكثر من موظف)
                   </label>
                   <ReactSelect
-                    instanceId="new-task-owner"
-                    placeholder="اختر موظف..."
-                    isClearable
+                    instanceId="new-task-assignees"
+                    placeholder="اختر موظف أو أكثر..."
+                    isMulti
                     isSearchable
-                    options={[
-                      { value: '', label: 'أنا (المدير)' },
-                      ...users.map((u) => ({
+                    options={users.map((u) => ({
+                      value: u.id,
+                      label: u.employee?.fullNameAr || u.displayName || u.username,
+                      subtitle: u.employee ? `${u.employee.position} - ${u.employee.employeeNumber}` : u.username
+                    }))}
+                    value={users
+                      .filter(u => newTaskAssignees.includes(u.id))
+                      .map(u => ({
                         value: u.id,
                         label: u.employee?.fullNameAr || u.displayName || u.username,
                         subtitle: u.employee ? `${u.employee.position} - ${u.employee.employeeNumber}` : u.username
                       }))
-                    ]}
-                    value={
-                      newTask.ownerId 
-                        ? { 
-                            value: newTask.ownerId, 
-                            label: users.find(u => u.id === newTask.ownerId)?.employee?.fullNameAr || 
-                                   users.find(u => u.id === newTask.ownerId)?.displayName || 
-                                   users.find(u => u.id === newTask.ownerId)?.username || 
-                                   newTask.ownerId 
-                          }
-                        : { value: '', label: 'أنا (المدير)' }
                     }
                     onChange={(selected) => {
-                      setNewTask({ ...newTask, ownerId: selected?.value || '' });
+                      setNewTaskAssignees(selected ? selected.map((s: any) => s.value) : []);
                     }}
                     formatOptionLabel={({ label, subtitle }: any) => (
                       <div>
@@ -717,6 +714,9 @@ export default function TasksPage() {
                       })
                     }}
                   />
+                  <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '6px' }}>
+                    💡 يمكنك اختيار موظف واحد أو عدة موظفين لتعيين المهمة لهم جميعاً
+                  </div>
                 </div>
               )}
 
