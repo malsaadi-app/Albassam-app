@@ -101,7 +101,9 @@ const PERMISSIONS = [
   
   // صلاحيات الحضور
   { name: 'attendance.view', nameAr: 'عرض الحضور', nameEn: 'View Attendance', module: 'attendance', description: 'عرض سجلات الحضور' },
+  { name: 'attendance.view_own', nameAr: 'عرض حضوري', nameEn: 'View Own Attendance', module: 'attendance', description: 'عرض سجل الحضور الشخصي والغيابات' },
   { name: 'attendance.view_team', nameAr: 'عرض حضور الفريق', nameEn: 'View Team Attendance', module: 'attendance', description: 'عرض حضور موظفي المرحلة/القسم فقط' },
+  { name: 'attendance.submit', nameAr: 'تسجيل الحضور', nameEn: 'Submit Attendance', module: 'attendance', description: 'تسجيل دخول وخروج شخصي' },
   { name: 'attendance.manage', nameAr: 'إدارة الحضور', nameEn: 'Manage Attendance', module: 'attendance', description: 'تعديل سجلات الحضور' },
   { name: 'attendance.export', nameAr: 'تصدير تقرير الحضور', nameEn: 'Export Attendance Report', module: 'attendance', description: 'تصدير تقارير الحضور' },
   
@@ -127,47 +129,49 @@ const ROLE_PERMISSIONS = {
   'SUPER_ADMIN': '*', // كل الصلاحيات
   'HR_MANAGER': [
     'employees.view', 'employees.create', 'employees.edit', 'employees.view_salary',
-    'hr.view_requests', 'hr.approve_requests', 'hr.manage_leaves',
-    'attendance.view', 'attendance.view_team', 'attendance.manage', 'attendance.export',
+    'hr.view_requests', 'hr.approve_requests', 'hr.manage_leaves', 'hr.submit_request',
+    'attendance.view', 'attendance.view_own', 'attendance.view_team', 'attendance.submit', 'attendance.manage', 'attendance.export',
     'org.view', 'org.assign',
     'tasks.view', 'tasks.create', 'tasks.assign', 'tasks.manage'
   ],
   'BRANCH_MANAGER': [
     'employees.view', 'employees.create', 'employees.edit',
-    'hr.view_requests', 'hr.approve_requests',
-    'attendance.view', 'attendance.view_team', 'attendance.export',
+    'hr.view_requests', 'hr.approve_requests', 'hr.submit_request',
+    'attendance.view', 'attendance.view_own', 'attendance.view_team', 'attendance.submit', 'attendance.export',
     'org.view', 'org.assign',
     'tasks.view', 'tasks.assign', 'tasks.manage',
     'procurement.view', 'procurement.approve'
   ],
   'DEPT_HEAD': [
     'employees.view', 'employees.view_team',
-    'hr.view_requests',
-    'attendance.view', 'attendance.view_team', 'attendance.export',
+    'hr.view_requests', 'hr.submit_request',
+    'attendance.view', 'attendance.view_own', 'attendance.view_team', 'attendance.submit', 'attendance.export',
     'org.view', 'org.view_team',
     'tasks.view', 'tasks.create', 'tasks.assign', 'tasks.manage',
     'procurement.view', 'procurement.create'
   ],
   'SUPERVISOR': [
     'employees.view', 'employees.view_team',
-    'hr.view_requests',
-    'attendance.view', 'attendance.view_team',
+    'hr.view_requests', 'hr.submit_request',
+    'attendance.view', 'attendance.view_own', 'attendance.view_team', 'attendance.submit',
     'org.view_team',
     'tasks.view', 'tasks.assign',
     'procurement.create'
   ],
   'STAGE_SECRETARY': [
     'employees.view_team',
-    'attendance.view_team', 'attendance.export',
+    'attendance.view_own', 'attendance.view_team', 'attendance.submit', 'attendance.export',
     'tasks.view',
     'hr.submit_request'
   ],
   'TEACHER': [
+    'attendance.view_own', 'attendance.submit',
     'tasks.view',
     'hr.submit_request',
     'procurement.create'
   ],
   'EMPLOYEE': [
+    'attendance.view_own', 'attendance.submit',
     'tasks.view',
     'hr.submit_request',
     'procurement.create'
