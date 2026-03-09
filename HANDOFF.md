@@ -611,3 +611,162 @@ const attendance = await prisma.attendance.findMany({
 - User goal: "نظام صلاحيات محكم و متطور ينعكس منها اللي يظهر للموظف بالواجهه الخاصه فيه مباشره بدون اكواد"
 
 **Status:** ✅ Phase 1 complete - permission system foundation ready
+
+## 2026-03-09: Permissions System - Phase 2 (Employee-Role Integration) ✅
+
+**Status:** Session integration complete
+
+**What was delivered:**
+
+### 1. Session Type Updates ✅
+- Updated `SessionUser` type in `lib/session.ts`:
+  - Added `permissions?: string[]` - array of permission names from systemRole
+  - Added `orgAssignments?: Array<{...}>` - org structure assignments for data filtering
+- Session now carries all permissions for frontend permission checks
+
+### 2. Login Flow Integration ✅
+- Modified `/api/auth/login/route.ts`:
+  - Loads systemRole with nested permissions during login
+  - Loads employee org assignments (active only)
+  - Extracts permission names into flat array
+  - Stores permissions + orgAssignments in session
+- User permissions loaded automatically on login
+
+### 3. Server-Side Permission Helpers ✅
+- Created `lib/permissions-server.ts` with comprehensive helpers:
+  - **Permission Checks:**
+    - `hasPermission(user, permission)` - check single permission
+    - `hasAnyPermission(user, permissions[])` - check any of multiple
+    - `hasAllPermissions(user, permissions[])` - check all of multiple
+  - **Data Filtering:**
+    - `getAccessibleEmployees(user, globalPerm?, teamPerm?)` - returns employee IDs user can access
+    - `getAccessibleOrgUnits(user)` - returns org unit IDs user manages
+    - `canAccessEmployee(user, targetId, globalPerm?, teamPerm?)` - check access to specific employee
+  - **Middleware Helpers:**
+    - `requirePermission(user, permission)` - returns 403 Response if no permission
+    - `requireAnyPermission(user, permissions[])` - returns 403 if none match
+  - **Utilities:**
+    - `getUserPermissions(user)` - get user's permission list
+    - `isSuperAdmin(user)` - check if user is SUPER_ADMIN
+
+### 4. Data Filtering Logic ✅
+**Concept:** Permission + Org Structure = Accessible Data
+
+**Example:**
+```typescript
+// API route for attendance
+const accessibleEmployees = await getAccessibleEmployees(
+  session.user,
+  'attendance.view',      // global permission (all employees)
+  'attendance.view_team'  // team permission (team only)
+);
+
+const attendance = await prisma.attendance.findMany({
+  where: { employeeId: { in: accessibleEmployees } }
+});
+```
+
+**Logic:**
+- If user has `attendance.view` → returns ALL employee IDs
+- If user has `attendance.view_team` → returns IDs of employees in user's managed org units
+- Otherwise → returns only user's own employee ID
+
+### 5. UI Already Complete ✅
+- Employee edit page (`/hr/employees/[id]/edit`) already has:
+  - `systemRoleId` field in formData
+  - Dropdown for selecting system role
+  - `fetchSystemRoles()` function loads available roles
+  - UI conditionally shows dropdown when roles are available
+- No UI changes needed!
+
+### 6. Permission Flow ✅
+```
+1. Admin creates employee
+   ↓
+2. Assigns systemRoleId (e.g., DEPT_HEAD)
+   ↓
+3. Employee logs in
+   ↓
+4. Login route loads:
+   - systemRole.permissions → user.permissions array
+   - employee.orgAssignments → user.orgAssignments array
+   ↓
+5. Session contains permissions
+   ↓
+6. Frontend uses usePermissions() hook
+   ↓
+7. Backend uses hasPermission() + getAccessibleEmployees()
+   ↓
+8. UI filters automatically
+   ↓
+9. Data scoped to allowed employees
+```
+
+### What Works Now ✅
+1. User logs in → permissions loaded into session
+2. Frontend can check permissions via `usePermissions()` hook
+3. Backend can check permissions via `hasPermission()`
+4. Backend can filter data via `getAccessibleEmployees()`
+5. System role can be assigned to employees via UI
+
+### What's NOT Included (Phase 3)
+- ⏳ Actual implementation in all API routes
+- ⏳ Testing with real users/roles
+- ⏳ Role selection UI in org assignments (HEAD/SUPERVISOR/MEMBER selection)
+- ⏳ Permission audit logging
+- ⏳ Bulk role assignment tools
+
+### Technical Details
+
+**Session Storage:**
+```typescript
+{
+  user: {
+    id: "xxx",
+    username: "ahmad",
+    permissions: ["employees.view_team", "attendance.view_team", "tasks.assign"],
+    orgAssignments: [
+      { id: "xxx", orgUnitId: "unit123", role: "HEAD", assignmentType: "ADMIN" }
+    ]
+  }
+}
+```
+
+**Server-Side Usage:**
+```typescript
+import { hasPermission, getAccessibleEmployees } from '@/lib/permissions-server';
+
+// Check permission
+if (!hasPermission(session.user, 'employees.view')) {
+  return Response.json({ error: 'No permission' }, { status: 403 });
+}
+
+// Filter data
+const employeeIds = await getAccessibleEmployees(
+  session.user,
+  'employees.view',      // global
+  'employees.view_team'  // team
+);
+```
+
+**Client-Side Usage:**
+```tsx
+import { usePermissions } from '@/hooks/usePermissions';
+
+const { hasPermission } = usePermissions();
+
+{hasPermission('employees.create') && (
+  <button>Add Employee</button>
+)}
+```
+
+### Commit:
+- `afe2bb0` - feat: Phase 2 - Employee-Role Integration & Session Permissions
+
+### Branch:
+- `feat/permissions-phase2-employee-role` (pushed to GitHub)
+
+---
+
+**Status:** ✅ Phase 2 complete - permissions flow end-to-end
+**Next:** Phase 3 - Apply to all API routes + testing + role selection UI
