@@ -397,6 +397,7 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#4a5568' }}>
             ابحث عن الموظفين (القائمة تبقى مفتوحة)
           </label>
+          {/* @ts-ignore - ReactSelect types conflict with simple option array */}
           <ReactSelect
             isMulti
             components={{ Option, MenuList }}
