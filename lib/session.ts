@@ -17,7 +17,7 @@ export type SessionUser = {
     id: string
     orgUnitId: string
     role: 'HEAD' | 'SUPERVISOR' | 'MEMBER'
-    assignmentType: 'ADMIN' | 'FUNCTIONAL'
+    assignmentType: 'ADMIN' | 'FUNCTIONAL' | 'EXECUTIVE' // 🆕
   }>
 }
 

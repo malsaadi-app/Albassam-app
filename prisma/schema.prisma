@@ -2553,8 +2553,9 @@ enum OrgUnitType {
 }
 
 enum OrgAssignmentType {
-  ADMIN
-  FUNCTIONAL
+  ADMIN      // مشرفين ومديرين
+  FUNCTIONAL // أقسام وظيفية
+  EXECUTIVE  // إداري تنفيذي
 }
 
 enum OrgAssignmentRole {

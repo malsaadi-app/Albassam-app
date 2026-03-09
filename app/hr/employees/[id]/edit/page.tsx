@@ -24,6 +24,7 @@ export default function EditEmployeePage() {
   const [orgUnits, setOrgUnits] = useState<any[]>([]);
   const [adminStageUnitIds, setAdminStageUnitIds] = useState<string[]>([]);
   const [functionalUnitIds, setFunctionalUnitIds] = useState<string[]>([]);
+  const [executiveUnitIds, setExecutiveUnitIds] = useState<string[]>([]); // 🆕 إداري تنفيذي
   const [savingOrg, setSavingOrg] = useState(false);
 
   // قوائم ثابتة
@@ -287,8 +288,10 @@ export default function EditEmployeePage() {
         const list = data.assignments || [];
         const adminStages = list.filter((a: any) => a.assignmentType === 'ADMIN' && a.role === 'MEMBER').map((a: any) => a.orgUnitId);
         const functional = list.filter((a: any) => a.assignmentType === 'FUNCTIONAL' && a.role === 'MEMBER').map((a: any) => a.orgUnitId);
+        const executive = list.filter((a: any) => a.assignmentType === 'EXECUTIVE' && a.role === 'MEMBER').map((a: any) => a.orgUnitId); // 🆕
         setAdminStageUnitIds(adminStages);
         setFunctionalUnitIds(functional);
+        setExecutiveUnitIds(executive); // 🆕
       }
     } catch (e) {
       console.error('Error fetching org assignments', e);
@@ -306,6 +309,7 @@ export default function EditEmployeePage() {
         body: JSON.stringify({
           adminStageUnitIds,
           functionalUnitIds,
+          executiveUnitIds, // 🆕 إداري تنفيذي
           primaryStageId: formData.stageId || null,
         }),
       });
@@ -772,8 +776,35 @@ export default function EditEmployeePage() {
                   </div>
                 </div>
 
+                {/* Executive Assignments - 🆕 إداري تنفيذي */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                    🎯 إداري تنفيذي (EXECUTIVE) — متعدد
+                  </label>
+                  <ReactSelect
+                    isMulti
+                    isRtl
+                    placeholder="اختر الوحدات التنظيمية…"
+                    options={orgUnits
+                      .filter((u) => u.isActive)
+                      .map((u) => ({ value: u.id, label: u.name }))}
+                    value={executiveUnitIds.map((id) => {
+                      const unit = orgUnits.find((u) => u.id === id);
+                      return unit ? { value: id, label: unit.name } : null;
+                    }).filter(Boolean) as any}
+                    onChange={(vals) => setExecutiveUnitIds((vals || []).map((v: any) => v.value))}
+                    styles={{
+                      control: (base) => ({ ...base, borderRadius: 12, borderColor: '#E5E7EB', minHeight: 44 }),
+                      menu: (base) => ({ ...base, zIndex: 60 }),
+                    }}
+                  />
+                  <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '6px' }}>
+                    تعيين إداري تنفيذي للوحدات التنظيمية (مراحل، أقسام، فروع).
+                  </div>
+                </div>
+
                 {/* Coverage Scope */}
-                {adminStageUnitIds.length > 0 && (
+                {(adminStageUnitIds.length > 0 || executiveUnitIds.length > 0) && (
                   <div style={{ marginTop: '24px', padding: '20px', background: '#F9FAFB', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
                     <div style={{ fontSize: '15px', fontWeight: '800', color: '#111827', marginBottom: '12px' }}>
                       🌍 نطاق التغطية

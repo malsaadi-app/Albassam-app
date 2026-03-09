@@ -36,6 +36,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 // {
 //   adminStageUnitIds?: string[]
 //   functionalUnitIds?: string[]
+//   executiveUnitIds?: string[]  // 🆕 إداري تنفيذي
 //   primaryStageId?: string | null  // writes Employee.stageId
 // }
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -50,6 +51,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const adminStageUnitIds: string[] | undefined = Array.isArray(body?.adminStageUnitIds) ? body.adminStageUnitIds.map(String) : undefined
     const functionalUnitIds: string[] | undefined = Array.isArray(body?.functionalUnitIds) ? body.functionalUnitIds.map(String) : undefined
+    const executiveUnitIds: string[] | undefined = Array.isArray(body?.executiveUnitIds) ? body.executiveUnitIds.map(String) : undefined // 🆕
     const primaryStageId: string | null | undefined = body?.primaryStageId === undefined ? undefined : body.primaryStageId ? String(body.primaryStageId) : null
 
     const employee = await prisma.employee.findUnique({ where: { id }, select: { id: true, branchId: true } })
@@ -123,6 +125,42 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
             await tx.orgUnitAssignment.updateMany({
               where: { employeeId: id, orgUnitId: { in: validIds }, assignmentType: 'FUNCTIONAL' },
+              data: { active: true, role: 'MEMBER' },
+            })
+          }
+        }
+      }
+
+      // 🆕 EXECUTIVE assignments (إداري تنفيذي)
+      if (executiveUnitIds !== undefined) {
+        await tx.orgUnitAssignment.updateMany({
+          where: { employeeId: id, assignmentType: 'EXECUTIVE', role: 'MEMBER' },
+          data: { active: false },
+        })
+
+        if (executiveUnitIds.length) {
+          const units = await tx.orgUnit.findMany({
+            where: { id: { in: executiveUnitIds }, branchId: employee.branchId, isActive: true },
+            select: { id: true },
+          })
+          const validIds = units.map((u) => u.id)
+
+          if (validIds.length) {
+            await tx.orgUnitAssignment.createMany({
+              data: validIds.map((orgUnitId) => ({
+                employeeId: id,
+                orgUnitId,
+                assignmentType: 'EXECUTIVE',
+                role: 'MEMBER',
+                coverageScope: 'BRANCH',
+                active: true,
+                isPrimary: false,
+              })),
+              skipDuplicates: true,
+            })
+
+            await tx.orgUnitAssignment.updateMany({
+              where: { employeeId: id, orgUnitId: { in: validIds }, assignmentType: 'EXECUTIVE' },
               data: { active: true, role: 'MEMBER' },
             })
           }
