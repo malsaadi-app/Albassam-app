@@ -453,9 +453,9 @@ export default function TasksPage() {
         {/* Statistics - Clickable Filters */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '20px',
-          marginBottom: '32px'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: '12px',
+          marginBottom: '24px'
         }}>
           {/* All Tasks */}
           <button
@@ -464,20 +464,20 @@ export default function TasksPage() {
               background: filter === 'ALL' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
               color: filter === 'ALL' ? 'white' : '#374151',
               border: filter === 'ALL' ? 'none' : '2px solid #E5E7EB',
-              borderRadius: '16px',
-              padding: '24px',
+              borderRadius: '12px',
+              padding: '14px',
               cursor: 'pointer',
               textAlign: 'right',
               transition: 'all 0.3s ease',
-              boxShadow: filter === 'ALL' ? '0 10px 25px rgba(102, 126, 234, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+              boxShadow: filter === 'ALL' ? '0 8px 20px rgba(102, 126, 234, 0.3)' : '0 2px 6px rgba(0, 0, 0, 0.08)',
               transform: filter === 'ALL' ? 'translateY(-2px)' : 'translateY(0)'
             }}
           >
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📊</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', opacity: filter === 'ALL' ? 1 : 0.7 }}>
+            <div style={{ fontSize: '20px', marginBottom: '6px' }}>📊</div>
+            <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px', opacity: filter === 'ALL' ? 1 : 0.7 }}>
               الكل
             </div>
-            <div style={{ fontSize: '36px', fontWeight: '800' }}>
+            <div style={{ fontSize: '24px', fontWeight: '800' }}>
               {tasks.length}
             </div>
           </button>
@@ -489,20 +489,20 @@ export default function TasksPage() {
               background: filter === 'NEW' ? 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' : 'white',
               color: filter === 'NEW' ? 'white' : '#374151',
               border: filter === 'NEW' ? 'none' : '2px solid #E5E7EB',
-              borderRadius: '16px',
-              padding: '24px',
+              borderRadius: '12px',
+              padding: '14px',
               cursor: 'pointer',
               textAlign: 'right',
               transition: 'all 0.3s ease',
-              boxShadow: filter === 'NEW' ? '0 10px 25px rgba(59, 130, 246, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+              boxShadow: filter === 'NEW' ? '0 8px 20px rgba(59, 130, 246, 0.3)' : '0 2px 6px rgba(0, 0, 0, 0.08)',
               transform: filter === 'NEW' ? 'translateY(-2px)' : 'translateY(0)'
             }}
           >
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📋</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', opacity: filter === 'NEW' ? 1 : 0.7 }}>
+            <div style={{ fontSize: '20px', marginBottom: '6px' }}>📋</div>
+            <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px', opacity: filter === 'NEW' ? 1 : 0.7 }}>
               جديد
             </div>
-            <div style={{ fontSize: '36px', fontWeight: '800' }}>
+            <div style={{ fontSize: '24px', fontWeight: '800' }}>
               {tasks.filter(t => t.status === 'NEW').length}
             </div>
           </button>
@@ -514,20 +514,20 @@ export default function TasksPage() {
               background: filter === 'IN_PROGRESS' ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' : 'white',
               color: filter === 'IN_PROGRESS' ? 'white' : '#374151',
               border: filter === 'IN_PROGRESS' ? 'none' : '2px solid #E5E7EB',
-              borderRadius: '16px',
-              padding: '24px',
+              borderRadius: '12px',
+              padding: '14px',
               cursor: 'pointer',
               textAlign: 'right',
               transition: 'all 0.3s ease',
-              boxShadow: filter === 'IN_PROGRESS' ? '0 10px 25px rgba(245, 158, 11, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+              boxShadow: filter === 'IN_PROGRESS' ? '0 8px 20px rgba(245, 158, 11, 0.3)' : '0 2px 6px rgba(0, 0, 0, 0.08)',
               transform: filter === 'IN_PROGRESS' ? 'translateY(-2px)' : 'translateY(0)'
             }}
           >
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>⚡</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', opacity: filter === 'IN_PROGRESS' ? 1 : 0.7 }}>
+            <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚡</div>
+            <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px', opacity: filter === 'IN_PROGRESS' ? 1 : 0.7 }}>
               قيد التنفيذ
             </div>
-            <div style={{ fontSize: '36px', fontWeight: '800' }}>
+            <div style={{ fontSize: '24px', fontWeight: '800' }}>
               {tasks.filter(t => t.status === 'IN_PROGRESS').length}
             </div>
           </button>
@@ -539,20 +539,20 @@ export default function TasksPage() {
               background: filter === 'ON_HOLD' ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)' : 'white',
               color: filter === 'ON_HOLD' ? 'white' : '#374151',
               border: filter === 'ON_HOLD' ? 'none' : '2px solid #E5E7EB',
-              borderRadius: '16px',
-              padding: '24px',
+              borderRadius: '12px',
+              padding: '14px',
               cursor: 'pointer',
               textAlign: 'right',
               transition: 'all 0.3s ease',
-              boxShadow: filter === 'ON_HOLD' ? '0 10px 25px rgba(239, 68, 68, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+              boxShadow: filter === 'ON_HOLD' ? '0 8px 20px rgba(239, 68, 68, 0.3)' : '0 2px 6px rgba(0, 0, 0, 0.08)',
               transform: filter === 'ON_HOLD' ? 'translateY(-2px)' : 'translateY(0)'
             }}
           >
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>⏸️</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', opacity: filter === 'ON_HOLD' ? 1 : 0.7 }}>
+            <div style={{ fontSize: '20px', marginBottom: '6px' }}>⏸️</div>
+            <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px', opacity: filter === 'ON_HOLD' ? 1 : 0.7 }}>
               بانتظار
             </div>
-            <div style={{ fontSize: '36px', fontWeight: '800' }}>
+            <div style={{ fontSize: '24px', fontWeight: '800' }}>
               {tasks.filter(t => t.status === 'ON_HOLD').length}
             </div>
           </button>
@@ -564,20 +564,20 @@ export default function TasksPage() {
               background: filter === 'DONE' ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : 'white',
               color: filter === 'DONE' ? 'white' : '#374151',
               border: filter === 'DONE' ? 'none' : '2px solid #E5E7EB',
-              borderRadius: '16px',
-              padding: '24px',
+              borderRadius: '12px',
+              padding: '14px',
               cursor: 'pointer',
               textAlign: 'right',
               transition: 'all 0.3s ease',
-              boxShadow: filter === 'DONE' ? '0 10px 25px rgba(16, 185, 129, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+              boxShadow: filter === 'DONE' ? '0 8px 20px rgba(16, 185, 129, 0.3)' : '0 2px 6px rgba(0, 0, 0, 0.08)',
               transform: filter === 'DONE' ? 'translateY(-2px)' : 'translateY(0)'
             }}
           >
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>✅</div>
-            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', opacity: filter === 'DONE' ? 1 : 0.7 }}>
+            <div style={{ fontSize: '20px', marginBottom: '6px' }}>✅</div>
+            <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px', opacity: filter === 'DONE' ? 1 : 0.7 }}>
               مكتمل
             </div>
-            <div style={{ fontSize: '36px', fontWeight: '800' }}>
+            <div style={{ fontSize: '24px', fontWeight: '800' }}>
               {tasks.filter(t => t.status === 'DONE').length}
             </div>
           </button>
