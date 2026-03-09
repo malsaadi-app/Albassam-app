@@ -27,7 +27,7 @@ export async function PATCH(
       }
     });
 
-    await syncDelegationNotifications(prisma, updated.delegateToUserId);
+    await syncDelegationNotifications(prisma as any, updated.delegateToUserId);
 
     return NextResponse.json({ delegation: updated });
   } catch (err) {

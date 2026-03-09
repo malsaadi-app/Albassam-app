@@ -16,6 +16,14 @@ const nextConfig: NextConfig = {
     return `build-${Date.now()}`;
   },
   
+  // Prisma: disable webpack cache for Prisma Client
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals.push('@prisma/client', '@prisma/engines');
+    }
+    return config;
+  },
+  
   // Image Optimization
   images: {
     formats: ['image/webp', 'image/avif'], // Modern formats first

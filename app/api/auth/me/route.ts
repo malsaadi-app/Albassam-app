@@ -14,7 +14,7 @@ export async function GET() {
     }
 
     // Opportunistically deliver delegation start/end notifications.
-    await syncDelegationNotifications(prisma, session.user.id);
+    await syncDelegationNotifications(prisma as any, session.user.id);
 
     const emp = await prisma.employee.findUnique({
       where: { userId: session.user.id },

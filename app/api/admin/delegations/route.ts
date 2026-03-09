@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Opportunistic notify if started already
-    await syncDelegationNotifications(prisma, delegation.delegateToUserId);
+    await syncDelegationNotifications(prisma as any, delegation.delegateToUserId);
 
     return NextResponse.json({ delegation }, { status: 201 });
   } catch (err) {
