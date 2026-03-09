@@ -93,7 +93,6 @@ export default function EditEmployeePage() {
     checkPermission();
     fetchSystemRoles();
     fetchBranches();
-    fetchDepartments();
     fetchJobTitles();
     if (params.id) {
       fetchEmployee();
@@ -103,9 +102,11 @@ export default function EditEmployeePage() {
   useEffect(() => {
     if (formData.branchId) {
       fetchStages(formData.branchId);
+      fetchDepartments(formData.branchId); // ✅ Load departments for selected branch
     } else {
       setStages([]);
-      setFormData(prev => ({ ...prev, stageId: '' }));
+      setDepartments([]); // ✅ Clear departments when no branch
+      setFormData(prev => ({ ...prev, stageId: '', departmentId: '' }));
     }
   }, [formData.branchId]);
 
@@ -155,9 +156,12 @@ export default function EditEmployeePage() {
     }
   };
 
-  const fetchDepartments = async () => {
+  const fetchDepartments = async (branchId?: string) => {
     try {
-      const res = await fetch('/api/hr/master-data/departments');
+      const url = branchId 
+        ? `/api/hr/master-data/departments?branchId=${branchId}`
+        : '/api/hr/master-data/departments';
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setDepartments(data.departments || []);
