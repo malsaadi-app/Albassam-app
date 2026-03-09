@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/session';
+import { hasPermission, getAccessibleEmployees } from '@/lib/permissions-server';
 
 // GET /api/attendance - Get user's attendance records
 export async function GET(request: NextRequest) {
@@ -13,14 +14,35 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || session.user.id;
+    const requestedUserId = searchParams.get('userId');
     const date = searchParams.get('date');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    // Check if user can view others' attendance (HR/Admin only)
-    if (userId !== session.user.id && session.user.role !== 'ADMIN' && session.user.role !== 'HR_EMPLOYEE') {
-      return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
+    // Determine accessible user IDs based on permissions
+    let accessibleUserIds: string[] = [];
+    
+    if (await hasPermission(session.user.id, 'attendance.view')) {
+      // Global view - can see all employees
+      const allEmployees = await prisma.employee.findMany({
+        where: { status: 'ACTIVE' },
+        select: { userId: true }
+      });
+      accessibleUserIds = allEmployees.map(e => e.userId).filter(Boolean) as string[];
+    } else if (await hasPermission(session.user.id, 'attendance.view_team')) {
+      // Team view - can see team members only
+      accessibleUserIds = await getAccessibleEmployees(session.user.id);
+    } else if (await hasPermission(session.user.id, 'attendance.view_own')) {
+      // Own view - can see only own records
+      accessibleUserIds = [session.user.id];
+    } else {
+      return NextResponse.json({ error: 'ليس لديك صلاحية عرض الحضور' }, { status: 403 });
+    }
+
+    // If specific user requested, check if accessible
+    const userId = requestedUserId || session.user.id;
+    if (!accessibleUserIds.includes(userId)) {
+      return NextResponse.json({ error: 'ليس لديك صلاحية عرض حضور هذا الموظف' }, { status: 403 });
     }
 
     const where: any = { userId };
@@ -127,6 +149,11 @@ export async function POST(request: NextRequest) {
 
     if (!session.user) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+    }
+
+    // Check permission for attendance submission
+    if (!(await hasPermission(session.user.id, 'attendance.submit'))) {
+      return NextResponse.json({ error: 'ليس لديك صلاحية تسجيل الحضور' }, { status: 403 });
     }
 
     const body = await request.json();

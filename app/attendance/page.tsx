@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { HiOutlineChartBar } from 'react-icons/hi';
 import { useI18n } from '@/lib/useI18n';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface AttendanceRecord {
   id: string;
@@ -22,6 +23,7 @@ interface AttendanceRecord {
 
 export default function AttendancePage() {
   const { locale, dir, t } = useI18n();
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -29,13 +31,19 @@ export default function AttendancePage() {
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
   const [gpsSupported, setGpsSupported] = useState(false);
 
+  // Check permissions
+  const canSubmit = hasPermission('attendance.submit');
+  const canViewOwn = hasPermission('attendance.view_own');
+
   useEffect(() => {
-    fetchTodayRecords();
+    if (!permissionsLoading) {
+      fetchTodayRecords();
+    }
     
     if ('geolocation' in navigator) {
       setGpsSupported(true);
     }
-  }, []);
+  }, [permissionsLoading]);
 
   const fetchTodayRecords = async () => {
     try {
@@ -278,16 +286,32 @@ export default function AttendancePage() {
           </p>
 
           {/* Action Buttons */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '16px',
-            maxWidth: '500px',
-            margin: '0 auto'
-          }}>
-            <button
-              onClick={handleCheckIn}
-              disabled={actionLoading}
+          {!canSubmit ? (
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              borderRadius: '12px',
+              padding: '20px',
+              color: 'white',
+              textAlign: 'center'
+            }}>
+              <p style={{ margin: 0, fontSize: '15px' }}>
+                ⚠️ ليس لديك صلاحية تسجيل الحضور
+              </p>
+              <p style={{ margin: '8px 0 0', fontSize: '13px', opacity: 0.8 }}>
+                يرجى التواصل مع مدير الموارد البشرية
+              </p>
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '16px',
+              maxWidth: '500px',
+              margin: '0 auto'
+            }}>
+              <button
+                onClick={handleCheckIn}
+                disabled={actionLoading}
               style={{
                 background: actionLoading 
                   ? 'rgba(255, 255, 255, 0.6)' 
@@ -354,6 +378,7 @@ export default function AttendancePage() {
               ✕ {t('checkOut')}
             </button>
           </div>
+          )}
         </div>
 
         {/* Date Card */}
