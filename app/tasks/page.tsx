@@ -12,6 +12,7 @@ import { Input, Textarea, Select } from '@/components/ui/Input';
 import { type ChecklistItem } from './ChecklistEditor';
 import ReactSelect from 'react-select';
 import { useToast } from '@/components/Toast';
+import PendingRequestsCard from '@/components/PendingRequestsCard';
 
 // Dynamic imports for heavy components (lazy loading)
 const TaskAttachments = dynamic(() => import('./TaskAttachments'), {
@@ -580,6 +581,9 @@ export default function TasksPage() {
               {tasks.filter(t => t.status === 'DONE').length}
             </div>
           </button>
+
+          {/* Pending Requests Card */}
+          <PendingRequestsCard />
         </div>
 
         {/* Category Filter Only */}
