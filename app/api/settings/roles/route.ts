@@ -20,7 +20,12 @@ export async function GET() {
     const roles = await prisma.systemRole.findMany({
       orderBy: [{ sortOrder: 'asc' }, { nameAr: 'asc' }],
       include: {
-        _count: { select: { users: true, permissions: true } },
+        _count: { 
+          select: { 
+            employees: true,  // Changed from users to employees
+            permissions: true 
+          } 
+        },
       },
     })
 
@@ -33,7 +38,7 @@ export async function GET() {
         description: r.description,
         isActive: r.isActive,
         isSystem: r.isSystem,
-        userCount: r._count.users,
+        userCount: r._count.employees,  // Changed from users to employees
         permissionCount: r._count.permissions,
       })),
     })
