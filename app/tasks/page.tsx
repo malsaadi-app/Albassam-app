@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Input, Textarea, Select } from '@/components/ui/Input';
 import { type ChecklistItem } from './ChecklistEditor';
 import ReactSelect from 'react-select';
+import { useToast } from '@/components/Toast';
 
 // Dynamic imports for heavy components (lazy loading)
 const TaskAttachments = dynamic(() => import('./TaskAttachments'), {
@@ -81,6 +82,7 @@ type TaskTemplate = {
 
 export default function TasksPage() {
   const router = useRouter();
+  const { showToast, ToastContainer } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [users, setUsers] = useState<AvailableUser[]>([]);
@@ -180,6 +182,7 @@ export default function TasksPage() {
       });
 
       if (res.ok) {
+        showToast('تم إنشاء المهمة بنجاح ✅', 'success');
         setShowNewTaskForm(false);
         setNewTask({
           title: '',
@@ -192,9 +195,13 @@ export default function TasksPage() {
         setNewTaskAssignees([]);
         setNewTaskChecklist([]);
         fetchTasks();
+      } else {
+        const error = await res.json();
+        showToast(error.error || 'فشل إنشاء المهمة ❌', 'error');
       }
     } catch (error) {
       console.error('Error creating task:', error);
+      showToast('حدث خطأ أثناء إنشاء المهمة ❌', 'error');
     }
   };
 
@@ -208,6 +215,7 @@ export default function TasksPage() {
         title: editingTask.title,
         description: editingTask.description,
         category: editingTask.category,
+        priority: editingTask.priority,
         isPrivate: editingTask.isPrivate,
         ownerId: editingTask.ownerId,
       };
@@ -223,13 +231,18 @@ export default function TasksPage() {
       });
 
       if (res.ok) {
+        showToast('تم حفظ التعديلات بنجاح ✅', 'success');
         setShowEditTaskForm(false);
         setEditingTask(null);
         setEditTaskChecklist([]);
         fetchTasks();
+      } else {
+        const error = await res.json();
+        showToast(error.error || 'فشل حفظ التعديلات ❌', 'error');
       }
     } catch (error) {
       console.error('Error updating task:', error);
+      showToast('حدث خطأ أثناء حفظ التعديلات ❌', 'error');
     }
   };
 
@@ -692,12 +705,28 @@ export default function TasksPage() {
                     onChange={(selected) => {
                       setNewTaskAssignees(selected ? selected.map((s: any) => s.value) : []);
                     }}
-                    formatOptionLabel={({ label, subtitle }: any) => (
-                      <div>
-                        <div style={{ fontWeight: '600', color: '#111827' }}>{label}</div>
-                        {subtitle && <div style={{ fontSize: '12px', color: '#6B7280' }}>{subtitle}</div>}
-                      </div>
-                    )}
+                    formatOptionLabel={({ value, label, subtitle }: any) => {
+                      const isSelected = newTaskAssignees.includes(value);
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 0' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            readOnly
+                            style={{
+                              width: '18px',
+                              height: '18px',
+                              cursor: 'pointer',
+                              accentColor: '#3B82F6'
+                            }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '600', color: '#111827' }}>{label}</div>
+                            {subtitle && <div style={{ fontSize: '12px', color: '#6B7280' }}>{subtitle}</div>}
+                          </div>
+                        </div>
+                      );
+                    }}
                     styles={{
                       control: (base) => ({
                         ...base,
@@ -830,6 +859,17 @@ export default function TasksPage() {
                 <option value="HR">شؤون الموظفين</option>
               </Select>
 
+              <Select
+                label="الأولوية"
+                required
+                value={editingTask.priority}
+                onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value as any })}
+              >
+                <option value="LOW">منخفضة 🟢</option>
+                <option value="MEDIUM">متوسطة 🟡</option>
+                <option value="HIGH">عالية 🔴</option>
+              </Select>
+
               {/* Checklist */}
               <ChecklistEditor
                 checklist={editTaskChecklist}
@@ -941,6 +981,9 @@ export default function TasksPage() {
           </Card>
         </div>
       )}
+
+      {/* Toast Notifications */}
+      <ToastContainer />
     </div>
   );
 }

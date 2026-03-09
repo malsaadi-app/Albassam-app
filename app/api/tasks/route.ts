@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { isAdmin } from '@/lib/authz'
-import { TaskCategory, TaskStatus } from '@prisma/client'
+import { TaskCategory, TaskStatus, TaskPriority } from '@prisma/client'
 import { sendTelegramNotification, notifyAdminOfStatusChange } from '@/lib/telegram'
 
 function requireUser(session: Awaited<ReturnType<typeof getSession>>) {
@@ -88,6 +88,7 @@ const CreateBody = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(2000).optional().nullable(),
   category: z.nativeEnum(TaskCategory),
+  priority: z.nativeEnum(TaskPriority).optional(),
   status: z.nativeEnum(TaskStatus).optional(),
   isPrivate: z.boolean().optional(),
   ownerId: z.string().optional(),
@@ -128,7 +129,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
   }
 
-  const { title, description, category, status, isPrivate, ownerId, checklist, assigneeIds } = parsed.data
+  const { title, description, category, priority, status, isPrivate, ownerId, checklist, assigneeIds } = parsed.data
 
   // Admin can assign to anyone, employees can only create for themselves
   const finalOwnerId = (isAdmin(user.role) && ownerId) ? ownerId : user.id
@@ -141,6 +142,7 @@ export async function POST(req: Request) {
       title,
       description: description || null,
       category,
+      priority: priority ?? TaskPriority.MEDIUM,
       status: status ?? TaskStatus.NEW,
       isPrivate: finalPrivate,
       ownerId: finalOwnerId,
@@ -213,6 +215,7 @@ const UpdateBody = z.object({
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional().nullable(),
   category: z.nativeEnum(TaskCategory).optional(),
+  priority: z.nativeEnum(TaskPriority).optional(),
   status: z.nativeEnum(TaskStatus).optional(),
   isPrivate: z.boolean().optional(),
   ownerId: z.string().optional(),
