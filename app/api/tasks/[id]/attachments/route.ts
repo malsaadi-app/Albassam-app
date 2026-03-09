@@ -1,28 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { getSession } from '@/lib/session';
+import { isAdmin } from '@/lib/authz';
+import { prisma } from '@/lib/db';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { randomUUID } from 'crypto';
-import { prisma } from '@/lib/db';
-import { getSession } from '@/lib/session';
+import { existsSync } from 'fs';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/gif',
-  'application/zip',
-  'application/x-zip-compressed'
-];
-
-export async function POST(
-  request: NextRequest,
+// GET /api/tasks/[id]/attachments - Get task attachments
+export async function GET(
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -30,94 +17,37 @@ export async function POST(
     const session = await getSession(cookieStore);
 
     if (!session.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
     }
 
-    const user = session.user;
-    const { id: taskId } = await params;
+    const { id } = await params;
 
-    // Verify task exists and user has access
     const task = await prisma.task.findUnique({
-      where: { id: taskId },
-      include: { owner: true, createdBy: true }
+      where: { id },
+      select: { attachments: true, ownerId: true, isPrivate: true }
     });
 
     if (!task) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
-    }
-    
-    // Only owner, creator, or admin can upload files
-    if (task.ownerId !== user.id && task.createdById !== user.id && user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'المهمة غير موجودة' }, { status: 404 });
     }
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    // Check permissions
+    if (!isAdmin(session.user.role) && task.ownerId !== session.user.id) {
+      return NextResponse.json({ error: 'ليس لديك صلاحية' }, { status: 403 });
     }
 
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: 'File size exceeds 10MB limit' }, { status: 400 });
-    }
+    const attachments = task.attachments ? JSON.parse(task.attachments) : [];
 
-    // Validate file type
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json({ error: 'File type not allowed' }, { status: 400 });
-    }
-
-    // Generate unique filename
-    const fileExtension = file.name.split('.').pop();
-    const uniqueFilename = `${randomUUID()}.${fileExtension}`;
-    const uploadDir = join(process.cwd(), 'uploads');
-    const filePath = join(uploadDir, uniqueFilename);
-
-    // Create uploads directory if it doesn't exist
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (err) {
-      // Directory might already exist
-    }
-
-    // Save file
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
-
-    // Update task attachments
-    const currentAttachments = task.attachments ? JSON.parse(task.attachments) : [];
-    const newAttachment = {
-      id: randomUUID(),
-      filename: file.name,
-      storedFilename: uniqueFilename,
-      size: file.size,
-      type: file.type,
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: user.displayName || user.username
-    };
-
-    const updatedAttachments = [...currentAttachments, newAttachment];
-
-    await prisma.task.update({
-      where: { id: taskId },
-      data: { attachments: JSON.stringify(updatedAttachments) }
-    });
-
-    return NextResponse.json({ 
-      success: true, 
-      attachment: newAttachment 
-    });
-
+    return NextResponse.json({ attachments });
   } catch (error) {
-    console.error('Upload error:', error);
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    console.error('Error fetching attachments:', error);
+    return NextResponse.json({ error: 'حدث خطأ' }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
+// POST /api/tasks/[id]/attachments - Upload attachment
+export async function POST(
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -125,40 +55,147 @@ export async function DELETE(
     const session = await getSession(cookieStore);
 
     if (!session.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
     }
 
-    const user = session.user;
-    const { id: taskId } = await params;
-    const { searchParams } = new URL(request.url);
+    const { id } = await params;
+
+    const task = await prisma.task.findUnique({
+      where: { id },
+      select: { attachments: true, ownerId: true }
+    });
+
+    if (!task) {
+      return NextResponse.json({ error: 'المهمة غير موجودة' }, { status: 404 });
+    }
+
+    // Check permissions
+    if (!isAdmin(session.user.role) && task.ownerId !== session.user.id) {
+      return NextResponse.json({ error: 'ليس لديك صلاحية' }, { status: 403 });
+    }
+
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return NextResponse.json({ error: 'لم يتم تحديد ملف' }, { status: 400 });
+    }
+
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      return NextResponse.json({ error: 'حجم الملف كبير جداً (الحد الأقصى 10MB)' }, { status: 400 });
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain'
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'نوع الملف غير مدعوم' }, { status: 400 });
+    }
+
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'tasks', id);
+    if (!existsSync(uploadsDir)) {
+      await mkdir(uploadsDir, { recursive: true });
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const originalName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filename = `${timestamp}-${originalName}`;
+    const filepath = join(uploadsDir, filename);
+
+    // Write file
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    await writeFile(filepath, buffer);
+
+    // Update attachments in database
+    const currentAttachments = task.attachments ? JSON.parse(task.attachments) : [];
+    const newAttachment = {
+      id: `${timestamp}`,
+      name: file.name,
+      filename,
+      size: file.size,
+      type: file.type,
+      url: `/uploads/tasks/${id}/${filename}`,
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: session.user.id
+    };
+
+    currentAttachments.push(newAttachment);
+
+    await prisma.task.update({
+      where: { id },
+      data: { attachments: JSON.stringify(currentAttachments) }
+    });
+
+    return NextResponse.json({ 
+      message: 'تم رفع الملف بنجاح',
+      attachment: newAttachment 
+    });
+  } catch (error) {
+    console.error('Error uploading attachment:', error);
+    return NextResponse.json({ error: 'حدث خطأ أثناء رفع الملف' }, { status: 500 });
+  }
+}
+
+// DELETE /api/tasks/[id]/attachments - Delete attachment
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const cookieStore = await cookies();
+    const session = await getSession(cookieStore);
+
+    if (!session.user) {
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const { searchParams } = new URL(req.url);
     const attachmentId = searchParams.get('attachmentId');
 
     if (!attachmentId) {
-      return NextResponse.json({ error: 'Attachment ID required' }, { status: 400 });
+      return NextResponse.json({ error: 'معرف المرفق مطلوب' }, { status: 400 });
     }
 
-    const task = await prisma.task.findUnique({ where: { id: taskId } });
+    const task = await prisma.task.findUnique({
+      where: { id },
+      select: { attachments: true, ownerId: true }
+    });
+
     if (!task) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
-    }
-    
-    // Only owner, creator, or admin can delete files
-    if (task.ownerId !== user.id && task.createdById !== user.id && user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'المهمة غير موجودة' }, { status: 404 });
     }
 
+    // Check permissions
+    if (!isAdmin(session.user.role) && task.ownerId !== session.user.id) {
+      return NextResponse.json({ error: 'ليس لديك صلاحية' }, { status: 403 });
+    }
+
+    // Remove attachment from list
     const currentAttachments = task.attachments ? JSON.parse(task.attachments) : [];
     const updatedAttachments = currentAttachments.filter((att: any) => att.id !== attachmentId);
 
     await prisma.task.update({
-      where: { id: taskId },
+      where: { id },
       data: { attachments: JSON.stringify(updatedAttachments) }
     });
 
-    return NextResponse.json({ success: true });
-
+    return NextResponse.json({ message: 'تم حذف المرفق بنجاح' });
   } catch (error) {
-    console.error('Delete error:', error);
-    return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
+    console.error('Error deleting attachment:', error);
+    return NextResponse.json({ error: 'حدث خطأ أثناء حذف المرفق' }, { status: 500 });
   }
 }

@@ -753,9 +753,7 @@ export default function TasksPage() {
                 {/* Attachments */}
                 <TaskAttachments
                   taskId={task.id}
-                  attachments={task.attachments ? JSON.parse(task.attachments) : []}
                   canEdit={user?.role === 'ADMIN' || task.ownerId === user?.id}
-                  onAttachmentsChange={fetchTasks}
                 />
 
                 {/* Comments */}

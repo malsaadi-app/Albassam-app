@@ -1,247 +1,284 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-type Attachment = {
+interface Attachment {
   id: string;
+  name: string;
   filename: string;
-  storedFilename: string;
   size: number;
   type: string;
+  url: string;
   uploadedAt: string;
-  uploadedBy: string;
-};
+}
 
-type TaskAttachmentsProps = {
+interface Props {
   taskId: string;
-  attachments: Attachment[];
   canEdit: boolean;
-  onAttachmentsChange: () => void;
-};
+}
 
-export default function TaskAttachments({ taskId, attachments, canEdit, onAttachmentsChange }: TaskAttachmentsProps) {
+export default function TaskAttachments({ taskId, canEdit }: Props) {
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [showAttachments, setShowAttachments] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
+  useEffect(() => {
+    fetchAttachments();
+  }, [taskId]);
 
-  const getFileIcon = (type: string) => {
-    if (type.includes('pdf')) return '📄';
-    if (type.includes('word') || type.includes('document')) return '📝';
-    if (type.includes('excel') || type.includes('spreadsheet')) return '📊';
-    if (type.includes('image')) return '🖼️';
-    if (type.includes('zip') || type.includes('compressed')) return '🗜️';
-    return '📎';
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file size
-    if (file.size > 10 * 1024 * 1024) {
-      alert('حجم الملف يجب أن لا يتجاوز 10MB');
-      return;
-    }
-
-    setUploading(true);
+  const fetchAttachments = async () => {
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const res = await fetch(`/api/tasks/${taskId}/attachments`, {
-        method: 'POST',
-        body: formData,
-      });
-
+      const res = await fetch(`/api/tasks/${taskId}/attachments`);
       if (res.ok) {
-        onAttachmentsChange();
-      } else {
         const data = await res.json();
-        alert(data.error || 'فشل رفع الملف');
+        setAttachments(data.attachments || []);
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      alert('حدث خطأ أثناء رفع الملف');
-    } finally {
-      setUploading(false);
-      e.target.value = ''; // Reset input
+      console.error('Error fetching attachments:', error);
     }
   };
 
-  const handleDownload = (attachmentId: string, filename: string) => {
-    const url = `/api/tasks/${taskId}/attachments/download?attachmentId=${attachmentId}`;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch(`/api/tasks/${taskId}/attachments`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setAttachments(prev => [...prev, data.attachment]);
+        } else {
+          const error = await res.json();
+          alert(`❌ ${error.error || 'فشل رفع الملف'}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('❌ حدث خطأ أثناء رفع الملف');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleDelete = async (attachmentId: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا الملف؟')) return;
+    if (!confirm('هل أنت متأكد من حذف هذا المرفق؟')) return;
 
     try {
       const res = await fetch(`/api/tasks/${taskId}/attachments?attachmentId=${attachmentId}`, {
-        method: 'DELETE',
+        method: 'DELETE'
       });
 
       if (res.ok) {
-        onAttachmentsChange();
+        setAttachments(prev => prev.filter(att => att.id !== attachmentId));
       } else {
-        alert('فشل حذف الملف');
+        const error = await res.json();
+        alert(`❌ ${error.error || 'فشل حذف المرفق'}`);
       }
     } catch (error) {
-      console.error('Delete error:', error);
-      alert('حدث خطأ أثناء حذف الملف');
+      console.error('Error deleting attachment:', error);
+      alert('❌ حدث خطأ أثناء حذف المرفق');
     }
   };
 
-  return (
-    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-        <button
-          onClick={() => setShowAttachments(!showAttachments)}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '0.875rem',
-            color: '#6b7280',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0',
-            fontWeight: '500'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#2D1B4E'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
-        >
-          <span>📎 المرفقات ({attachments.length})</span>
-          <span style={{ fontSize: '0.75rem' }}>{showAttachments ? '▼' : '◀'}</span>
-        </button>
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
 
-        {canEdit && (
-          <label
-            style={{
-              background: 'linear-gradient(135deg, #D4A574 0%, #E67E22 100%)',
-              color: 'white',
-              padding: '0.25rem 0.75rem',
-              borderRadius: '6px',
-              fontSize: '0.75rem',
-              cursor: uploading ? 'not-allowed' : 'pointer',
-              opacity: uploading ? 0.6 : 1,
-              display: 'inline-block',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              if (!uploading) {
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          >
-            <input
-              type="file"
-              style={{ display: 'none' }}
-              onChange={handleFileUpload}
-              disabled={uploading}
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.zip"
-            />
-            {uploading ? '⏳ جاري الرفع...' : '+ رفع ملف'}
-          </label>
-        )}
-      </div>
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileUpload(e.dataTransfer.files);
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('image/')) return '🖼️';
+    if (type === 'application/pdf') return '📄';
+    if (type.includes('word')) return '📝';
+    if (type.includes('sheet') || type.includes('excel')) return '📊';
+    if (type === 'text/plain') return '📋';
+    return '📎';
+  };
+
+  return (
+    <div style={{ marginTop: '24px' }}>
+      <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        📎 المرفقات ({attachments.length})
+      </h3>
+
+      {/* Upload Area */}
+      {canEdit && (
+        <div
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          style={{
+            border: dragActive ? '2px dashed #667eea' : '2px dashed #D1D5DB',
+            borderRadius: '12px',
+            padding: '32px',
+            textAlign: 'center',
+            cursor: 'pointer',
+            background: dragActive ? '#F3F4F6' : 'white',
+            marginBottom: '20px',
+            transition: 'all 0.2s'
+          }}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={(e) => handleFileUpload(e.target.files)}
+            style={{ display: 'none' }}
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+          />
+          <div style={{ fontSize: '48px', marginBottom: '12px' }}>📁</div>
+          <div style={{ fontSize: '16px', color: '#374151', fontWeight: '600', marginBottom: '8px' }}>
+            {uploading ? '⏳ جاري الرفع...' : 'اسحب الملفات هنا أو اضغط للاختيار'}
+          </div>
+          <div style={{ fontSize: '14px', color: '#6B7280' }}>
+            الصور، PDF، Word، Excel، TXT (حد أقصى 10MB)
+          </div>
+        </div>
+      )}
 
       {/* Attachments List */}
-      {showAttachments && attachments.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
-          {attachments.map((att) => (
+      {attachments.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#6B7280' }}>
+          📭 لا توجد مرفقات
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: '12px' }}>
+          {attachments.map((attachment) => (
             <div
-              key={att.id}
+              key={attachment.id}
               style={{
-                background: 'rgba(212,165,116,0.05)',
-                border: '1px solid rgba(212,165,116,0.2)',
-                borderRadius: '8px',
-                padding: '0.75rem',
                 display: 'flex',
-                justifyContent: 'space-between',
                 alignItems: 'center',
+                gap: '12px',
+                padding: '16px',
+                background: 'white',
+                border: '1px solid #E5E7EB',
+                borderRadius: '12px',
                 transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(212,165,116,0.1)';
-                e.currentTarget.style.borderColor = 'rgba(212,165,116,0.3)';
+                e.currentTarget.style.borderColor = '#667eea';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.15)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(212,165,116,0.05)';
-                e.currentTarget.style.borderColor = 'rgba(212,165,116,0.2)';
+                e.currentTarget.style.borderColor = '#E5E7EB';
+                e.currentTarget.style.boxShadow = 'none';
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
-                <span style={{ fontSize: '1.25rem' }}>{getFileIcon(att.type)}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p
-                    style={{
-                      fontSize: '0.813rem',
-                      color: '#374151',
-                      fontWeight: '500',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      margin: 0
-                    }}
-                    title={att.filename}
-                  >
-                    {att.filename}
-                  </p>
-                  <p style={{ fontSize: '0.688rem', color: '#9ca3af', margin: 0 }}>
-                    {formatFileSize(att.size)} • {att.uploadedBy}
-                  </p>
+              {/* File Icon */}
+              <div style={{ fontSize: '32px' }}>
+                {getFileIcon(attachment.type)}
+              </div>
+
+              {/* File Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {attachment.name}
+                </div>
+                <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                  {formatFileSize(attachment.size)} • {new Date(attachment.uploadedAt).toLocaleDateString('ar-SA')}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  onClick={() => handleDownload(att.id, att.filename)}
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {/* Preview for images */}
+                {attachment.type.startsWith('image/') && (
+                  <a
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '8px 16px',
+                      background: '#3B82F6',
+                      color: 'white',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      textDecoration: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    👁️ معاينة
+                  </a>
+                )}
+
+                {/* Download */}
+                <a
+                  href={attachment.url}
+                  download={attachment.name}
                   style={{
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '1.125rem',
-                    padding: '0.25rem',
-                    color: '#6b7280',
-                    transition: 'color 0.2s'
+                    padding: '8px 16px',
+                    background: '#10B981',
+                    color: 'white',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#2D1B4E'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
-                  title="تحميل"
                 >
-                  ⬇️
-                </button>
+                  ⬇️ تحميل
+                </a>
+
+                {/* Delete */}
                 {canEdit && (
                   <button
-                    onClick={() => handleDelete(att.id)}
+                    onClick={() => handleDelete(attachment.id)}
                     style={{
-                      background: 'transparent',
+                      padding: '8px 16px',
+                      background: '#EF4444',
+                      color: 'white',
                       border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '1.125rem',
-                      padding: '0.25rem',
-                      color: '#6b7280',
-                      transition: 'color 0.2s'
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
-                    title="حذف"
                   >
-                    🗑️
+                    🗑️ حذف
                   </button>
                 )}
               </div>
