@@ -449,56 +449,142 @@ export default function TasksPage() {
           )}
         </div>
 
-        {/* Statistics */}
+        {/* Statistics - Clickable Filters */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
           gap: '20px',
           marginBottom: '32px'
         }}>
-          <Stats
-            label="جديد"
-            value={tasks.filter(t => t.status === 'NEW').length}
-            variant="blue"
-            icon="📋"
-          />
-          <Stats
-            label="قيد التنفيذ"
-            value={tasks.filter(t => t.status === 'IN_PROGRESS').length}
-            variant="yellow"
-            icon="⚡"
-          />
-          <Stats
-            label="بانتظار"
-            value={tasks.filter(t => t.status === 'ON_HOLD').length}
-            variant="red"
-            icon="⏸️"
-          />
-          <Stats
-            label="مكتمل"
-            value={tasks.filter(t => t.status === 'DONE').length}
-            variant="green"
-            icon="✅"
-          />
+          {/* All Tasks */}
+          <button
+            onClick={() => setFilter('ALL')}
+            style={{
+              background: filter === 'ALL' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white',
+              color: filter === 'ALL' ? 'white' : '#374151',
+              border: filter === 'ALL' ? 'none' : '2px solid #E5E7EB',
+              borderRadius: '16px',
+              padding: '24px',
+              cursor: 'pointer',
+              textAlign: 'right',
+              transition: 'all 0.3s ease',
+              boxShadow: filter === 'ALL' ? '0 10px 25px rgba(102, 126, 234, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+              transform: filter === 'ALL' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+          >
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📊</div>
+            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', opacity: filter === 'ALL' ? 1 : 0.7 }}>
+              الكل
+            </div>
+            <div style={{ fontSize: '36px', fontWeight: '800' }}>
+              {tasks.length}
+            </div>
+          </button>
+
+          {/* New Tasks */}
+          <button
+            onClick={() => setFilter('NEW')}
+            style={{
+              background: filter === 'NEW' ? 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' : 'white',
+              color: filter === 'NEW' ? 'white' : '#374151',
+              border: filter === 'NEW' ? 'none' : '2px solid #E5E7EB',
+              borderRadius: '16px',
+              padding: '24px',
+              cursor: 'pointer',
+              textAlign: 'right',
+              transition: 'all 0.3s ease',
+              boxShadow: filter === 'NEW' ? '0 10px 25px rgba(59, 130, 246, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+              transform: filter === 'NEW' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+          >
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📋</div>
+            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', opacity: filter === 'NEW' ? 1 : 0.7 }}>
+              جديد
+            </div>
+            <div style={{ fontSize: '36px', fontWeight: '800' }}>
+              {tasks.filter(t => t.status === 'NEW').length}
+            </div>
+          </button>
+
+          {/* In Progress */}
+          <button
+            onClick={() => setFilter('IN_PROGRESS')}
+            style={{
+              background: filter === 'IN_PROGRESS' ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' : 'white',
+              color: filter === 'IN_PROGRESS' ? 'white' : '#374151',
+              border: filter === 'IN_PROGRESS' ? 'none' : '2px solid #E5E7EB',
+              borderRadius: '16px',
+              padding: '24px',
+              cursor: 'pointer',
+              textAlign: 'right',
+              transition: 'all 0.3s ease',
+              boxShadow: filter === 'IN_PROGRESS' ? '0 10px 25px rgba(245, 158, 11, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+              transform: filter === 'IN_PROGRESS' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+          >
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>⚡</div>
+            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', opacity: filter === 'IN_PROGRESS' ? 1 : 0.7 }}>
+              قيد التنفيذ
+            </div>
+            <div style={{ fontSize: '36px', fontWeight: '800' }}>
+              {tasks.filter(t => t.status === 'IN_PROGRESS').length}
+            </div>
+          </button>
+
+          {/* On Hold */}
+          <button
+            onClick={() => setFilter('ON_HOLD')}
+            style={{
+              background: filter === 'ON_HOLD' ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)' : 'white',
+              color: filter === 'ON_HOLD' ? 'white' : '#374151',
+              border: filter === 'ON_HOLD' ? 'none' : '2px solid #E5E7EB',
+              borderRadius: '16px',
+              padding: '24px',
+              cursor: 'pointer',
+              textAlign: 'right',
+              transition: 'all 0.3s ease',
+              boxShadow: filter === 'ON_HOLD' ? '0 10px 25px rgba(239, 68, 68, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+              transform: filter === 'ON_HOLD' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+          >
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>⏸️</div>
+            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', opacity: filter === 'ON_HOLD' ? 1 : 0.7 }}>
+              بانتظار
+            </div>
+            <div style={{ fontSize: '36px', fontWeight: '800' }}>
+              {tasks.filter(t => t.status === 'ON_HOLD').length}
+            </div>
+          </button>
+
+          {/* Done */}
+          <button
+            onClick={() => setFilter('DONE')}
+            style={{
+              background: filter === 'DONE' ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : 'white',
+              color: filter === 'DONE' ? 'white' : '#374151',
+              border: filter === 'DONE' ? 'none' : '2px solid #E5E7EB',
+              borderRadius: '16px',
+              padding: '24px',
+              cursor: 'pointer',
+              textAlign: 'right',
+              transition: 'all 0.3s ease',
+              boxShadow: filter === 'DONE' ? '0 10px 25px rgba(16, 185, 129, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+              transform: filter === 'DONE' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+          >
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>✅</div>
+            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', opacity: filter === 'DONE' ? 1 : 0.7 }}>
+              مكتمل
+            </div>
+            <div style={{ fontSize: '36px', fontWeight: '800' }}>
+              {tasks.filter(t => t.status === 'DONE').length}
+            </div>
+          </button>
         </div>
 
-        {/* Filters */}
+        {/* Category Filter Only */}
         <Card variant="default" className="mb-6">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-            <div style={{ flex: '1 1 200px' }}>
-              <Select
-                label="الحالة"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value as any)}
-              >
-                <option value="ALL">كل الحالات</option>
-                <option value="NEW">جديد</option>
-                <option value="IN_PROGRESS">قيد التنفيذ</option>
-                <option value="ON_HOLD">بانتظار</option>
-                <option value="DONE">مكتمل</option>
-              </Select>
-            </div>
-
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
             <div style={{ flex: '1 1 200px' }}>
               <Select
                 label="القسم"
@@ -510,6 +596,26 @@ export default function TasksPage() {
                 <option value="HR">شؤون الموظفين</option>
               </Select>
             </div>
+            {filter !== 'ALL' && (
+              <div style={{ 
+                padding: '12px 20px',
+                background: '#F3F4F6',
+                borderRadius: '8px',
+                fontSize: '14px',
+                color: '#374151',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                🔍 فلتر نشط: {
+                  filter === 'NEW' ? 'جديد' :
+                  filter === 'IN_PROGRESS' ? 'قيد التنفيذ' :
+                  filter === 'ON_HOLD' ? 'بانتظار' :
+                  filter === 'DONE' ? 'مكتمل' : 'الكل'
+                }
+              </div>
+            )}
           </div>
         </Card>
 
