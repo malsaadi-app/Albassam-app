@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Input, Select } from '@/components/ui/Input';
 import ReactSelect from 'react-select';
+import EmployeeCoverageEditor from '@/app/components/EmployeeCoverageEditor';
 
 export default function EditEmployeePage() {
   const params = useParams();
@@ -771,8 +772,24 @@ export default function EditEmployeePage() {
                   </div>
                 </div>
 
+                {/* Coverage Scope */}
+                {adminStageUnitIds.length > 0 && (
+                  <div style={{ marginTop: '24px', padding: '20px', background: '#F9FAFB', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#111827', marginBottom: '12px' }}>
+                      🌍 نطاق التغطية
+                    </div>
+                    <div style={{ color: '#6B7280', fontSize: '13px', marginBottom: '16px' }}>
+                      حدد نطاق صلاحيات المشرف/المدير (الفرع الحالي، فروع محددة، أو كل الفروع)
+                    </div>
+                    <EmployeeCoverageEditor 
+                      assignmentId={adminStageUnitIds[0] || ''} 
+                      branches={branches} 
+                    />
+                  </div>
+                )}
+
                 {/* Save Org Assignments Button */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
                   <Button
                     type="button"
                     variant="primary"
