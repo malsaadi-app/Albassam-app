@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import ReactSelect from 'react-select';
+import ReactSelect, { components } from 'react-select';
 
 type Employee = {
   id: string;
@@ -127,6 +127,28 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
     label: `${emp.fullNameAr} • ${emp.employeeNumber}${emp.position ? ` • ${emp.position}` : ''}`
   }));
 
+  // Custom Option component with checkbox
+  const Option = (props: any) => {
+    return (
+      <components.Option {...props}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <input
+            type="checkbox"
+            checked={props.isSelected}
+            readOnly
+            style={{
+              width: '18px',
+              height: '18px',
+              cursor: 'pointer',
+              accentColor: '#667eea'
+            }}
+          />
+          <span>{props.label}</span>
+        </div>
+      </components.Option>
+    );
+  };
+
   return (
     <div>
       <style>{`
@@ -172,9 +194,14 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
           marginBottom: '2rem',
           boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
         }}>
-        <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#1a202c', marginBottom: '1rem' }}>
-          ➕ إضافة موظفين للدور
-        </h3>
+        <div style={{ marginBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#1a202c', marginBottom: '0.5rem' }}>
+            ➕ إضافة موظفين للدور
+          </h3>
+          <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0 }}>
+            💡 يمكنك اختيار أكثر من موظف مرة واحدة - فقط اضغط على كل موظف تريد إضافته
+          </p>
+        </div>
         
         <div style={{ marginBottom: '1rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#4a5568' }}>
@@ -182,17 +209,20 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
           </label>
           <ReactSelect
             isMulti
+            components={{ Option }}
             options={employeeOptions}
             value={employeeOptions.filter(opt => selectedEmployees.includes(opt.value))}
             onChange={(selected) => setSelectedEmployees(selected ? selected.map(s => s.value) : [])}
-            placeholder={loading ? '⏳ جاري تحميل الموظفين...' : '🔍 ابحث بالاسم أو الرقم الوظيفي...'}
+            placeholder={loading ? '⏳ جاري تحميل الموظفين...' : '🔍 ابحث بالاسم أو الرقم الوظيفي... (يمكن اختيار أكثر من موظف)'}
             noOptionsMessage={() => loading ? '⏳ جاري التحميل...' : availableEmployees.length === 0 ? '✅ كل الموظفين معينون لهذا الدور' : 'لا توجد نتائج'}
             loadingMessage={() => '⏳ جاري البحث...'}
             isLoading={loading}
             isDisabled={saving || loading}
             menuPlacement="auto"
             menuPosition="fixed"
-            maxMenuHeight={300}
+            maxMenuHeight={350}
+            hideSelectedOptions={false}
+            closeMenuOnSelect={false}
             styles={{
               control: (base, state) => ({
                 ...base,
