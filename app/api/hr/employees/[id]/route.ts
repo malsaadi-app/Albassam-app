@@ -122,6 +122,8 @@ export async function PUT(
     if (body.department !== undefined) updateData.department = body.department;
     // departmentId ignored - we use OrgUnit assignments instead
     // if (body.departmentId !== undefined) updateData.departmentId = body.departmentId || null;
+    if (body.branchId !== undefined) updateData.branchId = body.branchId || null; // ✅ Branch ID
+    if (body.stageId !== undefined) updateData.stageId = body.stageId || null; // ✅ Stage ID
     if (body.jobTitleId !== undefined) updateData.jobTitleId = body.jobTitleId || null;
     if (body.systemRoleId !== undefined) updateData.systemRoleId = body.systemRoleId || null;
     if (body.status) updateData.status = body.status;
