@@ -122,13 +122,78 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
     emp => !employees.some(e => e.id === emp.id)
   );
 
-  const employeeOptions = availableEmployees.map(emp => ({
-    value: emp.id,
-    label: `${emp.fullNameAr} • ${emp.employeeNumber}${emp.position ? ` • ${emp.position}` : ''}`
-  }));
+  // Add "Select All" option at the beginning
+  const selectAllOption = {
+    value: '__select_all__',
+    label: '✨ اختيار الكل'
+  };
+  
+  const employeeOptions = [
+    selectAllOption,
+    ...availableEmployees.map(emp => ({
+      value: emp.id,
+      label: `${emp.fullNameAr} • ${emp.employeeNumber}${emp.position ? ` • ${emp.position}` : ''}`
+    }))
+  ];
+  
+  // Handle select/deselect all
+  const handleSelectChange = (selected: any) => {
+    if (!selected) {
+      setSelectedEmployees([]);
+      return;
+    }
+    
+    const values = selected.map((s: any) => s.value);
+    
+    // If "Select All" was clicked
+    if (values.includes('__select_all__')) {
+      // If all are already selected, deselect all
+      if (selectedEmployees.length === availableEmployees.length) {
+        setSelectedEmployees([]);
+      } else {
+        // Select all available employees
+        setSelectedEmployees(availableEmployees.map(emp => emp.id));
+      }
+    } else {
+      // Normal selection
+      setSelectedEmployees(values.filter((v: string) => v !== '__select_all__'));
+    }
+  };
 
   // Custom Option component with checkbox
   const Option = (props: any) => {
+    const isSelectAll = props.value === '__select_all__';
+    
+    if (isSelectAll) {
+      return (
+        <components.Option {...props}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.75rem',
+            padding: '0.25rem 0',
+            borderBottom: '2px solid #e2e8f0',
+            marginBottom: '0.5rem',
+            fontWeight: 'bold',
+            color: '#667eea'
+          }}>
+            <input
+              type="checkbox"
+              checked={selectedEmployees.length === availableEmployees.length && availableEmployees.length > 0}
+              readOnly
+              style={{
+                width: '18px',
+                height: '18px',
+                cursor: 'pointer',
+                accentColor: '#667eea'
+              }}
+            />
+            <span>✨ اختيار الكل ({availableEmployees.length} موظف)</span>
+          </div>
+        </components.Option>
+      );
+    }
+    
     return (
       <components.Option {...props}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -195,34 +260,65 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
           boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
         }}>
         <div style={{ marginBottom: '1rem' }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#1a202c', marginBottom: '0.5rem' }}>
-            ➕ إضافة موظفين للدور
-          </h3>
-          <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0 }}>
-            💡 يمكنك اختيار أكثر من موظف مرة واحدة - فقط اضغط على كل موظف تريد إضافته
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#1a202c', marginBottom: '0.5rem' }}>
+                ➕ إضافة موظفين للدور
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0 }}>
+                💡 القائمة تبقى مفتوحة - اختر عدة موظفين ثم اضغط إضافة
+              </p>
+            </div>
+            {selectedEmployees.length > 0 && (
+              <button
+                onClick={() => setSelectedEmployees([])}
+                style={{
+                  background: '#fff5f5',
+                  color: '#dc2626',
+                  border: '1px solid #fecaca',
+                  borderRadius: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#fee2e2';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#fff5f5';
+                }}
+              >
+                ✕ مسح الكل ({selectedEmployees.length})
+              </button>
+            )}
+          </div>
         </div>
         
         <div style={{ marginBottom: '1rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#4a5568' }}>
-            اختر الموظفين (يمكن اختيار أكثر من موظف)
+            اختر الموظفين (القائمة تبقى مفتوحة)
           </label>
           <ReactSelect
             isMulti
             components={{ Option }}
             options={employeeOptions}
-            value={employeeOptions.filter(opt => selectedEmployees.includes(opt.value))}
-            onChange={(selected) => setSelectedEmployees(selected ? selected.map(s => s.value) : [])}
-            placeholder={loading ? '⏳ جاري تحميل الموظفين...' : '🔍 ابحث بالاسم أو الرقم الوظيفي... (يمكن اختيار أكثر من موظف)'}
+            value={employeeOptions.filter(opt => selectedEmployees.includes(opt.value) && opt.value !== '__select_all__')}
+            onChange={handleSelectChange}
+            placeholder={loading ? '⏳ جاري تحميل الموظفين...' : '🔍 ابحث واختر عدة موظفين... (القائمة تبقى مفتوحة)'}
             noOptionsMessage={() => loading ? '⏳ جاري التحميل...' : availableEmployees.length === 0 ? '✅ كل الموظفين معينون لهذا الدور' : 'لا توجد نتائج'}
             loadingMessage={() => '⏳ جاري البحث...'}
             isLoading={loading}
             isDisabled={saving || loading}
             menuPlacement="auto"
             menuPosition="fixed"
-            maxMenuHeight={350}
+            maxMenuHeight={400}
             hideSelectedOptions={false}
             closeMenuOnSelect={false}
+            isSearchable={true}
+            isClearable={false}
             styles={{
               control: (base, state) => ({
                 ...base,
