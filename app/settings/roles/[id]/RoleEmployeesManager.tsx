@@ -41,18 +41,23 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
       if (res.ok) {
         const data = await res.json();
         console.log('✅ Fetched employees:', data.employees?.length || 0);
-        setAllEmployees(data.employees || []);
+        const employees = Array.isArray(data.employees) ? data.employees : [];
+        setAllEmployees(employees);
       } else {
         console.error('❌ Failed to fetch employees:', res.status);
         // Fallback: try without query params
         const fallbackRes = await fetch('/api/hr/employees');
         if (fallbackRes.ok) {
           const fallbackData = await fallbackRes.json();
-          setAllEmployees(fallbackData.employees || []);
+          const employees = Array.isArray(fallbackData.employees) ? fallbackData.employees : [];
+          setAllEmployees(employees);
+        } else {
+          setAllEmployees([]);
         }
       }
     } catch (error) {
       console.error('Error fetching employees:', error);
+      setAllEmployees([]);
       alert('فشل تحميل قائمة الموظفين - يرجى المحاولة مرة أخرى');
     } finally {
       setLoading(false);
@@ -140,40 +145,49 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
   
   // Handle select/deselect all
   const handleSelectChange = (selected: any) => {
-    if (!selected) {
-      setSelectedEmployees([]);
-      return;
-    }
-    
-    const values = selected.map((s: any) => s.value);
-    
-    // If "Select All" was clicked
-    if (values.includes('__select_all__')) {
-      // If all are already selected, deselect all
-      if (selectedEmployees.length === availableEmployees.length) {
+    try {
+      if (!selected || !Array.isArray(selected)) {
         setSelectedEmployees([]);
-      } else {
-        // Select all available employees
-        setSelectedEmployees(availableEmployees.map(emp => emp.id));
+        return;
       }
-    } else {
-      // Normal selection
-      setSelectedEmployees(values.filter((v: string) => v !== '__select_all__'));
+      
+      const values = selected.map((s: any) => s?.value).filter(Boolean);
+      
+      // If "Select All" was clicked
+      if (values.includes('__select_all__')) {
+        // If all are already selected, deselect all
+        if (selectedEmployees.length === availableEmployees.length) {
+          setSelectedEmployees([]);
+        } else {
+          // Select all available employees
+          setSelectedEmployees(availableEmployees.map(emp => emp.id));
+        }
+      } else {
+        // Normal selection
+        setSelectedEmployees(values.filter((v: string) => v !== '__select_all__'));
+      }
+    } catch (error) {
+      console.error('Error in handleSelectChange:', error);
     }
   };
 
   // Custom MenuList with Select Search Results button
   const MenuList = (props: any) => {
-    // Get all visible options (excluding "Select All")
-    const visibleOptions = props.children?.filter((child: any) => 
-      child && child.props && child.props.data && child.props.data.value !== '__select_all__'
-    ) || [];
-    
-    const visibleCount = visibleOptions.length;
-    const totalCount = availableEmployees.length;
-    
-    // Show button if filtered results are less than total (means search is active)
-    const hasSearch = visibleCount < totalCount && visibleCount > 0;
+    try {
+      // Get all visible options (excluding "Select All")
+      const visibleOptions = Array.isArray(props.children) 
+        ? props.children.filter((child: any) => 
+            child && child.props && child.props.data && child.props.data.value !== '__select_all__'
+          )
+        : props.children?.props?.data?.value !== '__select_all__' 
+          ? [props.children]
+          : [];
+      
+      const visibleCount = visibleOptions.length;
+      const totalCount = availableEmployees.length;
+      
+      // Show button if filtered results are less than total (means search is active)
+      const hasSearch = visibleCount < totalCount && visibleCount > 0;
     
     return (
       <components.MenuList {...props}>
@@ -236,6 +250,10 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
         {props.children}
       </components.MenuList>
     );
+    } catch (error) {
+      console.error('Error in MenuList:', error);
+      return <components.MenuList {...props}>{props.children}</components.MenuList>;
+    }
   };
 
   // Custom Option component with checkbox
@@ -383,18 +401,20 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
             isMulti
             components={{ Option, MenuList }}
             options={employeeOptions}
-            value={employeeOptions.filter(opt => selectedEmployees.includes(opt.value) && opt.value !== '__select_all__')}
+            value={[]}
             onChange={handleSelectChange}
             onInputChange={(value, action) => {
               if (action.action === 'input-change') {
-                setSearchValue(value);
+                setSearchValue(value || '');
               }
             }}
             filterOption={(option, searchText) => {
               if (option.value === '__select_all__') {
                 return !searchText || searchText.trim().length === 0;
               }
-              return option.label.toLowerCase().includes(searchText.toLowerCase());
+              const text = searchText?.toLowerCase() || '';
+              const label = option.label?.toLowerCase() || '';
+              return label.includes(text);
             }}
             placeholder={loading ? '⏳ جاري تحميل الموظفين...' : '🔍 ابحث بالاسم أو الرقم الوظيفي...'}
             noOptionsMessage={() => loading ? '⏳ جاري التحميل...' : availableEmployees.length === 0 ? '✅ كل الموظفين معينون لهذا الدور' : 'لا توجد نتائج'}
@@ -409,6 +429,7 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
             isSearchable={true}
             isClearable={false}
             controlShouldRenderValue={false}
+            backspaceRemovesValue={false}
             styles={{
               control: (base, state) => ({
                 ...base,
