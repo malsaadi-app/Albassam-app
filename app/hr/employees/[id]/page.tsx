@@ -40,6 +40,7 @@ export default function EmployeeDetailPage() {
   // editable selections
   const [adminStageUnitIds, setAdminStageUnitIds] = useState<string[]>([]);
   const [functionalUnitIds, setFunctionalUnitIds] = useState<string[]>([]);
+  const [executiveUnitIds, setExecutiveUnitIds] = useState<string[]>([]); // 🆕 إداري تنفيذي
   const [primaryStageId, setPrimaryStageId] = useState<string>('');
 
   const [savingOrg, setSavingOrg] = useState(false);
@@ -165,13 +166,16 @@ export default function EmployeeDetailPage() {
 
       const adminStages = list.filter((a) => a.assignmentType === 'ADMIN' && a.role === 'MEMBER').map((a) => a.orgUnitId);
       const functional = list.filter((a) => a.assignmentType === 'FUNCTIONAL' && a.role === 'MEMBER').map((a) => a.orgUnitId);
+      const executive = list.filter((a) => a.assignmentType === 'EXECUTIVE' && a.role === 'MEMBER').map((a) => a.orgUnitId); // 🆕
       setAdminStageUnitIds(adminStages);
       setFunctionalUnitIds(functional);
+      setExecutiveUnitIds(executive); // 🆕
     } catch (e) {
       console.error('Error fetching org assignments', e);
       setOrgAssignments([]);
       setAdminStageUnitIds([]);
       setFunctionalUnitIds([]);
+      setExecutiveUnitIds([]); // 🆕
     }
   };
 
@@ -184,6 +188,7 @@ export default function EmployeeDetailPage() {
         body: JSON.stringify({
           adminStageUnitIds,
           functionalUnitIds,
+          executiveUnitIds, // 🆕 إداري تنفيذي
           primaryStageId: primaryStageId || null,
         }),
       });
@@ -431,6 +436,25 @@ export default function EmployeeDetailPage() {
                 />
                 <div style={{ color: '#6B7280', fontSize: 12, marginTop: 6 }}>
                   تقدر تربط الموظف بأكثر من قسم. هذا لا يغيّر تعيين المشرف/المدير للقسم.
+                </div>
+              </div>
+
+              {/* 🆕 Executive Assignments */}
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 8 }}>🎯 إداري تنفيذي (EXECUTIVE) — متعدد</div>
+                <ReactSelect
+                  isMulti
+                  isRtl
+                  placeholder="اختر الوحدات التنظيمية…"
+                  options={orgUnits.filter((u) => u.type !== 'BRANCH').map((u) => ({ value: u.id, label: u.name }))}
+                  value={executiveUnitIds.map((id) => {
+                    const unit = orgUnits.find((u) => u.id === id);
+                    return unit ? { value: id, label: unit.name } : null;
+                  }).filter(Boolean) as any}
+                  onChange={(vals) => setExecutiveUnitIds((vals || []).map((v: any) => v.value))}
+                />
+                <div style={{ color: '#6B7280', fontSize: 12, marginTop: 6 }}>
+                  تعيين إداري تنفيذي للوحدات التنظيمية (مراحل، أقسام، وحدات).
                 </div>
               </div>
 
