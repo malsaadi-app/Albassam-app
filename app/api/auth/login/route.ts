@@ -30,7 +30,30 @@ export async function POST(req: Request) {
           id: true,
           name: true,
           nameAr: true,
-          nameEn: true
+          nameEn: true,
+          permissions: {
+            select: {
+              permission: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          }
+        }
+      },
+      employee: {
+        select: {
+          id: true,
+          orgAssignments: {
+            where: { active: true },
+            select: {
+              id: true,
+              orgUnitId: true,
+              role: true,
+              assignmentType: true
+            }
+          }
         }
       }
     }
@@ -46,12 +69,26 @@ export async function POST(req: Request) {
 
   const cookieStore = await cookies()
   const session = await getSession(cookieStore)
+  
+  // Extract permissions from systemRole
+  const permissions = user.systemRole?.permissions.map(rp => rp.permission.name) || []
+  
+  // Extract org assignments
+  const orgAssignments = user.employee?.orgAssignments || []
+  
   session.user = {
     id: user.id,
     username: user.username,
     displayName: user.displayName,
     role: user.role,
-    systemRole: user.systemRole || undefined
+    systemRole: user.systemRole ? {
+      id: user.systemRole.id,
+      name: user.systemRole.name,
+      nameAr: user.systemRole.nameAr,
+      nameEn: user.systemRole.nameEn
+    } : undefined,
+    permissions,
+    orgAssignments
   }
   await session.save()
 

@@ -12,6 +12,13 @@ export type SessionUser = {
     nameAr: string
     nameEn: string
   }
+  permissions?: string[] // User permissions array (from systemRole)
+  orgAssignments?: Array<{ // Org structure assignments for data filtering
+    id: string
+    orgUnitId: string
+    role: 'HEAD' | 'SUPERVISOR' | 'MEMBER'
+    assignmentType: 'ADMIN' | 'FUNCTIONAL'
+  }>
 }
 
 export type AppSession = {
