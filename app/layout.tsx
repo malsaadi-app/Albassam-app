@@ -7,6 +7,7 @@ import ServiceWorkerRegistration from './components/pwa/ServiceWorkerRegistratio
 import InstallPrompt from './components/pwa/InstallPrompt'
 import OfflineIndicator from './components/pwa/OfflineIndicator'
 import PushNotifications from './components/pwa/PushNotifications'
+import { Providers } from './providers'
 
 export const metadata: Metadata = {
   title: 'نظام مدارس الباسم',
@@ -70,24 +71,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
       </head>
       <body style={{ fontFamily: 'system-ui, -apple-system, Segoe UI, Arial', margin: 0, padding: 0 }}>
-        {/* Service Worker Registration */}
-        <ServiceWorkerRegistration />
-        
-        {/* Sidebar (auto-hides on /auth pages) */}
-        <Sidebar />
-        <main className="ds-app-main" style={{
-          minHeight: '100vh',
-          position: 'relative',
-          zIndex: 1
-        }}>
-          <TopBar />
-          {children}
-        </main>
-        
-        {/* PWA Features */}
-        <InstallPrompt />
-        <OfflineIndicator />
-        <PushNotifications />
+        <Providers>
+          {/* Service Worker Registration */}
+          <ServiceWorkerRegistration />
+          
+          {/* Sidebar (auto-hides on /auth pages) */}
+          <Sidebar />
+          <main className="ds-app-main" style={{
+            minHeight: '100vh',
+            position: 'relative',
+            zIndex: 1
+          }}>
+            <TopBar />
+            {children}
+          </main>
+          
+          {/* PWA Features */}
+          <InstallPrompt />
+          <OfflineIndicator />
+          <PushNotifications />
+        </Providers>
       </body>
     </html>
   )

@@ -1,54 +1,41 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Stats } from '@/components/ui/Stats';
-import { Input } from '@/components/ui/Input';
+import { useState } from 'react';
+import { usePermissions } from '@/hooks/usePermissions';
+import { useAttendanceRecords } from '@/hooks/useAttendanceRecords';
+import { useToast } from '@/components/Toast';
+import Link from 'next/link';
 
-export default function HRAttendancePage() {
-  const router = useRouter();
-  const [records, setRecords] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+export default function AttendanceRecordsPage() {
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const { showToast, ToastContainer } = useToast();
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
+  const [filters, setFilters] = useState({
+    startDate: '',
+    endDate: '',
+    status: ''
+  });
 
-  useEffect(() => {
-    fetchRecords();
-  }, [date]);
+  const canView = hasPermission('attendance.view') || 
+                 hasPermission('attendance.view_team') ||
+                 hasPermission('attendance.view_own');
 
-  const fetchRecords = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/hr/attendance?date=${date}`);
-      if (res.ok) {
-        const data = await res.json();
-        setRecords(data.records || []);
-      }
-    } catch (error) {
-      console.error('Error fetching records:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { records, pagination, isLoading, isError } = useAttendanceRecords({
+    page,
+    limit,
+    ...filters,
+    enabled: canView && !permissionsLoading
+  });
 
-  const stats = {
-    total: records.length,
-    present: records.filter(r => r.status === 'PRESENT').length,
-    absent: records.filter(r => r.status === 'ABSENT').length,
-    late: records.filter(r => r.status === 'LATE').length,
-    onLeave: records.filter(r => r.status === 'ON_LEAVE').length
-  };
-
-  if (loading) {
+  if (permissionsLoading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F9FAFB' }}>
         <div style={{
           width: '48px',
           height: '48px',
           border: '4px solid #E5E7EB',
-          borderTop: '4px solid #3B82F6',
+          borderTop: '4px solid #667eea',
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite'
         }}></div>
@@ -57,108 +44,262 @@ export default function HRAttendancePage() {
     );
   }
 
-  return (
-    <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <PageHeader
-          title="⏰ سجل الحضور"
-          breadcrumbs={['الرئيسية', 'الموارد البشرية', 'الحضور']}
-          actions={
-            <>
-              <Button variant="outline" onClick={() => router.push('/hr/attendance/reports')}>
-                📊 التقارير
-              </Button>
-              <Button variant="outline" onClick={() => router.push('/hr/attendance/correction')}>
-                ✏️ التصحيح
-              </Button>
-              <Button variant="outline" onClick={() => router.push('/hr/attendance/settings')}>
-                ⚙️ الإعدادات
-              </Button>
-            </>
-          }
-        />
+  if (!canView) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F9FAFB', padding: '20px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '64px', marginBottom: '20px' }}>🔒</div>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#111827', marginBottom: '12px' }}>
+            ليس لديك صلاحية
+          </h1>
+          <Link href="/" style={{ color: '#667eea', textDecoration: 'none' }}>
+            العودة إلى الصفحة الرئيسية
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '20px',
-          marginBottom: '32px'
-        }}>
-          <Stats label="إجمالي الموظفين" value={stats.total} variant="blue" icon="👥" />
-          <Stats label="حاضر" value={stats.present} variant="green" icon="✅" />
-          <Stats label="غائب" value={stats.absent} variant="red" icon="❌" />
-          <Stats label="متأخر" value={stats.late} variant="yellow" icon="⏰" />
-          <Stats label="في إجازة" value={stats.onLeave} variant="purple" icon="🌴" />
+  return (
+    <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: '20px' }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        
+        {/* Header */}
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '12px' }}>
+            <Link href="/" style={{ color: '#6B7280', textDecoration: 'none' }}>الرئيسية</Link>
+            {' / '}
+            <span style={{ color: '#111827', fontWeight: '500' }}>سجل الحضور</span>
+          </div>
+          <h1 style={{ fontSize: '32px', fontWeight: 'bold', color: '#111827', marginBottom: '8px' }}>
+            📋 سجل الحضور
+          </h1>
+          <p style={{ color: '#6B7280' }}>
+            {pagination.total} سجل • صفحة {pagination.page} من {pagination.totalPages}
+          </p>
         </div>
 
-        <Card variant="default" style={{ marginBottom: '24px' }}>
-          <Input
-            label="التاريخ"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </Card>
+        {/* Filters */}
+        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+            🔍 الفلاتر
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                من التاريخ
+              </label>
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => {
+                  setFilters({ ...filters, startDate: e.target.value });
+                  setPage(1);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #D1D5DB',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                إلى التاريخ
+              </label>
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => {
+                  setFilters({ ...filters, endDate: e.target.value });
+                  setPage(1);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #D1D5DB',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                الحالة
+              </label>
+              <select
+                value={filters.status}
+                onChange={(e) => {
+                  setFilters({ ...filters, status: e.target.value });
+                  setPage(1);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #D1D5DB',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              >
+                <option value="">كل الحالات</option>
+                <option value="PRESENT">حاضر</option>
+                <option value="LATE">متأخر</option>
+                <option value="ABSENT">غائب</option>
+                <option value="HALF_DAY">نصف يوم</option>
+              </select>
+            </div>
+          </div>
+        </div>
 
-        <Card variant="default">
-          <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', marginBottom: '20px' }}>
-            سجلات اليوم ({records.length})
-          </h3>
-
-          {records.length === 0 ? (
-            <div style={{ padding: '60px 40px', textAlign: 'center' }}>
-              <div style={{ fontSize: '80px', marginBottom: '24px' }}>📋</div>
-              <p style={{ fontSize: '16px', color: '#6B7280' }}>
-                لا توجد سجلات لهذا التاريخ
-              </p>
+        {/* Records Table */}
+        <div style={{ background: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}>
+          {isLoading ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>
+              ⏳ جاري تحميل السجلات...
+            </div>
+          ) : isError ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#991B1B' }}>
+              ❌ حدث خطأ أثناء تحميل السجلات
+            </div>
+          ) : records.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#6B7280' }}>
+              📭 لا توجد سجلات
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #E5E7EB' }}>
-                    <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: '700', color: '#374151' }}>الموظف</th>
-                    <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: '700', color: '#374151' }}>الحالة</th>
-                    <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: '700', color: '#374151' }}>الدخول</th>
-                    <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: '700', color: '#374151' }}>الخروج</th>
-                    <th style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: '700', color: '#374151' }}>ساعات العمل</th>
+                  <tr style={{ background: '#F3F4F6', borderBottom: '1px solid #E5E7EB' }}>
+                    <th style={{ padding: '16px', textAlign: 'right', fontWeight: '600', color: '#374151', fontSize: '14px' }}>التاريخ</th>
+                    <th style={{ padding: '16px', textAlign: 'right', fontWeight: '600', color: '#374151', fontSize: '14px' }}>اسم الموظف</th>
+                    <th style={{ padding: '16px', textAlign: 'right', fontWeight: '600', color: '#374151', fontSize: '14px' }}>رقم الموظف</th>
+                    <th style={{ padding: '16px', textAlign: 'right', fontWeight: '600', color: '#374151', fontSize: '14px' }}>وقت الدخول</th>
+                    <th style={{ padding: '16px', textAlign: 'right', fontWeight: '600', color: '#374151', fontSize: '14px' }}>وقت الخروج</th>
+                    <th style={{ padding: '16px', textAlign: 'right', fontWeight: '600', color: '#374151', fontSize: '14px' }}>الحالة</th>
+                    <th style={{ padding: '16px', textAlign: 'right', fontWeight: '600', color: '#374151', fontSize: '14px' }}>ساعات العمل</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map((record) => (
-                    <tr key={record.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
-                      <td style={{ padding: '12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                        {record.employee?.displayName || '-'}
-                      </td>
-                      <td style={{ padding: '12px' }}>
-                        <span style={{
-                          padding: '4px 12px',
-                          borderRadius: '12px',
-                          fontSize: '13px',
-                          fontWeight: '700',
-                          background: record.status === 'PRESENT' ? '#D1FAE5' : record.status === 'ABSENT' ? '#FEE2E2' : record.status === 'LATE' ? '#FEF3C7' : '#E9D5FF',
-                          color: record.status === 'PRESENT' ? '#059669' : record.status === 'ABSENT' ? '#DC2626' : record.status === 'LATE' ? '#D97706' : '#A855F7'
-                        }}>
-                          {record.status === 'PRESENT' ? 'حاضر' : record.status === 'ABSENT' ? 'غائب' : record.status === 'LATE' ? 'متأخر' : 'إجازة'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px', fontWeight: '600', color: '#6B7280' }}>
-                        {record.checkIn ? new Date(record.checkIn).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '-'}
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px', fontWeight: '600', color: '#6B7280' }}>
-                        {record.checkOut ? new Date(record.checkOut).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '-'}
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '14px', fontWeight: '700', color: '#111827' }}>
-                        {record.workHours || '-'}
-                      </td>
-                    </tr>
-                  ))}
+                  {records.map((record, idx) => {
+                    const statusColor = {
+                      'PRESENT': { bg: '#D1FAE5', text: '#065F46', label: '✅ حاضر' },
+                      'LATE': { bg: '#FEF3C7', text: '#92400E', label: '⏰ متأخر' },
+                      'ABSENT': { bg: '#FEE2E2', text: '#991B1B', label: '❌ غائب' },
+                      'HALF_DAY': { bg: '#DBEAFE', text: '#1E40AF', label: '📌 نصف يوم' }
+                    }[record.status] || { bg: '#F3F4F6', text: '#6B7280', label: record.status };
+
+                    return (
+                      <tr
+                        key={record.id}
+                        style={{
+                          borderBottom: '1px solid #E5E7EB',
+                          background: idx % 2 === 0 ? '#FFFFFF' : '#F9FAFB',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#F3F4F6';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = idx % 2 === 0 ? '#FFFFFF' : '#F9FAFB';
+                        }}
+                      >
+                        <td style={{ padding: '16px', fontSize: '14px', color: '#374151' }}>
+                          {new Date(record.date).toLocaleDateString('ar-SA')}
+                        </td>
+                        <td style={{ padding: '16px', fontSize: '14px', color: '#374151', fontWeight: '600' }}>
+                          {record.employee.name}
+                        </td>
+                        <td style={{ padding: '16px', fontSize: '14px', color: '#6B7280' }}>
+                          {record.employee.number || '-'}
+                        </td>
+                        <td style={{ padding: '16px', fontSize: '14px', color: '#374151', fontFamily: 'monospace' }}>
+                          {new Date(record.checkIn).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td style={{ padding: '16px', fontSize: '14px', color: '#374151', fontFamily: 'monospace' }}>
+                          {record.checkOut 
+                            ? new Date(record.checkOut).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })
+                            : '❌'
+                          }
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '6px 12px',
+                            background: statusColor.bg,
+                            color: statusColor.text,
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}>
+                            {statusColor.label}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px', fontSize: '14px', color: '#374151', fontFamily: 'monospace' }}>
+                          {record.workHours ? `${record.workHours.toFixed(2)}h` : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
-        </Card>
+        </div>
+
+        {/* Pagination Controls */}
+        {!isLoading && records.length > 0 && (
+          <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ color: '#6B7280', fontSize: '14px' }}>
+              {(page - 1) * limit + 1} إلى {Math.min(page * limit, pagination.total)} من {pagination.total}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => setPage(page - 1)}
+                disabled={!pagination.hasPreviousPage}
+                style={{
+                  padding: '10px 16px',
+                  border: '1px solid #D1D5DB',
+                  background: pagination.hasPreviousPage ? 'white' : '#F3F4F6',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: pagination.hasPreviousPage ? 'pointer' : 'not-allowed',
+                  color: pagination.hasPreviousPage ? '#374151' : '#9CA3AF'
+                }}
+              >
+                ← السابق
+              </button>
+              <div style={{ padding: '10px 16px', background: '#F9FAFB', borderRadius: '8px', fontSize: '14px', color: '#374151' }}>
+                صفحة {pagination.page} من {pagination.totalPages}
+              </div>
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={!pagination.hasNextPage}
+                style={{
+                  padding: '10px 16px',
+                  border: '1px solid #D1D5DB',
+                  background: pagination.hasNextPage ? 'white' : '#F3F4F6',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: pagination.hasNextPage ? 'pointer' : 'not-allowed',
+                  color: pagination.hasNextPage ? '#374151' : '#9CA3AF'
+                }}
+              >
+                التالي →
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
+
+      <ToastContainer />
     </div>
   );
 }
