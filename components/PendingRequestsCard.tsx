@@ -68,7 +68,7 @@ export default function PendingRequestsCard() {
       position: 'relative',
       overflow: 'hidden'
     }}
-    onClick={() => router.push('/requests')}
+    onClick={() => router.push('/workflows/approvals')}
     onMouseEnter={(e) => {
       e.currentTarget.style.transform = 'translateY(-4px)';
       e.currentTarget.style.boxShadow = '0 15px 35px rgba(245, 158, 11, 0.4)';
@@ -135,7 +135,7 @@ export default function PendingRequestsCard() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                router.push('/requests?type=hr');
+                router.push('/workflows/approvals?type=hr');
               }}
               style={{ 
                 display: 'flex', 
@@ -177,7 +177,7 @@ export default function PendingRequestsCard() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                router.push('/requests?type=maintenance');
+                router.push('/workflows/approvals?type=maintenance');
               }}
               style={{ 
                 display: 'flex', 
@@ -219,7 +219,7 @@ export default function PendingRequestsCard() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                router.push('/requests?type=purchase');
+                router.push('/workflows/approvals?type=purchase');
               }}
               style={{ 
                 display: 'flex', 
@@ -261,7 +261,7 @@ export default function PendingRequestsCard() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                router.push('/requests?type=attendance');
+                router.push('/workflows/approvals?type=attendance');
               }}
               style={{ 
                 display: 'flex', 

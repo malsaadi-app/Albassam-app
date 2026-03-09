@@ -1,6 +1,7 @@
 'use client';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   HiOutlineClock,
@@ -19,14 +20,31 @@ type PendingApproval = {
   url: string;
 };
 
-export default function WorkflowApprovalsPage() {
+function ApprovalsContent() {
+  const searchParams = useSearchParams();
+  const typeParam = searchParams.get('type');
+  
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('ALL');
 
   useEffect(() => {
     fetchPendingApprovals();
-  }, []);
+    
+    // Set filter based on URL parameter
+    if (typeParam) {
+      const typeMap: Record<string, string> = {
+        'hr': 'hr_request',
+        'maintenance': 'maintenance_request',
+        'purchase': 'purchase_request',
+        'attendance': 'attendance_request'
+      };
+      const mappedType = typeMap[typeParam];
+      if (mappedType) {
+        setFilter(mappedType);
+      }
+    }
+  }, [typeParam]);
 
   const fetchPendingApprovals = async () => {
     try {
@@ -223,54 +241,71 @@ export default function WorkflowApprovalsPage() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Filter Tabs */}
         <div style={{
           background: 'white',
-          borderRadius: '12px',
-          padding: '16px 20px',
+          borderRadius: '16px',
+          padding: '8px',
           marginBottom: '24px',
-          border: '1px solid #E5E7EB',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
           display: 'flex',
-          gap: '12px',
-          alignItems: 'center',
+          gap: '8px',
           flexWrap: 'wrap'
         }}>
-          <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
-            التصنيف:
-          </span>
           {[
-            { value: 'ALL', label: 'الكل' },
-            { value: 'hr_request', label: 'موارد بشرية' },
-            { value: 'purchase_request', label: 'مشتريات' },
-            { value: 'maintenance_request', label: 'صيانة' },
-            { value: 'finance_request', label: 'مالية' }
+            { value: 'ALL', label: 'الكل', icon: '📊', count: stats.total },
+            { value: 'hr_request', label: 'موارد بشرية', icon: '👥', count: stats.hr },
+            { value: 'purchase_request', label: 'مشتريات', icon: '📦', count: stats.procurement },
+            { value: 'maintenance_request', label: 'صيانة', icon: '🔧', count: stats.maintenance },
+            { value: 'finance_request', label: 'مالية', icon: '💰', count: approvals.filter(a => a.type === 'finance_request').length }
           ].map(f => (
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
               style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: filter === f.value ? '2px solid #3B82F6' : '1px solid #E5E7EB',
-                background: filter === f.value ? '#EFF6FF' : 'white',
-                color: filter === f.value ? '#3B82F6' : '#6B7280',
-                fontSize: '13px',
-                fontWeight: filter === f.value ? '600' : '500',
+                flex: '1 1 auto',
+                minWidth: '140px',
+                padding: '14px 20px',
+                background: filter === f.value ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'transparent',
+                color: filter === f.value ? 'white' : '#6B7280',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '15px',
+                fontWeight: '700',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: filter === f.value ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none',
+                transform: filter === f.value ? 'translateY(-2px)' : 'translateY(0)'
               }}
               onMouseEnter={(e) => {
                 if (filter !== f.value) {
-                  e.currentTarget.style.borderColor = '#D1D5DB';
+                  e.currentTarget.style.background = '#F3F4F6';
                 }
               }}
               onMouseLeave={(e) => {
                 if (filter !== f.value) {
-                  e.currentTarget.style.borderColor = '#E5E7EB';
+                  e.currentTarget.style.background = 'transparent';
                 }
               }}
             >
-              {f.label}
+              <span style={{ fontSize: '20px' }}>{f.icon}</span>
+              <span>{f.label}</span>
+              {f.count > 0 && (
+                <span style={{
+                  background: filter === f.value ? 'rgba(255, 255, 255, 0.3)' : '#E5E7EB',
+                  color: filter === f.value ? 'white' : '#374151',
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                  fontSize: '12px',
+                  fontWeight: '800'
+                }}>
+                  {f.count}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -427,5 +462,29 @@ export default function WorkflowApprovalsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function WorkflowApprovalsPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            border: '4px solid #E5E7EB',
+            borderTop: '4px solid #667eea',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+            margin: '0 auto 16px'
+          }}></div>
+          <div style={{ fontSize: '14px', color: '#6B7280' }}>جاري التحميل...</div>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    }>
+      <ApprovalsContent />
+    </Suspense>
   );
 }
