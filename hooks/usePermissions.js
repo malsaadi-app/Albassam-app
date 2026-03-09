@@ -1,5 +1,4 @@
-import { useMemo } from 'react';
-import { useSession } from 'next-auth/react';
+import { useMemo, useState, useEffect } from 'react';
 import { NAVIGATION_CONFIG, getAccessibleModules } from '@/lib/navigation-config';
 
 /**
@@ -13,7 +12,22 @@ import { NAVIGATION_CONFIG, getAccessibleModules } from '@/lib/navigation-config
  * }
  */
 export function usePermissions() {
-  const { data: session } = useSession();
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch session from API
+    fetch('/api/auth/session')
+      .then(res => res.json())
+      .then(data => {
+        setSession(data);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Error fetching session:', error);
+        setLoading(false);
+      });
+  }, []);
   
   // جلب صلاحيات المستخدم من الـ session
   const userPermissions = useMemo(() => {
@@ -141,7 +155,9 @@ export function usePermissions() {
     accessibleModules,
     canAccessPath,
     isSuperAdmin: userPermissions.includes('*'),
-    isLoggedIn: !!session?.user
+    isLoggedIn: !!session?.user,
+    loading,
+    user: session?.user || null
   };
 }
 
