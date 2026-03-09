@@ -126,31 +126,39 @@ export default function WorkflowBuilderDetail() {
   // Load stages + departments for the selected branch (only when exactly 1 branch selected)
   useEffect(() => {
     if (!ruleModal) return
-    if (ruleSelectedBranchIds.length !== 1) return
-    const branchId = ruleSelectedBranchIds[0]
-
-    if (stagesLoadedForBranch !== branchId) {
-      ;(async () => {
-        try {
-          const res = await fetch(`/api/branches/${branchId}/stages`)
-          if (!res.ok) return
-          const data = await res.json().catch(() => [])
-          setStages(Array.isArray(data) ? data : [])
-          setStagesLoadedForBranch(branchId)
-        } catch {
-          // ignore
-        }
-      })()
+    
+    // Load stages only if exactly 1 branch selected
+    if (ruleSelectedBranchIds.length === 1) {
+      const branchId = ruleSelectedBranchIds[0]
+      if (stagesLoadedForBranch !== branchId) {
+        ;(async () => {
+          try {
+            const res = await fetch(`/api/branches/${branchId}/stages`)
+            if (!res.ok) return
+            const data = await res.json().catch(() => [])
+            setStages(Array.isArray(data) ? data : [])
+            setStagesLoadedForBranch(branchId)
+          } catch {
+            // ignore
+          }
+        })()
+      }
     }
 
-    if (departmentsLoadedForBranch !== branchId) {
+    // Load departments - works with or without branch selection
+    const branchKey = ruleSelectedBranchIds.length === 1 ? ruleSelectedBranchIds[0] : 'all'
+    if (departmentsLoadedForBranch !== branchKey) {
       ;(async () => {
         try {
-          const res = await fetch(`/api/hr/master-data/departments?branchId=${branchId}`)
+          const branchId = ruleSelectedBranchIds.length === 1 ? ruleSelectedBranchIds[0] : null
+          const url = branchId 
+            ? `/api/hr/master-data/departments?branchId=${branchId}`
+            : `/api/hr/master-data/departments`
+          const res = await fetch(url)
           if (!res.ok) return
           const data = await res.json().catch(() => ({}))
           setDepartments(Array.isArray(data?.departments) ? data.departments : [])
-          setDepartmentsLoadedForBranch(branchId)
+          setDepartmentsLoadedForBranch(branchKey)
         } catch {
           // ignore
         }
