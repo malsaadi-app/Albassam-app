@@ -290,7 +290,7 @@ export const PERMISSION_MODULE_MAP = {
 /**
  * Helper: احصل على جميع الصلاحيات اللي تفتح module معين
  */
-export function getPermissionsForModule(moduleId) {
+export function getPermissionsForModule(moduleId: string): string[] {
   return Object.entries(PERMISSION_MODULE_MAP)
     .filter(([_, modules]) => modules.includes(moduleId))
     .map(([permission]) => permission);
@@ -299,12 +299,12 @@ export function getPermissionsForModule(moduleId) {
 /**
  * Helper: احصل على جميع الـ modules المسموح بها لمجموعة صلاحيات
  */
-export function getAccessibleModules(userPermissions) {
-  const modules = new Set();
+export function getAccessibleModules(userPermissions: string[]): string[] {
+  const modules = new Set<string>();
   
   userPermissions.forEach(permission => {
-    const moduleList = PERMISSION_MODULE_MAP[permission] || [];
-    moduleList.forEach(m => modules.add(m));
+    const moduleList = (PERMISSION_MODULE_MAP as any)[permission] || [];
+    moduleList.forEach((m: string) => modules.add(m));
   });
   
   return Array.from(modules);

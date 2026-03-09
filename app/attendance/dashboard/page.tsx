@@ -373,7 +373,7 @@ export default function AttendanceDashboard() {
               </div>
             )}
 
-            {stats?.today.workHours !== null && !stats?.today.isActiveSession && (
+            {stats && stats.today.workHours !== null && !stats.today.isActiveSession && (
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '4px' }}>
                   ⏰ ساعات العمل

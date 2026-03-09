@@ -20,17 +20,25 @@ export async function GET(request: NextRequest) {
     // Determine accessible user IDs based on permissions
     let accessibleUserIds: string[] = [];
     
-    if (await hasPermission(session.user.id, 'attendance.view')) {
+    if (hasPermission(session.user, 'attendance.view')) {
       // Global view - can see all employees
       const allEmployees = await prisma.employee.findMany({
         where: { status: 'ACTIVE' },
         select: { userId: true }
       });
       accessibleUserIds = allEmployees.map(e => e.userId).filter(Boolean) as string[];
-    } else if (await hasPermission(session.user.id, 'attendance.view_team')) {
+    } else if (hasPermission(session.user, 'attendance.view_team')) {
       // Team view - can see team members only
-      accessibleUserIds = await getAccessibleEmployees(session.user.id);
-    } else if (await hasPermission(session.user.id, 'attendance.view_own')) {
+      const accessibleEmployees = await getAccessibleEmployees(session.user, 'attendance.view', 'attendance.view_team');
+      // Convert employee IDs to user IDs
+      if (accessibleEmployees.length > 0) {
+        const employees = await prisma.employee.findMany({
+          where: { id: { in: accessibleEmployees } },
+          select: { userId: true }
+        });
+        accessibleUserIds = employees.map(e => e.userId).filter(Boolean) as string[];
+      }
+    } else if (hasPermission(session.user, 'attendance.view_own')) {
       // Own view - can see only own records
       accessibleUserIds = [session.user.id];
     } else {

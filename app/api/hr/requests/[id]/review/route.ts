@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 import { z } from 'zod';
 import { getSession } from '@/lib/session';
 import { createHRRequestAuditLog } from '@/lib/audit';
-import { hasPermission, isSuperAdmin } from '@/lib/permissions';
+import { hasPermission, isSuperAdmin } from '@/lib/permissions-server';
 
 
 // Validation schema for review action
@@ -42,7 +42,7 @@ export async function POST(
     }
 
     // RBAC: requires hr_requests.review (or SUPER_ADMIN)
-    const allowed = (await isSuperAdmin(session.user.id)) || (await hasPermission(session.user.id, 'hr_requests.review'));
+    const allowed = isSuperAdmin(session.user) || hasPermission(session.user, 'hr_requests.review');
     if (!allowed) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }

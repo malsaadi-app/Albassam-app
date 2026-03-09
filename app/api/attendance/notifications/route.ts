@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
     }
 
-    if (!(await hasPermission(session.user.id, 'attendance.view_own'))) {
+    if (!hasPermission(session.user, 'attendance.view_own')) {
       return NextResponse.json({ error: 'ليس لديك صلاحية' }, { status: 403 });
     }
 

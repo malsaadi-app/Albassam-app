@@ -1,6 +1,44 @@
 import { useMemo, useState, useEffect } from 'react';
 import { NAVIGATION_CONFIG, getAccessibleModules } from '@/lib/navigation-config';
 
+interface SessionUser {
+  id: string;
+  username: string;
+  email: string;
+  displayName: string;
+  permissions: string[];
+  systemRoleId: string;
+  systemRole?: {
+    id: string;
+    name: string;
+    permissions: string[];
+  };
+  orgAssignments?: Array<{
+    id: string;
+    orgUnitId: string;
+    role: string;
+  }>;
+}
+
+interface Session {
+  user?: SessionUser;
+  expires?: string;
+}
+
+interface UsePermissionsReturn {
+  userPermissions: string[];
+  hasPermission: (permission: string) => boolean;
+  hasAnyPermission: (permissions: string[]) => boolean;
+  hasAllPermissions: (permissions: string[]) => boolean;
+  getAccessibleNavigation: any[];
+  accessibleModules: string[];
+  canAccessPath: (path: string) => boolean;
+  isSuperAdmin: boolean;
+  isLoggedIn: boolean;
+  loading: boolean;
+  user: SessionUser | null;
+}
+
 /**
  * Hook للتحقق من الصلاحيات وفلترة الواجهة
  * 
@@ -11,8 +49,8 @@ import { NAVIGATION_CONFIG, getAccessibleModules } from '@/lib/navigation-config
  *   // عرض المحتوى
  * }
  */
-export function usePermissions() {
-  const [session, setSession] = useState(null);
+export function usePermissions(): UsePermissionsReturn {
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,7 +76,7 @@ export function usePermissions() {
   /**
    * التحقق من صلاحية واحدة
    */
-  const hasPermission = (permission) => {
+  const hasPermission = (permission: string): boolean => {
     if (!permission) return true; // لا صلاحية مطلوبة
     if (userPermissions.includes('*')) return true; // SUPER_ADMIN
     return userPermissions.includes(permission);
@@ -47,7 +85,7 @@ export function usePermissions() {
   /**
    * التحقق من أي صلاحية من مجموعة
    */
-  const hasAnyPermission = (permissions) => {
+  const hasAnyPermission = (permissions: string[]): boolean => {
     if (!permissions || permissions.length === 0) return true;
     if (userPermissions.includes('*')) return true; // SUPER_ADMIN
     return permissions.some(p => userPermissions.includes(p));
@@ -56,7 +94,7 @@ export function usePermissions() {
   /**
    * التحقق من جميع الصلاحيات
    */
-  const hasAllPermissions = (permissions) => {
+  const hasAllPermissions = (permissions: string[]): boolean => {
     if (!permissions || permissions.length === 0) return true;
     if (userPermissions.includes('*')) return true; // SUPER_ADMIN
     return permissions.every(p => userPermissions.includes(p));
@@ -65,7 +103,7 @@ export function usePermissions() {
   /**
    * فلترة عنصر navigation حسب الصلاحيات
    */
-  const filterNavItem = (item) => {
+  const filterNavItem = (item: any): any => {
     // التحقق من الصلاحية الأساسية
     if (item.permission && !hasPermission(item.permission)) {
       return null;
@@ -81,7 +119,7 @@ export function usePermissions() {
       const accessibleChildren = item.children
         .map(filterNavItem)
         .filter(Boolean)
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
+        .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
       
       // إذا كل الـ children محجوبة، احجب الـ parent أيضاً
       if (accessibleChildren.length === 0) {
@@ -104,22 +142,22 @@ export function usePermissions() {
     return NAVIGATION_CONFIG
       .map(filterNavItem)
       .filter(Boolean)
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
+      .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
   }, [userPermissions]);
   
   /**
    * الحصول على الـ modules المسموح بها
    */
   const accessibleModules = useMemo(() => {
-    return getAccessibleModules(userPermissions);
+    return getAccessibleModules(userPermissions) as string[];
   }, [userPermissions]);
   
   /**
    * التحقق من الوصول لمسار معين
    */
-  const canAccessPath = (path) => {
+  const canAccessPath = (path: string): boolean => {
     // البحث في navigation config
-    const findItem = (items) => {
+    const findItem = (items: any[]): any => {
       for (const item of items) {
         if (item.path === path) {
           return item;
@@ -167,8 +205,8 @@ export function usePermissions() {
  * الاستخدام:
  * export default withPermission(MyPage, 'employees.view');
  */
-export function withPermission(Component, requiredPermission) {
-  return function ProtectedComponent(props) {
+export function withPermission(Component: any, requiredPermission: string) {
+  return function ProtectedComponent(props: any) {
     const { hasPermission, isLoggedIn } = usePermissions();
     
     if (!isLoggedIn) {
@@ -214,6 +252,12 @@ export function PermissionGuard({
   allPermissions,
   fallback = null, 
   children 
+}: {
+  permission?: string;
+  anyPermission?: string[];
+  allPermissions?: string[];
+  fallback?: any;
+  children: any;
 }) {
   const { hasPermission, hasAnyPermission, hasAllPermissions } = usePermissions();
   
