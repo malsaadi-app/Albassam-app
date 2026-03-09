@@ -54,9 +54,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is Super Admin
-    const isAdmin = await isSuperAdmin(session.user.id);
-    if (!isAdmin) {
+    // Admin-only (consistent with other role endpoints)
+    if (session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -118,9 +117,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is Super Admin
-    const isAdmin = await isSuperAdmin(session.user.id);
-    if (!isAdmin) {
+    // Admin-only (consistent with other role endpoints)
+    if (session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
