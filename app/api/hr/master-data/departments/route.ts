@@ -10,12 +10,14 @@ export async function GET(request: NextRequest) {
   const deps = await prisma.orgUnit.findMany({
     where: {
       type: 'DEPARTMENT',
+      isActive: true,
       ...(branchId ? { branchId } : {}),
     },
     select: { 
       id: true, 
       name: true,
       branchId: true,
+      isActive: true,
     },
     orderBy: { name: 'asc' },
   })
@@ -25,6 +27,7 @@ export async function GET(request: NextRequest) {
     id: d.id,
     nameAr: d.name,
     nameEn: d.name,
+    isActive: d.isActive,
   }))
   
   return NextResponse.json({ departments: formatted })

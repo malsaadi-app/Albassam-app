@@ -254,11 +254,13 @@ export default function EditEmployeePage() {
   };
 
   // Fetch org structure for current employee's branch
-  const fetchOrgStructure = async (branchId: string) => {
-    if (!branchId) return;
+  const fetchOrgStructure = async (branchId?: string) => {
     try {
-      console.log('[ORG] Fetching org structure for branchId:', branchId);
-      const res = await fetch(`/api/settings/org-structure?branchId=${branchId}`);
+      console.log('[ORG] Fetching org structure for branchId:', branchId || 'all');
+      const url = branchId 
+        ? `/api/settings/org-structure?branchId=${branchId}`
+        : `/api/settings/org-structure`;
+      const res = await fetch(url);
       const data = await res.json().catch(() => ({}));
       console.log('[ORG] Response status:', res.status, 'Units count:', (data.units || []).length);
       if (res.ok) {
@@ -317,10 +319,10 @@ export default function EditEmployeePage() {
     }
   };
 
-  // Load org structure when branchId changes
+  // Load org structure when branchId changes (or when no branchId)
   useEffect(() => {
-    if (formData.branchId && !loading && params.id) {
-      console.log('[ORG] Loading org structure for branchId:', formData.branchId);
+    if (!loading && params.id) {
+      console.log('[ORG] Loading org structure for branchId:', formData.branchId || 'all');
       console.log('[ORG] Position:', formData.position, 'Specialization:', formData.specialization);
       fetchOrgStructure(formData.branchId);
       fetchOrgAssignments();

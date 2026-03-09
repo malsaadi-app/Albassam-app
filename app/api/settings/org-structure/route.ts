@@ -14,10 +14,12 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const branchId = searchParams.get('branchId')
-    if (!branchId) return NextResponse.json({ error: 'branchId is required' }, { status: 400 })
 
     const units = await prisma.orgUnit.findMany({
-      where: { branchId, isActive: true },
+      where: { 
+        ...(branchId ? { branchId } : {}),
+        isActive: true 
+      },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       select: {
         id: true,
@@ -26,11 +28,15 @@ export async function GET(request: NextRequest) {
         type: true,
         sortOrder: true,
         isActive: true,
+        branchId: true,
       },
     })
 
     const assignments = await prisma.orgUnitAssignment.findMany({
-      where: { orgUnit: { branchId }, active: true },
+      where: { 
+        ...(branchId ? { orgUnit: { branchId } } : {}),
+        active: true 
+      },
       select: {
         id: true,
         orgUnitId: true,
@@ -46,7 +52,7 @@ export async function GET(request: NextRequest) {
     })
 
     const employees = await prisma.employee.findMany({
-      where: { branchId },
+      where: branchId ? { branchId } : {},
       select: { id: true, fullNameAr: true, employeeNumber: true, department: true, position: true, specialization: true },
       orderBy: { fullNameAr: 'asc' },
     })
