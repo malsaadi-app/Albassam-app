@@ -76,6 +76,36 @@ export default async function RoleDetailPage(props: { params: Promise<{ id: stri
       `}</style>
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '2rem', direction: 'rtl' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Back Button */}
+        <Link
+          href="/settings/roles"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            background: 'rgba(255, 255, 255, 0.9)',
+            color: '#667eea',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '0.75rem',
+            fontWeight: 'bold',
+            textDecoration: 'none',
+            marginBottom: '1rem',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e: any) => {
+            e.currentTarget.style.background = 'white';
+            e.currentTarget.style.transform = 'translateX(4px)';
+          }}
+          onMouseLeave={(e: any) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
+            e.currentTarget.style.transform = 'translateX(0)';
+          }}
+        >
+          <span style={{ fontSize: '1.25rem' }}>←</span>
+          <span>رجوع إلى الأدوار والصلاحيات</span>
+        </Link>
+
         {/* Header */}
         <div style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
