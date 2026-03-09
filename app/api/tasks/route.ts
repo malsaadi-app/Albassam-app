@@ -291,6 +291,7 @@ export async function PATCH(req: Request) {
   if (updates.title !== undefined) updateData.title = updates.title
   if (updates.description !== undefined) updateData.description = updates.description
   if (updates.category !== undefined) updateData.category = updates.category
+  if (updates.priority !== undefined) updateData.priority = updates.priority
   if (updates.status !== undefined) updateData.status = updates.status
   if (updates.checklist !== undefined) updateData.checklist = updates.checklist
   if (updates.isPrivate !== undefined && isAdmin(user.role)) {
@@ -316,6 +317,7 @@ export async function PATCH(req: Request) {
   if (updates.title !== undefined) changes.title = { from: task.title, to: updates.title }
   if (updates.description !== undefined) changes.description = { from: task.description, to: updates.description }
   if (updates.category !== undefined) changes.category = { from: task.category, to: updates.category }
+  if (updates.priority !== undefined) changes.priority = { from: task.priority, to: updates.priority }
   if (updates.status !== undefined) changes.status = { from: task.status, to: updates.status }
   if (updates.checklist !== undefined) changes.checklist = { from: task.checklist, to: updates.checklist }
   if (updates.ownerId !== undefined && isAdmin(user.role)) changes.owner = { from: task.ownerId, to: updates.ownerId }
