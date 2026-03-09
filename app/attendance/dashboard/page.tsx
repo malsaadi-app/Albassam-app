@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useToast } from '@/components/Toast';
+import { StatsSkeleton } from '@/components/LoadingSkeleton';
 import Link from 'next/link';
 
 interface DashboardStats {
@@ -30,12 +32,11 @@ interface DashboardStats {
 export default function AttendanceDashboard() {
   const router = useRouter();
   const { hasPermission, loading: permissionsLoading, user } = usePermissions();
+  const { showToast, ToastContainer } = useToast();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [actionLoading, setActionLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState<'success' | 'error'>('success');
 
   // Update time every second
   useEffect(() => {
@@ -132,7 +133,6 @@ export default function AttendanceDashboard() {
 
   const handleCheckIn = async () => {
     setActionLoading(true);
-    setMessage('');
 
     try {
       const location = await getLocation();
@@ -146,24 +146,24 @@ export default function AttendanceDashboard() {
       const data = await res.json();
 
       if (res.ok) {
-        setMessage(data.message);
-        setMessageType('success');
+        showToast(data.message || 'تم تسجيل الدخول بنجاح ✅', 'success');
         fetchDashboardData();
       } else {
-        setMessage(data.error);
-        setMessageType('error');
+        showToast(data.error || 'فشل تسجيل الدخول', 'error');
       }
     } catch (error) {
-      setMessage('حدث خطأ أثناء تسجيل الدخول');
-      setMessageType('error');
+      showToast('حدث خطأ أثناء تسجيل الدخول', 'error');
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleCheckOut = async () => {
+    // Confirm dialog before checkout
+    const confirmed = window.confirm('هل أنت متأكد من تسجيل الخروج؟');
+    if (!confirmed) return;
+
     setActionLoading(true);
-    setMessage('');
 
     try {
       const res = await fetch('/api/attendance', {
@@ -175,16 +175,13 @@ export default function AttendanceDashboard() {
       const data = await res.json();
 
       if (res.ok) {
-        setMessage(data.message);
-        setMessageType('success');
+        showToast(data.message || 'تم تسجيل الخروج بنجاح 👋', 'success');
         fetchDashboardData();
       } else {
-        setMessage(data.error);
-        setMessageType('error');
+        showToast(data.error || 'فشل تسجيل الخروج', 'error');
       }
     } catch (error) {
-      setMessage('حدث خطأ أثناء تسجيل الخروج');
-      setMessageType('error');
+      showToast('حدث خطأ أثناء تسجيل الخروج', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -244,16 +241,15 @@ export default function AttendanceDashboard() {
 
   if (loading || permissionsLoading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F9FAFB' }}>
-        <div style={{
-          width: '48px',
-          height: '48px',
-          border: '4px solid #E5E7EB',
-          borderTop: '4px solid #667eea',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite'
-        }}></div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ minHeight: '100vh', background: '#F9FAFB', padding: '20px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ marginBottom: '32px' }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#111827', marginBottom: '8px' }}>
+              جاري التحميل...
+            </div>
+          </div>
+          <StatsSkeleton />
+        </div>
       </div>
     );
   }
@@ -310,22 +306,7 @@ export default function AttendanceDashboard() {
           </p>
         </div>
 
-        {/* Message */}
-        {message && (
-          <div style={{
-            marginBottom: '20px',
-            padding: '14px 18px',
-            borderRadius: '12px',
-            border: '1px solid',
-            fontSize: '14px',
-            fontWeight: '500',
-            ...(messageType === 'success' 
-              ? { background: '#D1FAE5', borderColor: '#A7F3D0', color: '#065F46' }
-              : { background: '#FEE2E2', borderColor: '#FECACA', color: '#991B1B' })
-          }}>
-            {message}
-          </div>
-        )}
+
 
         {/* Main Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '24px' }}>
@@ -647,6 +628,9 @@ export default function AttendanceDashboard() {
         </div>
 
       </div>
+
+      {/* Toast Notifications */}
+      <ToastContainer />
     </div>
   );
 }
