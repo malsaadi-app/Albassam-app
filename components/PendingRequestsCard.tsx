@@ -132,7 +132,31 @@ export default function PendingRequestsCard() {
           padding: '16px'
         }}>
           {counts.breakdown.hr > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push('/requests?type=hr');
+              }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                width: '100%',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '20px' }}>👥</span>
                 <span style={{ fontSize: '14px', fontWeight: '600' }}>موارد بشرية</span>
@@ -146,11 +170,35 @@ export default function PendingRequestsCard() {
               }}>
                 {counts.breakdown.hr}
               </span>
-            </div>
+            </button>
           )}
 
           {counts.breakdown.maintenance > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push('/requests?type=maintenance');
+              }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                width: '100%',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '20px' }}>🔧</span>
                 <span style={{ fontSize: '14px', fontWeight: '600' }}>صيانة</span>
@@ -164,11 +212,35 @@ export default function PendingRequestsCard() {
               }}>
                 {counts.breakdown.maintenance}
               </span>
-            </div>
+            </button>
           )}
 
           {counts.breakdown.purchase > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push('/requests?type=purchase');
+              }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                width: '100%',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '20px' }}>📦</span>
                 <span style={{ fontSize: '14px', fontWeight: '600' }}>مشتريات</span>
@@ -182,11 +254,35 @@ export default function PendingRequestsCard() {
               }}>
                 {counts.breakdown.purchase}
               </span>
-            </div>
+            </button>
           )}
 
           {counts.breakdown.attendance > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push('/requests?type=attendance');
+              }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                width: '100%',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '20px' }}>📅</span>
                 <span style={{ fontSize: '14px', fontWeight: '600' }}>حضور</span>
@@ -200,7 +296,7 @@ export default function PendingRequestsCard() {
               }}>
                 {counts.breakdown.attendance}
               </span>
-            </div>
+            </button>
           )}
         </div>
 
