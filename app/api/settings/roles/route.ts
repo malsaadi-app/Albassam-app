@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         nameAr: nameAr.trim(),
-        nameEn: nameEn?.trim() || null,
+        nameEn: nameEn?.trim() || nameAr.trim(), // ✅ Use Arabic as fallback if English not provided
         description: description?.trim() || null,
         isActive: isActive !== false,
         isSystem: false,
