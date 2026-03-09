@@ -401,7 +401,7 @@ export default function RoleEmployeesManager({ roleId, roleName, roleNameAr, ini
             isMulti
             components={{ Option, MenuList }}
             options={employeeOptions as any}
-            value={[]}
+            value={employeeOptions.filter(opt => selectedEmployees.includes(opt.value) && opt.value !== '__select_all__')}
             onChange={handleSelectChange}
             onInputChange={(value, action) => {
               if (action.action === 'input-change') {
