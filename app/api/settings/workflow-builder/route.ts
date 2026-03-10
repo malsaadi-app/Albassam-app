@@ -61,3 +61,47 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ ok: true, ...created })
 }
+
+// PATCH: update workflow definition (name, description, etc.)
+export async function PATCH(request: NextRequest) {
+  const session = await getSession(await cookies())
+  if (!session.user || session.user.role !== 'ADMIN') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+
+  const body = await request.json().catch(() => ({}))
+  const id = String(body?.id || '').trim()
+  const name = body?.name ? String(body.name).trim() : undefined
+  const description = body?.description !== undefined ? (body.description ? String(body.description) : null) : undefined
+
+  if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+  if (!name && description === undefined) return NextResponse.json({ error: 'nothing to update' }, { status: 400 })
+
+  const updateData: any = { updatedBy: session.user.id }
+  if (name) updateData.name = name
+  if (description !== undefined) updateData.description = description
+
+  const updated = await prisma.workflowDefinition.update({
+    where: { id },
+    data: updateData,
+    select: { id: true, name: true, description: true },
+  })
+
+  return NextResponse.json({ ok: true, workflow: updated })
+}
+
+// DELETE: delete workflow definition and all versions
+export async function DELETE(request: NextRequest) {
+  const session = await getSession(await cookies())
+  if (!session.user || session.user.role !== 'ADMIN') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
+  if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+
+  // Delete workflow (cascade will delete versions, steps, rules)
+  await prisma.workflowDefinition.delete({
+    where: { id },
+  })
+
+  return NextResponse.json({ ok: true, deleted: id })
+}

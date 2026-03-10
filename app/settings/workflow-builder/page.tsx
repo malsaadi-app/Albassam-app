@@ -9,6 +9,10 @@ export default function WorkflowBuilderHome() {
   const [defs, setDefs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
+  
+  // Edit modal state
+  const [editModal, setEditModal] = useState<{ open: boolean; workflow: any | null }>({ open: false, workflow: null })
+  const [editName, setEditName] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -62,6 +66,55 @@ export default function WorkflowBuilderHome() {
     await load()
     const okCount = (data.results || []).filter((r: any) => r.published).length
     alert(`✅ تم نشر: ${okCount} من ${data.count || 0}`)
+  }
+
+  // Edit workflow name
+  const openEditModal = (workflow: any) => {
+    setEditModal({ open: true, workflow })
+    setEditName(workflow.name || '')
+  }
+
+  const closeEditModal = () => {
+    setEditModal({ open: false, workflow: null })
+    setEditName('')
+  }
+
+  const saveEdit = async () => {
+    const n = editName.trim()
+    if (!n || !editModal.workflow) return
+
+    const res = await fetch('/api/settings/workflow-builder', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editModal.workflow.id, name: n }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || `فشل (HTTP ${res.status})`)
+      return
+    }
+
+    alert('✅ تم تحديث الاسم')
+    closeEditModal()
+    await load()
+  }
+
+  // Delete workflow
+  const deleteWorkflow = async (workflow: any) => {
+    const confirmed = confirm(`⚠️ هل أنت متأكد من حذف "${workflow.name}"؟\n\nسيتم حذف جميع الإصدارات والخطوات المرتبطة بهذا الـ workflow.`)
+    if (!confirmed) return
+
+    const res = await fetch(`/api/settings/workflow-builder?id=${workflow.id}`, {
+      method: 'DELETE',
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.error || `فشل (HTTP ${res.status})`)
+      return
+    }
+
+    alert('✅ تم الحذف')
+    await load()
   }
 
   return (
@@ -243,100 +296,281 @@ export default function WorkflowBuilderHome() {
                   const isActive = status === 'ACTIVE'
                   
                   return (
-                    <a 
+                    <div 
                       key={d.id} 
-                      href={`/settings/workflow-builder/${d.id}`} 
                       style={{ 
-                        textDecoration: 'none', 
                         color: '#111827', 
                         background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)',
                         borderRadius: 16,
                         padding: 20,
                         border: '1px solid rgba(102, 126, 234, 0.2)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: 16,
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                        position: 'relative' as any,
-                        overflow: 'hidden' as any
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'
-                        e.currentTarget.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.2)'
-                        e.currentTarget.style.borderColor = 'rgba(102, 126, 234, 0.4)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0) scale(1)'
-                        e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.05)'
-                        e.currentTarget.style.borderColor = 'rgba(102, 126, 234, 0.2)'
+                        position: 'relative' as any
                       }}
                     >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: '800', fontSize: 17, color: '#111827', marginBottom: 8 }}>
-                          {d.name}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: '800', fontSize: 17, color: '#111827', marginBottom: 8 }}>
+                            {d.name}
+                          </div>
+                          <div style={{ 
+                            fontSize: 13, 
+                            color: '#6B7280',
+                            display: 'flex',
+                            gap: 8,
+                            alignItems: 'center',
+                            flexWrap: 'wrap'
+                          }}>
+                            <span style={{
+                              background: 'rgba(255,255,255,0.9)',
+                              padding: '4px 10px',
+                              borderRadius: 8,
+                              fontWeight: '600',
+                              border: '1px solid rgba(102, 126, 234, 0.1)'
+                            }}>
+                              {d.module}
+                            </span>
+                            <span style={{
+                              background: isDraft 
+                                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                : isActive
+                                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                                : '#9CA3AF',
+                              color: 'white',
+                              padding: '4px 12px',
+                              borderRadius: 20,
+                              fontSize: 12,
+                              fontWeight: '700',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                            }}>
+                              {isDraft ? '📝 مسودة' : isActive ? '✅ مفعّل' : status}
+                            </span>
+                            <span>
+                              آخر إصدار: v{latestVersion?.version ?? '-'}
+                            </span>
+                          </div>
                         </div>
-                        <div style={{ 
-                          fontSize: 13, 
-                          color: '#6B7280',
-                          display: 'flex',
-                          gap: 8,
-                          alignItems: 'center',
-                          flexWrap: 'wrap'
-                        }}>
-                          <span style={{
-                            background: 'rgba(255,255,255,0.9)',
-                            padding: '4px 10px',
-                            borderRadius: 8,
-                            fontWeight: '600',
-                            border: '1px solid rgba(102, 126, 234, 0.1)'
-                          }}>
-                            {d.module}
-                          </span>
-                          <span style={{
-                            background: isDraft 
-                              ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                              : isActive
-                              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
-                              : '#9CA3AF',
-                            color: 'white',
-                            padding: '4px 12px',
-                            borderRadius: 20,
-                            fontSize: 12,
-                            fontWeight: '700',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                          }}>
-                            {isDraft ? '📝 مسودة' : isActive ? '✅ مفعّل' : status}
-                          </span>
-                          <span>
-                            آخر إصدار: v{latestVersion?.version ?? '-'}
-                          </span>
+                        
+                        {/* Action buttons */}
+                        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openEditModal(d)
+                            }}
+                            style={{
+                              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                              color: 'white',
+                              width: 40,
+                              height: 40,
+                              borderRadius: '50%',
+                              border: 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 18,
+                              cursor: 'pointer',
+                              boxShadow: '0 4px 15px rgba(245, 158, 11, 0.4)',
+                              transition: 'all 0.3s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.1)'
+                              e.currentTarget.style.boxShadow = '0 6px 20px rgba(245, 158, 11, 0.6)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'scale(1)'
+                              e.currentTarget.style.boxShadow = '0 4px 15px rgba(245, 158, 11, 0.4)'
+                            }}
+                            title="تعديل الاسم"
+                          >
+                            ✏️
+                          </button>
+                          
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteWorkflow(d)
+                            }}
+                            style={{
+                              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                              color: 'white',
+                              width: 40,
+                              height: 40,
+                              borderRadius: '50%',
+                              border: 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 18,
+                              cursor: 'pointer',
+                              boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)',
+                              transition: 'all 0.3s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.1)'
+                              e.currentTarget.style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.6)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'scale(1)'
+                              e.currentTarget.style.boxShadow = '0 4px 15px rgba(239, 68, 68, 0.4)'
+                            }}
+                            title="حذف"
+                          >
+                            🗑️
+                          </button>
+
+                          <a
+                            href={`/settings/workflow-builder/${d.id}`}
+                            style={{
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              color: 'white',
+                              width: 40,
+                              height: 40,
+                              borderRadius: '50%',
+                              border: 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 20,
+                              fontWeight: '900',
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                              transition: 'all 0.3s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.1)'
+                              e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'scale(1)'
+                              e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)'
+                            }}
+                            title="فتح"
+                          >
+                            →
+                          </a>
                         </div>
                       </div>
-                      <div style={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        color: 'white',
-                        width: 40,
-                        height: 40,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 20,
-                        fontWeight: '900',
-                        boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
-                        flexShrink: 0
-                      }}>
-                        →
-                      </div>
-                    </a>
+                    </div>
                   )
                 })}
               </div>
             )}
           </div>
         </Card>
+
+        {/* Edit Modal */}
+        {editModal.open && (
+          <div
+            style={{
+              position: 'fixed' as any,
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: 20
+            }}
+            onClick={closeEditModal}
+          >
+            <div
+              style={{
+                background: 'white',
+                borderRadius: 20,
+                padding: 32,
+                maxWidth: 500,
+                width: '100%',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+                animation: 'slideIn 0.3s ease'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ 
+                fontSize: 24, 
+                fontWeight: '900', 
+                marginBottom: 24,
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}>
+                ✏️ تعديل اسم الـ Workflow
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontWeight: '700', marginBottom: 8, color: '#374151' }}>
+                  الاسم الجديد
+                </label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="أدخل اسم الـ workflow"
+                  style={{
+                    width: '100%',
+                    padding: 14,
+                    borderRadius: 12,
+                    border: '2px solid rgba(245, 158, 11, 0.2)',
+                    fontSize: 15,
+                    fontWeight: '600',
+                    outline: 'none',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'rgba(245, 158, 11, 0.6)'
+                    e.target.style.boxShadow = '0 0 0 4px rgba(245, 158, 11, 0.1)'
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'rgba(245, 158, 11, 0.2)'
+                    e.target.style.boxShadow = 'none'
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <Button
+                  variant="outline"
+                  onClick={closeEditModal}
+                  style={{ borderRadius: 12 }}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={saveEdit}
+                  disabled={!editName.trim()}
+                  style={{
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    border: 'none',
+                    boxShadow: '0 4px 15px rgba(245, 158, 11, 0.4)'
+                  }}
+                >
+                  💾 حفظ
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <style jsx>{`
+          @keyframes slideIn {
+            from {
+              opacity: 0;
+              transform: translateY(-20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
       </div>
     </div>
   )
