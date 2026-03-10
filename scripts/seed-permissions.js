@@ -87,6 +87,14 @@ const PERMISSIONS = [
   { name: 'employees.delete', nameAr: 'حذف موظف', nameEn: 'Delete Employee', module: 'employees', description: 'حذف موظف' },
   { name: 'employees.view_salary', nameAr: 'عرض الرواتب', nameEn: 'View Salary', module: 'employees', description: 'عرض معلومات الرواتب' },
   
+  // صلاحيات الموظفين - عرض دقيق (Field-Level Permissions)
+  { name: 'employees.view_basic', nameAr: 'عرض البيانات الأساسية', nameEn: 'View Basic Info', module: 'employees', description: 'عرض الاسم والرقم الوظيفي فقط' },
+  { name: 'employees.view_personal', nameAr: 'عرض البيانات الشخصية', nameEn: 'View Personal Info', module: 'employees', description: 'عرض الهوية والجنسية والمواليد' },
+  { name: 'employees.view_contact', nameAr: 'عرض بيانات الاتصال', nameEn: 'View Contact Info', module: 'employees', description: 'عرض الجوال والإيميل والعنوان' },
+  { name: 'employees.view_employment', nameAr: 'عرض البيانات الوظيفية', nameEn: 'View Employment Info', module: 'employees', description: 'عرض القسم والوظيفة وتاريخ التعيين' },
+  { name: 'employees.view_documents', nameAr: 'عرض المستندات', nameEn: 'View Documents', module: 'employees', description: 'عرض الملفات والمستندات المرفقة' },
+  { name: 'employees.view_attendance_history', nameAr: 'عرض سجل الحضور', nameEn: 'View Attendance History', module: 'employees', description: 'عرض سجل حضور الموظف' },
+  
   // صلاحيات الهيكل التنظيمي
   { name: 'org.view', nameAr: 'عرض الهيكل التنظيمي', nameEn: 'View Org Structure', module: 'org', description: 'عرض الهيكل التنظيمي' },
   { name: 'org.manage', nameAr: 'إدارة الهيكل التنظيمي', nameEn: 'Manage Org Structure', module: 'org', description: 'تعديل وإدارة الهيكل التنظيمي' },
@@ -129,6 +137,9 @@ const ROLE_PERMISSIONS = {
   'SUPER_ADMIN': '*', // كل الصلاحيات
   'HR_MANAGER': [
     'employees.view', 'employees.create', 'employees.edit', 'employees.view_salary',
+    // Field-level permissions (all)
+    'employees.view_basic', 'employees.view_personal', 'employees.view_contact', 
+    'employees.view_employment', 'employees.view_documents', 'employees.view_attendance_history',
     'hr.view_requests', 'hr.approve_requests', 'hr.manage_leaves', 'hr.submit_request',
     'attendance.view', 'attendance.view_own', 'attendance.view_team', 'attendance.submit', 'attendance.manage', 'attendance.export',
     'org.view', 'org.assign',
@@ -136,6 +147,9 @@ const ROLE_PERMISSIONS = {
   ],
   'BRANCH_MANAGER': [
     'employees.view', 'employees.create', 'employees.edit',
+    // Field-level (all except salary)
+    'employees.view_basic', 'employees.view_personal', 'employees.view_contact',
+    'employees.view_employment', 'employees.view_documents', 'employees.view_attendance_history',
     'hr.view_requests', 'hr.approve_requests', 'hr.submit_request',
     'attendance.view', 'attendance.view_own', 'attendance.view_team', 'attendance.submit', 'attendance.export',
     'org.view', 'org.assign',
@@ -144,6 +158,9 @@ const ROLE_PERMISSIONS = {
   ],
   'DEPT_HEAD': [
     'employees.view', 'employees.view_team',
+    // Field-level (all except salary)
+    'employees.view_basic', 'employees.view_personal', 'employees.view_contact',
+    'employees.view_employment', 'employees.view_documents', 'employees.view_attendance_history',
     'hr.view_requests', 'hr.submit_request',
     'attendance.view', 'attendance.view_own', 'attendance.view_team', 'attendance.submit', 'attendance.export',
     'org.view', 'org.view_team',
@@ -152,6 +169,8 @@ const ROLE_PERMISSIONS = {
   ],
   'SUPERVISOR': [
     'employees.view', 'employees.view_team',
+    // Field-level (limited: basic, contact, employment)
+    'employees.view_basic', 'employees.view_contact', 'employees.view_employment',
     'hr.view_requests', 'hr.submit_request',
     'attendance.view', 'attendance.view_own', 'attendance.view_team', 'attendance.submit',
     'org.view_team',
@@ -160,6 +179,8 @@ const ROLE_PERMISSIONS = {
   ],
   'STAGE_SECRETARY': [
     'employees.view_team',
+    // Field-level (very limited: basic, contact)
+    'employees.view_basic', 'employees.view_contact',
     'attendance.view_own', 'attendance.view_team', 'attendance.submit', 'attendance.export',
     'tasks.view',
     'hr.submit_request'
