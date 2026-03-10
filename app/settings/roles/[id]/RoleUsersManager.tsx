@@ -11,6 +11,12 @@ type User = {
     name: string;
     nameAr: string;
   } | null;
+  employee: {
+    fullNameAr: string | null;
+    fullNameEn: string | null;
+    position: string | null;
+    employeeNumber: string | null;
+  } | null;
 };
 
 type Props = {
@@ -44,7 +50,11 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
       u.displayName.toLowerCase().includes(query) ||
       u.username.toLowerCase().includes(query) ||
       u.systemRole?.nameAr?.includes(query) ||
-      u.systemRole?.name?.toLowerCase().includes(query)
+      u.systemRole?.name?.toLowerCase().includes(query) ||
+      u.employee?.fullNameAr?.includes(query) ||
+      u.employee?.fullNameEn?.toLowerCase().includes(query) ||
+      u.employee?.position?.includes(query) ||
+      u.employee?.employeeNumber?.includes(query)
     );
   }, [allUsers, assignedUserIds, searchQuery]);
 
@@ -293,15 +303,17 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
                         onClick={(e) => e.stopPropagation()}
                       />
                       <div style={{ flex: 1 }}>
+                        {/* Name with badges */}
                         <div style={{ 
                           fontWeight: '600', 
                           color: '#1a202c',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.5rem',
-                          flexWrap: 'wrap'
+                          flexWrap: 'wrap',
+                          marginBottom: '0.25rem'
                         }}>
-                          <span>{user.displayName}</span>
+                          <span>{user.employee?.fullNameAr || user.displayName}</span>
                           {isAlreadyAssigned && (
                             <span style={{
                               fontSize: '0.75rem',
@@ -314,21 +326,24 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
                               ✓ مربوط
                             </span>
                           )}
-                          {hasOtherRole && user.systemRole && (
-                            <span style={{
-                              fontSize: '0.75rem',
-                              background: '#ed8936',
-                              color: 'white',
-                              padding: '2px 8px',
-                              borderRadius: '12px',
-                              fontWeight: '600'
-                            }}>
-                              {user.systemRole.nameAr || user.systemRole.name}
-                            </span>
-                          )}
                         </div>
+                        
+                        {/* Position / Role badge */}
+                        {(user.employee?.position || user.systemRole?.nameAr) && (
+                          <div style={{ 
+                            fontSize: '0.875rem', 
+                            color: hasOtherRole ? '#ed8936' : '#667eea',
+                            fontWeight: '600',
+                            marginBottom: '0.25rem'
+                          }}>
+                            {user.employee?.position || user.systemRole?.nameAr}
+                          </div>
+                        )}
+                        
+                        {/* Username + Employee Number */}
                         <div style={{ fontSize: '0.875rem', color: '#718096' }}>
                           @{user.username}
+                          {user.employee?.employeeNumber && ` • 🆔 ${user.employee.employeeNumber}`}
                         </div>
                       </div>
                     </div>
@@ -432,11 +447,29 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
                 }}
               >
                 <div style={{ marginBottom: '0.75rem' }}>
+                  {/* Name */}
                   <div style={{ fontWeight: 'bold', color: '#1a202c', fontSize: '1.05rem', marginBottom: '0.25rem' }}>
-                    {user.displayName}
+                    {user.employee?.fullNameAr || user.displayName}
                   </div>
-                  <div style={{ fontSize: '0.875rem', color: '#718096' }}>
-                    @{user.username}
+                  
+                  {/* Position / Role */}
+                  {(user.employee?.position || user.systemRole?.nameAr) && (
+                    <div style={{ 
+                      fontSize: '0.875rem', 
+                      color: '#667eea',
+                      fontWeight: '600',
+                      marginBottom: '0.25rem'
+                    }}>
+                      {user.employee?.position || user.systemRole?.nameAr}
+                    </div>
+                  )}
+                  
+                  {/* Username + Employee Number */}
+                  <div style={{ fontSize: '0.875rem', color: '#718096', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <span>@{user.username}</span>
+                    {user.employee?.employeeNumber && (
+                      <span>🆔 {user.employee.employeeNumber}</span>
+                    )}
                   </div>
                 </div>
                 
