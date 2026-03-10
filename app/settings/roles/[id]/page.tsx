@@ -5,7 +5,6 @@ import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import RolePermissionsManager from './RolePermissionsManager';
 import RoleEditButtons from './RoleEditButtons';
-import RoleEmployeesManager from './RoleEmployeesManager';
 import RoleUsersManager from './RoleUsersManager';
 
 export default async function RoleDetailPage(props: { params: Promise<{ id: string }> }) {
@@ -16,7 +15,7 @@ export default async function RoleDetailPage(props: { params: Promise<{ id: stri
     redirect('/');
   }
 
-  // Fetch role with permissions and employees
+  // Fetch role with permissions and users
   const role = await prisma.systemRole.findUnique({
     where: { id: params.id },
     include: {
@@ -31,17 +30,6 @@ export default async function RoleDetailPage(props: { params: Promise<{ id: stri
           username: true,
           displayName: true
         }
-      },
-      employees: {
-        where: { status: 'ACTIVE' },
-        select: {
-          id: true,
-          fullNameAr: true,
-          employeeNumber: true,
-          position: true,
-          department: true
-        },
-        orderBy: { fullNameAr: 'asc' }
       }
     }
   });
@@ -169,10 +157,7 @@ export default async function RoleDetailPage(props: { params: Promise<{ id: stri
           
           <div style={{ display: 'flex', gap: '2rem', fontSize: '0.9rem', color: '#718096', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
             <span>🔑 الصلاحيات: <strong style={{ color: '#667eea' }}>{role.permissions.length}</strong></span>
-            <span>👥 الموظفون: <strong style={{ color: '#667eea' }}>{role.employees.length}</strong></span>
-            {role.users.length > 0 && (
-              <span>🔐 المستخدمون: <strong style={{ color: '#667eea' }}>{role.users.length}</strong></span>
-            )}
+            <span>🔐 المستخدمون: <strong style={{ color: '#667eea' }}>{role.users.length}</strong></span>
           </div>
         </div>
 
@@ -187,20 +172,6 @@ export default async function RoleDetailPage(props: { params: Promise<{ id: stri
             roleName={role.name}
             permissionsByModule={permissionsByModule}
             currentPermissionIds={Array.from(rolePermissionIds)}
-          />
-        </div>
-
-        {/* Employees Manager */}
-        <div style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a202c', marginBottom: '1.5rem' }}>
-            👥 إدارة الموظفين
-          </h2>
-          
-          <RoleEmployeesManager
-            roleId={role.id}
-            roleName={role.name}
-            roleNameAr={role.nameAr}
-            initialEmployees={role.employees}
           />
         </div>
 
