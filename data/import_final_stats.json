@@ -1,0 +1,19 @@
+{
+  "branches": {
+    "created": 7,
+    "existing": 1
+  },
+  "orgUnits": {
+    "created": 99,
+    "existing": 26
+  },
+  "employees": {
+    "created": 0,
+    "skipped": 0,
+    "errors": 600
+  },
+  "assignments": {
+    "created": 0,
+    "errors": 0
+  }
+}

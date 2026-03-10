@@ -1,0 +1,14 @@
+{
+  "deleted": 1,
+  "corrected": 2,
+  "deletedNames": [
+    "خالد محمد"
+  ],
+  "correctedNames": [
+    "محمد سالم الدوسري",
+    "فوزية محمد سالم بلكديش"
+  ],
+  "totalEmployeesBefore": 601,
+  "totalEmployeesAfter": 600,
+  "cleanPercentage": 100
+}

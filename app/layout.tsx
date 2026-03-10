@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
-import Sidebar from './components/Sidebar'
-import TopBar from './components/TopBar'
+import SidebarEnhanced from './components/SidebarEnhanced'
+import TopBarEnhanced from './components/TopBarEnhanced'
 import DesignSystemStyles from './components/ui/DesignSystemStyles'
 import ServiceWorkerRegistration from './components/pwa/ServiceWorkerRegistration'
 import InstallPrompt from './components/pwa/InstallPrompt'
@@ -75,14 +75,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* Service Worker Registration */}
           <ServiceWorkerRegistration />
           
-          {/* Sidebar (auto-hides on /auth pages) */}
-          <Sidebar />
+          {/* Sidebar Enhanced (auto-hides on /auth pages) */}
+          <SidebarEnhanced />
           <main className="ds-app-main" style={{
             minHeight: '100vh',
             position: 'relative',
-            zIndex: 1
+            zIndex: 1,
+            paddingTop: '64px'
           }}>
-            <TopBar />
+            <TopBarEnhanced />
             {children}
           </main>
           
