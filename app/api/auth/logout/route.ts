@@ -6,5 +6,5 @@ export async function POST() {
   const cookieStore = await cookies()
   const session = await getSession(cookieStore)
   session.destroy()
-  return NextResponse.redirect(new URL('/login', process.env.APP_URL || 'http://localhost:3000'))
+  return NextResponse.redirect(new URL('/auth/login', process.env.APP_URL || 'http://localhost:3000'))
 }

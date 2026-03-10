@@ -59,8 +59,8 @@ export function usePermissions(): UsePermissionsReturn {
       .then(res => {
         if (!res.ok) {
           // Session invalid or expired - redirect to login
-          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-            window.location.href = '/login';
+          if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login') {
+            window.location.href = '/auth/login';
           }
           return null;
         }
@@ -69,8 +69,8 @@ export function usePermissions(): UsePermissionsReturn {
       .then(data => {
         if (!data || !data.user) {
           // No user in session - redirect to login
-          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-            window.location.href = '/login';
+          if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login') {
+            window.location.href = '/auth/login';
           }
           setSession(null);
         } else {
@@ -81,8 +81,8 @@ export function usePermissions(): UsePermissionsReturn {
       .catch(error => {
         console.error('Error fetching session:', error);
         // On error, redirect to login
-        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-          window.location.href = '/login';
+        if (typeof window !== 'undefined' && window.location.pathname !== '/auth/login') {
+          window.location.href = '/auth/login';
         }
         setLoading(false);
       });
