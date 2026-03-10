@@ -115,8 +115,10 @@ export default function SidebarEnhanced() {
       label: t('hr'),
       items: [
         { href: '/hr/employees', icon: <HiOutlineUser size={18} />, label: t('employees') },
+        { href: '/hr/leaves', icon: <HiOutlineDocumentText size={18} />, label: t('leaves') },
         { href: '/hr/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('hrRequests') },
         { href: '/hr/attendance', icon: <HiOutlineClock size={18} />, label: t('attendance') },
+        { href: '/hr/attendance/correction', icon: <HiOutlinePencil size={18} />, label: t('attendanceRequests') },
         { href: '/hr/job-applications', icon: <HiOutlineUserAdd size={18} />, label: t('jobApplications') },
       ]
     },
@@ -137,6 +139,22 @@ export default function SidebarEnhanced() {
       items: [
         { href: '/maintenance/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('maintenanceRequests') },
         { href: '/maintenance/assets', icon: <HiOutlineCube size={18} />, label: t('maintenanceAssets') },
+        { href: '/maintenance/vendors', icon: <HiOutlineUserGroup size={18} />, label: t('maintenanceVendors') },
+      ]
+    },
+    {
+      id: 'support_services',
+      icon: <HiOutlineTruck size={18} />,
+      label: 'الخدمات المساندة',
+      items: [
+        { href: '/support-services/transport/drivers', icon: <HiOutlineTruck size={18} />, label: 'النقل — السائقين' },
+        { href: '/support-services/transport/vehicles', icon: <HiOutlineTruck size={18} />, label: 'النقل — المركبات' },
+        ...(userRole === 'ADMIN'
+          ? [
+              { href: '/inventory', icon: <HiOutlineCube size={18} />, label: 'المخازن' },
+              { href: '/settings/inventory', icon: <HiOutlineCog size={18} />, label: 'إعدادات المخزون' },
+            ]
+          : []),
       ]
     },
     {
@@ -154,6 +172,17 @@ export default function SidebarEnhanced() {
       items: [
         { href: '/reports', icon: <HiOutlineChartBar size={18} />, label: t('allReports') },
         { href: '/reports/attendance', icon: <HiOutlineClock size={18} />, label: t('attendanceReports') },
+        { href: '/reports/financial', icon: <HiOutlineCurrencyDollar size={18} />, label: t('financialReports') },
+      ]
+    },
+    {
+      id: 'workflow',
+      icon: <HiOutlineClipboardList size={18} />,
+      label: t('workflow'),
+      items: [
+        { href: '/workflows', icon: <HiOutlineClipboardList size={18} />, label: t('workflow') },
+        { href: '/workflows/approvals', icon: <HiOutlineClipboardCheck size={18} />, label: t('workflowApprovals'), badge: 0 },
+        { href: '/workflows/stages', icon: <HiOutlineTag size={18} />, label: t('workflowStages') },
       ]
     },
     {
@@ -162,10 +191,19 @@ export default function SidebarEnhanced() {
       label: t('settings'),
       items: [
         { href: '/branches', icon: <HiOutlineOfficeBuilding size={18} />, label: t('branches') },
+        { href: '/settings/school-structure', icon: <HiOutlineOfficeBuilding size={18} />, label: 'هيكل المدارس' },
+        { href: '/settings/locations', icon: <HiOutlineLocationMarker size={18} />, label: t('locations') },
         { href: '/settings/roles', icon: <HiOutlineShieldCheck size={18} />, label: t('rolesAndPermissions') },
+        { href: '/settings/org-structure', icon: <HiOutlineUserGroup size={18} />, label: 'الهيكل التنظيمي' },
+        { href: '/settings/hr-routing-rules', icon: <HiOutlineDotsHorizontal size={18} />, label: 'HR Routing (بنين)' },
+        { href: '/settings/workflow-builder', icon: <HiOutlineDotsHorizontal size={18} />, label: 'Workflow Builder' },
+        { href: '/settings/delegations', icon: <HiOutlineUserGroup size={18} />, label: t('delegations') },
+        { href: '/hr/succession', icon: <HiOutlineUserGroup size={18} />, label: t('succession') },
+        { href: '/hr/positions', icon: <HiOutlineBriefcase size={18} />, label: t('positions') },
         { href: '/settings', icon: <HiOutlineCog size={18} />, label: t('systemSettings') },
         ...(userRole === 'ADMIN' ? [
           { href: '/admin/users', icon: <HiOutlineUserGroup size={18} />, label: 'إدارة المستخدمين' },
+          { href: '/admin', icon: <HiOutlineShieldCheck size={18} />, label: t('adminPanel') },
         ] : []),
       ]
     },
@@ -181,9 +219,50 @@ export default function SidebarEnhanced() {
     setExpandedSections(newExpanded);
   };
 
-  const menuSections = userRole === 'USER' 
-    ? fullMenuSections.filter(s => ['main', 'hr', 'procurement'].includes(s.id))
-    : fullMenuSections;
+  const menuSections: MenuSection[] = (() => {
+    // Restrict what normal employees see
+    if (userRole === 'USER') {
+      return [
+        {
+          id: 'main',
+          icon: <HiOutlineHome size={18} />,
+          label: t('mainMenu'),
+          items: [
+            { href: '/dashboard', icon: <HiOutlineViewGrid size={18} />, label: t('home') },
+            { href: '/attendance', icon: <HiOutlineClock size={18} />, label: t('attendance') },
+            { href: '/notifications', icon: <HiOutlineBell size={18} />, label: t('notifications'), badge: unreadNotificationsCount },
+            { href: '/workflows/approvals', icon: <HiOutlineClipboardCheck size={18} />, label: t('workflowApprovals'), badge: pendingRequestsCount },
+          ]
+        },
+        {
+          id: 'hr',
+          icon: <HiOutlineUserGroup size={18} />,
+          label: t('hr'),
+          items: [
+            { href: '/hr/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('hrRequests') },
+          ]
+        },
+        {
+          id: 'procurement',
+          icon: <HiOutlineShoppingCart size={18} />,
+          label: t('procurement'),
+          items: [
+            { href: '/procurement/requests', icon: <HiOutlineClipboardList size={18} />, label: t('procurementRequests') },
+          ]
+        },
+        {
+          id: 'maintenance',
+          icon: <HiOutlineCube size={18} />,
+          label: t('maintenance'),
+          items: [
+            { href: '/maintenance/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('maintenanceRequests') },
+          ]
+        },
+      ];
+    }
+
+    return fullMenuSections;
+  })();
 
   const filteredSections = searchQuery
     ? menuSections.map(section => ({
