@@ -33,13 +33,15 @@ interface ResponsiveGridProps {
   };
   gap?: 'sm' | 'md' | 'lg';
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export function ResponsiveGrid({
   children,
   columns = { mobile: 1, tablet: 2, desktop: 3 },
   gap = 'md',
-  className = ''
+  className = '',
+  style
 }: ResponsiveGridProps) {
   const gapSizes = {
     sm: '12px',
@@ -51,6 +53,7 @@ export function ResponsiveGrid({
     display: 'grid',
     gap: gapSizes[gap],
     gridTemplateColumns: `repeat(${columns.mobile || 1}, 1fr)`,
+    ...style
   };
 
   return (
@@ -80,6 +83,7 @@ interface ResponsiveStackProps {
   align?: 'start' | 'center' | 'end' | 'stretch';
   justify?: 'start' | 'center' | 'end' | 'between' | 'around';
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export function ResponsiveStack({
@@ -88,7 +92,8 @@ export function ResponsiveStack({
   gap = 'md',
   align = 'stretch',
   justify = 'start',
-  className = ''
+  className = '',
+  style
 }: ResponsiveStackProps) {
   const gapSizes = {
     sm: '12px',
@@ -116,12 +121,13 @@ export function ResponsiveStack({
     flexDirection: direction === 'vertical' ? 'column' : 'row',
     gap: gapSizes[gap],
     alignItems: alignMap[align],
-    justifyContent: justifyMap[justify]
+    justifyContent: justifyMap[justify],
+    ...style
   };
 
   if (direction === 'responsive') {
     return (
-      <div className={className}>
+      <div className={className} style={{ ...style }}>
         <style jsx>{`
           div {
             display: flex;
