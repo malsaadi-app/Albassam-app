@@ -7,9 +7,8 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Stats } from '@/components/ui/Stats';
-import { Badge } from '@/components/ui/TableEnhanced';
+import { Badge } from '@/components/ui/Badge';
 import { Input, Textarea, Select } from '@/components/ui/Input';
-import { FloatingSelect } from '@/components/ui/FormEnhanced';
 import { type ChecklistItem } from './ChecklistEditor';
 import ReactSelect from 'react-select';
 import { useToast } from '@/components/Toast';
@@ -319,14 +318,14 @@ export default function TasksPage() {
   });
 
   const getStatusBadge = (status: Task['status']) => {
-    const badges: Record<Task['status'], { variant: 'success' | 'warning' | 'danger' | 'info', text: string }> = {
-      NEW: { variant: 'info', text: 'جديد' },
-      IN_PROGRESS: { variant: 'warning', text: 'قيد التنفيذ' },
-      ON_HOLD: { variant: 'danger', text: 'بانتظار' },
-      DONE: { variant: 'success', text: 'مكتمل' },
+    const badges: Record<Task['status'], { variant: 'blue' | 'yellow' | 'red' | 'green', text: string }> = {
+      NEW: { variant: 'blue', text: 'جديد' },
+      IN_PROGRESS: { variant: 'yellow', text: 'قيد التنفيذ' },
+      ON_HOLD: { variant: 'red', text: 'بانتظار' },
+      DONE: { variant: 'green', text: 'مكتمل' },
     };
     const badge = badges[status];
-    return <Badge type={badge.variant}>{badge.text}</Badge>;
+    return <Badge variant={badge.variant}>{badge.text}</Badge>;
   };
 
   const getCategoryText = (category: Task['category']) => {
@@ -606,16 +605,15 @@ export default function TasksPage() {
         <Card variant="default" className="mb-6">
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
             <div style={{ flex: '1 1 200px' }}>
-              <FloatingSelect
+              <Select
                 label="القسم"
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value as any)}
-                options={[
-                  { value: 'ALL', label: 'كل الأقسام' },
-                  { value: 'TRANSACTIONS', label: 'معاملات' },
-                  { value: 'HR', label: 'شؤون الموظفين' }
-                ]}
-              />
+              >
+                <option value="ALL">كل الأقسام</option>
+                <option value="TRANSACTIONS">معاملات</option>
+                <option value="HR">شؤون الموظفين</option>
+              </Select>
             </div>
             {filter !== 'ALL' && (
               <div style={{ 
