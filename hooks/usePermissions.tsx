@@ -74,6 +74,18 @@ export function usePermissions(): UsePermissionsReturn {
           }
           setSession(null);
         } else {
+          // Check session version - if old, force logout
+          const CURRENT_VERSION = 2; // Must match CURRENT_SESSION_VERSION in lib/session.ts
+          if (!data.version || data.version < CURRENT_VERSION) {
+            console.log('Old session detected, forcing re-login...');
+            // Force logout
+            fetch('/api/force-relogin').then(() => {
+              if (typeof window !== 'undefined') {
+                window.location.href = '/auth/login';
+              }
+            });
+            return;
+          }
           setSession(data);
         }
         setLoading(false);

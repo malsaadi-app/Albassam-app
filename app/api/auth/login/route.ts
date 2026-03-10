@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db'
-import { getSession } from '@/lib/session'
+import { getSession, CURRENT_SESSION_VERSION } from '@/lib/session'
 import { applyRateLimit, loginLimiter } from '@/lib/rate-limit'
 import { loginSchema, validateRequestBody } from '@/lib/validations'
 
@@ -90,6 +90,7 @@ export async function POST(req: Request) {
     permissions,
     orgAssignments
   }
+  session.version = CURRENT_SESSION_VERSION
   await session.save()
 
   return NextResponse.json({ ok: true })

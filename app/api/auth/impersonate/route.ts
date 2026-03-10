@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getSession } from '@/lib/session';
+import { getSession, CURRENT_SESSION_VERSION } from '@/lib/session';
 import { prisma } from '@/lib/db';
 
 export async function POST(request: Request) {
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Target user ID is required' }, { status: 400 });
     }
 
-    // Get target user
+    // Get target user with permissions
     const targetUser = await prisma.user.findUnique({
       where: { id: targetUserId },
       select: { 
@@ -37,7 +37,30 @@ export async function POST(request: Request) {
             id: true,
             name: true,
             nameAr: true,
-            nameEn: true
+            nameEn: true,
+            permissions: {
+              select: {
+                permission: {
+                  select: {
+                    name: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        employee: {
+          select: {
+            id: true,
+            orgAssignments: {
+              where: { active: true },
+              select: {
+                id: true,
+                orgUnitId: true,
+                role: true,
+                assignmentType: true
+              }
+            }
           }
         }
       }
@@ -47,6 +70,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Target user not found' }, { status: 404 });
     }
 
+    // Extract permissions from systemRole (same as login)
+    const permissions = targetUser.systemRole?.permissions.map(rp => rp.permission.name) || [];
+    const orgAssignments = targetUser.employee?.orgAssignments || [];
+    
     // Save original user before impersonation
     (session as any).originalUser = session.user;
     (session as any).isImpersonating = true;
@@ -56,8 +83,16 @@ export async function POST(request: Request) {
       username: targetUser.username,
       displayName: targetUser.displayName,
       role: targetUser.role as 'ADMIN' | 'HR_EMPLOYEE' | 'USER',
-      systemRole: targetUser.systemRole || undefined
+      systemRole: targetUser.systemRole ? {
+        id: targetUser.systemRole.id,
+        name: targetUser.systemRole.name,
+        nameAr: targetUser.systemRole.nameAr,
+        nameEn: targetUser.systemRole.nameEn
+      } : undefined,
+      permissions,
+      orgAssignments
     };
+    session.version = CURRENT_SESSION_VERSION;
 
     await session.save();
 

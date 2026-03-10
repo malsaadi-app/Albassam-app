@@ -23,7 +23,11 @@ export type SessionUser = {
 
 export type AppSession = {
   user?: SessionUser
+  version?: number // Session version to invalidate old sessions
 }
+
+// Current session version - increment this to invalidate all sessions
+export const CURRENT_SESSION_VERSION = 2;
 
 const password = process.env.SESSION_PASSWORD
 if (!password) {
