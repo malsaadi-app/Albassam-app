@@ -1,0 +1,354 @@
+/* Enhanced Card Component */
+
+.card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid #E2E8F0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+/* Card Variants */
+.cardDefault {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.cardOutlined {
+  border: 2px solid #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.cardElevated {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border-color: #F1F5F9;
+}
+
+.cardGradient {
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  border: none;
+  color: #FFFFFF;
+}
+
+.cardStats {
+  background: linear-gradient(135deg, #F093FB 0%, #F5576C 100%);
+  border: none;
+  color: #FFFFFF;
+}
+
+.cardSuccess {
+  background: linear-gradient(135deg, #4ADE80 0%, #16A34A 100%);
+  border: none;
+  color: #FFFFFF;
+}
+
+.cardWarning {
+  background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%);
+  border: none;
+  color: #FFFFFF;
+}
+
+.cardDanger {
+  background: linear-gradient(135deg, #FB7185 0%, #DC2626 100%);
+  border: none;
+  color: #FFFFFF;
+}
+
+/* Hover Effect */
+.cardHoverable {
+  cursor: pointer;
+}
+
+.cardHoverable:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
+.cardHoverable:active {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading State */
+.cardLoading {
+  position: relative;
+  overflow: hidden;
+}
+
+.cardLoading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    left: 100%;
+  }
+}
+
+/* Card Header */
+.cardHeader {
+  padding: 20px 24px;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardHeaderNoBorder {
+  border-bottom: none;
+}
+
+.cardHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.cardHeaderIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+  flex-shrink: 0;
+}
+
+.cardHeaderContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardHeaderTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardHeaderSubtitle {
+  font-size: 14px;
+  color: #64748B;
+  margin: 4px 0 0 0;
+  line-height: 1.4;
+}
+
+.cardHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* For gradient cards */
+.cardGradient .cardHeader,
+.cardStats .cardHeader,
+.cardSuccess .cardHeader,
+.cardWarning .cardHeader,
+.cardDanger .cardHeader {
+  border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+.cardGradient .cardHeaderTitle,
+.cardStats .cardHeaderTitle,
+.cardSuccess .cardHeaderTitle,
+.cardWarning .cardHeaderTitle,
+.cardDanger .cardHeaderTitle {
+  color: #FFFFFF;
+}
+
+.cardGradient .cardHeaderSubtitle,
+.cardStats .cardHeaderSubtitle,
+.cardSuccess .cardHeaderSubtitle,
+.cardWarning .cardHeaderSubtitle,
+.cardDanger .cardHeaderSubtitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cardGradient .cardHeaderIcon,
+.cardStats .cardHeaderIcon,
+.cardSuccess .cardHeaderIcon,
+.cardWarning .cardHeaderIcon,
+.cardDanger .cardHeaderIcon {
+  background: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+}
+
+/* Card Body */
+.cardBody {
+  padding: 24px;
+}
+
+.cardBodyCompact {
+  padding: 16px 24px;
+}
+
+/* Card Footer */
+.cardFooter {
+  padding: 16px 24px;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #F8FAFC;
+}
+
+.cardFooterNoBorder {
+  border-top: none;
+  background: transparent;
+}
+
+.cardGradient .cardFooter,
+.cardStats .cardFooter,
+.cardSuccess .cardFooter,
+.cardWarning .cardFooter,
+.cardDanger .cardFooter {
+  border-top-color: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Stats Card Specific */
+.statsNumber {
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 8px 0;
+}
+
+.statsLabel {
+  font-size: 14px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.statsChange {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.statsChangePositive {
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.statsChangeNegative {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* Action Button in Header */
+.headerButton {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.headerButton:hover {
+  background: #F8FAFC;
+  border-color: #3B82F6;
+  color: #3B82F6;
+}
+
+.cardGradient .headerButton,
+.cardStats .headerButton,
+.cardSuccess .headerButton,
+.cardWarning .headerButton,
+.cardDanger .headerButton {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+}
+
+.cardGradient .headerButton:hover,
+.cardStats .headerButton:hover,
+.cardSuccess .headerButton:hover,
+.cardWarning .headerButton:hover,
+.cardDanger .headerButton:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* RTL Support */
+[dir="rtl"] .cardHeaderLeft {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .cardHeaderActions {
+  flex-direction: row-reverse;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card {
+    border-radius: 12px;
+  }
+  
+  .cardHeader {
+    padding: 16px 20px;
+    flex-wrap: wrap;
+  }
+  
+  .cardHeaderIcon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .cardHeaderTitle {
+    font-size: 16px;
+  }
+  
+  .cardHeaderSubtitle {
+    font-size: 13px;
+  }
+  
+  .cardBody {
+    padding: 20px;
+  }
+  
+  .cardFooter {
+    padding: 14px 20px;
+    flex-wrap: wrap;
+  }
+  
+  .statsNumber {
+    font-size: 28px;
+  }
+}
