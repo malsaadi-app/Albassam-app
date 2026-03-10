@@ -122,11 +122,33 @@ export default function WorkflowBuilderHome() {
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {/* Enhanced Header */}
         <div style={{ marginBottom: 24, background: 'rgba(255,255,255,0.95)', borderRadius: 20, padding: 24, boxShadow: '0 10px 40px rgba(0,0,0,0.1)' }}>
-          <div style={{ fontSize: 28, fontWeight: '900', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 8 }}>
-            ⚙️ Workflow Builder
-          </div>
-          <div style={{ color: '#6B7280', fontSize: 14 }}>
-            الرئيسية / الإعدادات / Workflow Builder
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 28, fontWeight: '900', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: 8 }}>
+                ⚙️ Workflow Builder
+              </div>
+              <div style={{ color: '#6B7280', fontSize: 14 }}>
+                الرئيسية / الإعدادات / Workflow Builder
+              </div>
+            </div>
+            <Button
+              variant="primary"
+              onClick={() => window.location.href = '/settings/workflow-builder/analytics'}
+              style={{
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                border: 'none',
+                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                padding: '12px 24px',
+                fontSize: 15,
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
+              }}
+            >
+              📊 Analytics
+            </Button>
           </div>
         </div>
 
