@@ -2,8 +2,10 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, Suspense } from 'react'
-import { COLORS } from '@/lib/colors';
-import { useI18n } from '@/lib/useI18n';
+import Image from 'next/image'
+import { COLORS } from '@/lib/colors'
+import { useI18n } from '@/lib/useI18n'
+import { FloatingInput } from '@/components/ui/FormEnhanced'
 
 function LoginForm() {
   const router = useRouter()
@@ -13,7 +15,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [redirectMessage, setRedirectMessage] = useState<string | null>(null)
-  const { locale: language, setLocale: setLanguage, dir, t: tt } = useI18n();
+  const { locale: language, setLocale: setLanguage, dir, t: tt } = useI18n()
 
   useEffect(() => {
     const next = searchParams.get('next')
@@ -24,7 +26,7 @@ function LoginForm() {
         setRedirectMessage(tt('needsAuth'))
       }
     }
-  }, [searchParams, language])
+  }, [searchParams, language, tt])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -46,7 +48,7 @@ function LoginForm() {
     }
 
     const next = searchParams.get('next')
-    router.push(next || '/')
+    router.push(next || '/dashboard')
     router.refresh()
   }
 
@@ -64,25 +66,26 @@ function LoginForm() {
   return (
     <main dir={dir} style={{
       minHeight: '100vh',
-      background: COLORS.background,
+      background: '#F9FAFB',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px',
+      padding: '24px',
       position: 'relative'
     }}>
       {/* Language Selector */}
       <div style={{
         position: 'absolute',
-        top: '20px',
-        [language === 'ar' ? 'left' : 'right']: '20px',
+        top: '24px',
+        [language === 'ar' ? 'left' : 'right']: '24px',
         display: 'flex',
         gap: '8px',
         background: COLORS.white,
         border: `1px solid ${COLORS.gray200}`,
         borderRadius: '12px',
         padding: '4px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+        zIndex: 10
       }}>
         <button
           onClick={() => setLanguage('ar')}
@@ -121,138 +124,197 @@ function LoginForm() {
       </div>
 
       <div style={{
-        maxWidth: '420px',
+        maxWidth: '440px',
         width: '100%',
-        background: COLORS.white,
-        border: `1px solid ${COLORS.gray200}`,
-        borderRadius: '24px',
-        padding: '40px 32px',
-        boxShadow: `0 8px 32px ${COLORS.shadowMd}`
+        animation: 'fadeIn 0.5s ease-out'
       }}>
+        {/* Logo and Header */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+            <div style={{ 
+              position: 'relative', 
+              width: '100px', 
+              height: '100px',
+              background: COLORS.white,
+              borderRadius: '24px',
+              padding: '12px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+              border: `1px solid ${COLORS.gray200}`
+            }}>
+              <Image
+                src="/logo.jpg"
+                alt="Albassam Schools"
+                fill
+                style={{ objectFit: 'contain', padding: '8px' }}
+                priority
+              />
+            </div>
+          </div>
           <h1 style={{
-            fontSize: '32px',
-            fontWeight: 'bold',
+            fontSize: '28px',
+            fontWeight: '800',
             color: COLORS.gray900,
-            marginBottom: '8px'
+            marginBottom: '8px',
+            letterSpacing: '-0.5px'
           }}>
             {currentLang.title}
           </h1>
-          <p style={{ color: COLORS.gray500, fontSize: '16px' }}>
+          <p style={{ color: COLORS.gray500, fontSize: '16px', fontWeight: '500' }}>
             {currentLang.subtitle}
           </p>
         </div>
 
-        {redirectMessage && (
-          <div style={{
-            background: COLORS.warningLighter,
-            border: `1px solid ${COLORS.warningLight}`,
-            borderRadius: '12px',
-            padding: '12px',
-            color: COLORS.warningText,
-            fontSize: '14px',
-            marginBottom: '20px',
-            textAlign: 'center'
-          }}>
-            ⚠️ {redirectMessage}
-          </div>
-        )}
-
-        <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div>
-            <label style={{
-              display: 'block',
-              color: COLORS.gray600,
+        {/* Login Card */}
+        <div style={{
+          background: COLORS.white,
+          border: `1px solid ${COLORS.gray200}`,
+          borderRadius: '20px',
+          padding: '40px 32px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.08)'
+        }}>
+          {redirectMessage && (
+            <div style={{
+              background: '#FEF3C7',
+              border: `1px solid #FCD34D`,
+              borderRadius: '12px',
+              padding: '14px 16px',
+              color: '#92400E',
               fontSize: '14px',
+              marginBottom: '24px',
+              textAlign: 'center',
               fontWeight: '600',
-              marginBottom: '8px'
+              animation: 'fadeIn 0.3s ease-out'
             }}>
-              {currentLang.username}
-            </label>
-            <input
+              ⚠️ {redirectMessage}
+            </div>
+          )}
+
+          <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <FloatingInput
+              label={currentLang.username}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                border: `1px solid ${COLORS.gray200}`,
-                background: COLORS.white,
-                color: COLORS.gray900,
-                fontSize: '16px',
-                outline: 'none',
-                textAlign: language === 'ar' ? 'right' : 'left'
-              }}
-              placeholder={currentLang.usernamePlaceholder}
+              clearable
+              onClear={() => setUsername('')}
             />
-          </div>
 
-          <div>
-            <label style={{
-              display: 'block',
-              color: COLORS.gray600,
-              fontSize: '14px',
-              fontWeight: '600',
-              marginBottom: '8px'
-            }}>
-              {currentLang.password}
-            </label>
-            <input
+            <FloatingInput
+              label={currentLang.password}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+            />
+
+            {error && (
+              <div style={{
+                background: '#FEE2E2',
+                border: `1px solid #FCA5A5`,
+                borderRadius: '12px',
+                padding: '14px 16px',
+                color: '#991B1B',
+                fontSize: '14px',
+                textAlign: 'center',
+                fontWeight: '600',
+                animation: 'shake 0.3s ease-out'
+              }}>
+                ❌ {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
               style={{
                 width: '100%',
-                padding: '12px 16px',
+                padding: '16px',
+                background: loading 
+                  ? COLORS.gray300 
+                  : `linear-gradient(135deg, ${COLORS.primary} 0%, #764ba2 100%)`,
+                border: 'none',
                 borderRadius: '12px',
-                border: `1px solid ${COLORS.gray200}`,
-                background: COLORS.white,
-                color: COLORS.gray900,
+                color: COLORS.white,
                 fontSize: '16px',
-                outline: 'none',
-                textAlign: language === 'ar' ? 'right' : 'left'
+                fontWeight: '700',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                boxShadow: loading 
+                  ? 'none'
+                  : '0 4px 16px rgba(45, 27, 78, 0.3)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: 'scale(1)'
               }}
-              placeholder={currentLang.passwordPlaceholder}
-            />
-          </div>
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(45, 27, 78, 0.4)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(45, 27, 78, 0.3)'
+                }
+              }}
+            >
+              {loading ? (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <span style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTop: '2px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite'
+                  }}></span>
+                  {currentLang.loading}
+                </span>
+              ) : (
+                currentLang.login
+              )}
+            </button>
+          </form>
+        </div>
 
-          {error && (
-            <div style={{
-              background: COLORS.dangerLighter,
-              border: `1px solid ${COLORS.dangerLight}`,
-              borderRadius: '12px',
-              padding: '12px',
-              color: COLORS.dangerText,
-              fontSize: '14px',
-              textAlign: 'center'
-            }}>
-              ❌ {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '14px',
-              background: loading ? COLORS.gray300 : COLORS.primary,
-              border: 'none',
-              borderRadius: '12px',
-              color: COLORS.white,
-              fontSize: '16px',
-              fontWeight: 'bold',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: `0 4px 12px ${COLORS.shadowMd}`,
-              transition: 'all 0.3s ease'
-            }}
-          >
-            {loading ? currentLang.loading : currentLang.login}
-          </button>
-        </form>
+        {/* Footer */}
+        <div style={{ 
+          textAlign: 'center', 
+          marginTop: '24px',
+          animation: 'fadeIn 0.5s ease-out 0.2s backwards'
+        }}>
+          <p style={{ 
+            color: COLORS.gray400, 
+            fontSize: '13px',
+            fontWeight: '500'
+          }}>
+            © 2026 {language === 'ar' ? 'مدارس الباسم' : 'Albassam Schools'} - {language === 'ar' ? 'جميع الحقوق محفوظة' : 'All rights reserved'}
+          </p>
+        </div>
       </div>
+
+      {/* Animations */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-8px); }
+          75% { transform: translateX(8px); }
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </main>
   )
 }
@@ -262,12 +324,20 @@ export default function LoginPage() {
     <Suspense fallback={
       <main dir="rtl" style={{
         minHeight: '100vh',
-        background: COLORS.background,
+        background: '#F9FAFB',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <div style={{ color: COLORS.gray600, fontSize: '20px' }}>جاري التحميل...</div>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          border: '4px solid #E5E7EB',
+          borderTop: `4px solid ${COLORS.primary}`,
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite'
+        }}></div>
+        <style jsx>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </main>
     }>
       <LoginForm />

@@ -1,306 +1,298 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import Image from 'next/image'
+import { COLORS } from '@/lib/colors'
+import { useI18n } from '@/lib/useI18n'
+import { FloatingInput } from '@/components/ui/FormEnhanced'
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+function LoginForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [redirectMessage, setRedirectMessage] = useState<string | null>(null)
+  const { locale: language, setLocale: setLanguage, dir, t: tt } = useI18n()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-        credentials: 'same-origin',
-      });
-
-      if (res.ok) {
-        // Success - redirect using window.location for reliable navigation
-        window.location.href = '/dashboard';
-        return;
+  useEffect(() => {
+    const next = searchParams.get('next')
+    if (next) {
+      if (next.startsWith('/hr')) {
+        setRedirectMessage(tt('needsHRAuth'))
+      } else {
+        setRedirectMessage(tt('needsAuth'))
       }
-
-      const data = await res.json().catch(() => ({ error: 'خطأ في تسجيل الدخول' }));
-      setError(data.error || data.message || 'خطأ في تسجيل الدخول');
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('حدث خطأ. يرجى المحاولة مرة أخرى.');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [searchParams, language, tt])
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    })
+
+    setLoading(false)
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(data?.error || tt('loginFailed'))
+      return
+    }
+
+    const next = searchParams.get('next')
+    router.push(next || '/dashboard')
+    router.refresh()
+  }
+
+  const currentLang = {
+    title: tt('loginTitle'),
+    subtitle: tt('loginSubtitle'),
+    username: tt('username'),
+    password: tt('password'),
+    login: `🔐 ${tt('login')}`,
+    loading: tt('loggingIn'),
+    usernamePlaceholder: language === 'ar' ? 'أدخل اسم المستخدم' : 'Enter username',
+    passwordPlaceholder: language === 'ar' ? 'أدخل كلمة المرور' : 'Enter password',
+  }
 
   return (
-    <div style={{ 
+    <main dir={dir} style={{
       minHeight: '100vh',
+      background: '#F9FAFB',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '3rem 1rem',
-      background: 'linear-gradient(135deg, #1D0B3E 0%, #2D1B4E 50%, #3D2B5E 100%)',
-      position: 'relative',
-      overflow: 'hidden'
+      padding: '24px',
+      position: 'relative'
     }}>
-      {/* Animated Background Elements */}
+      {/* Language Selector */}
       <div style={{
         position: 'absolute',
-        top: '-10%',
-        right: '-10%',
-        width: '500px',
-        height: '500px',
-        background: 'radial-gradient(circle, rgba(212,165,116,0.15) 0%, transparent 70%)',
-        borderRadius: '50%',
-        filter: 'blur(60px)',
-        animation: 'pulse 8s ease-in-out infinite'
-      }}></div>
-      <div style={{
-        position: 'absolute',
-        bottom: '-10%',
-        left: '-10%',
-        width: '400px',
-        height: '400px',
-        background: 'radial-gradient(circle, rgba(230,126,34,0.15) 0%, transparent 70%)',
-        borderRadius: '50%',
-        filter: 'blur(60px)',
-        animation: 'pulse 6s ease-in-out infinite reverse'
-      }}></div>
+        top: '24px',
+        [language === 'ar' ? 'left' : 'right']: '24px',
+        display: 'flex',
+        gap: '8px',
+        background: COLORS.white,
+        border: `1px solid ${COLORS.gray200}`,
+        borderRadius: '12px',
+        padding: '4px',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+        zIndex: 10
+      }}>
+        <button
+          onClick={() => setLanguage('ar')}
+          aria-label="العربية"
+          style={{
+            padding: '8px 16px',
+            borderRadius: '8px',
+            border: 'none',
+            background: language === 'ar' ? COLORS.primary : 'transparent',
+            color: language === 'ar' ? COLORS.white : COLORS.gray600,
+            fontSize: '14px',
+            fontWeight: language === 'ar' ? '600' : '500',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
+          🇸🇦 العربية
+        </button>
+        <button
+          onClick={() => setLanguage('en')}
+          aria-label="English"
+          style={{
+            padding: '8px 16px',
+            borderRadius: '8px',
+            border: 'none',
+            background: language === 'en' ? COLORS.primary : 'transparent',
+            color: language === 'en' ? COLORS.white : COLORS.gray600,
+            fontSize: '14px',
+            fontWeight: language === 'en' ? '600' : '500',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
+          🇬🇧 English
+        </button>
+      </div>
 
-      <div style={{ maxWidth: '440px', width: '100%', position: 'relative', zIndex: 1 }}>
+      <div style={{
+        maxWidth: '440px',
+        width: '100%',
+        animation: 'fadeIn 0.5s ease-out'
+      }}>
         {/* Logo and Header */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem', animation: 'fadeIn 0.6s ease-out' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
             <div style={{ 
               position: 'relative', 
-              width: '120px', 
-              height: '120px',
-              background: 'rgba(255,255,255,0.1)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '30px',
-              padding: '1rem',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-              border: '1px solid rgba(255,255,255,0.18)'
+              width: '100px', 
+              height: '100px',
+              background: COLORS.white,
+              borderRadius: '24px',
+              padding: '12px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+              border: `1px solid ${COLORS.gray200}`
             }}>
               <Image
                 src="/logo.jpg"
                 alt="Albassam Schools"
                 fill
-                style={{ objectFit: 'contain', padding: '0.5rem' }}
+                style={{ objectFit: 'contain', padding: '8px' }}
                 priority
               />
             </div>
           </div>
-          <h1 style={{ 
-            fontSize: '2rem', 
-            fontWeight: 'bold', 
-            color: 'white',
-            marginBottom: '0.5rem',
-            textShadow: '0 2px 10px rgba(0,0,0,0.3)'
+          <h1 style={{
+            fontSize: '28px',
+            fontWeight: '800',
+            color: COLORS.gray900,
+            marginBottom: '8px',
+            letterSpacing: '-0.5px'
           }}>
-            مدارس الباسم
+            {currentLang.title}
           </h1>
-          <p style={{ 
-            color: 'rgba(255,255,255,0.8)', 
-            fontSize: '1rem',
-            fontWeight: '300'
-          }}>
-            نظام إدارة المهام
+          <p style={{ color: COLORS.gray500, fontSize: '16px', fontWeight: '500' }}>
+            {currentLang.subtitle}
           </p>
         </div>
 
-        {/* Login Card - Glassmorphism */}
-        <div style={{ 
-          background: 'rgba(255,255,255,0.1)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '24px',
-          padding: '2.5rem',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
-          border: '1px solid rgba(255,255,255,0.18)',
-          animation: 'fadeIn 0.6s ease-out 0.2s backwards'
+        {/* Login Card */}
+        <div style={{
+          background: COLORS.white,
+          border: `1px solid ${COLORS.gray200}`,
+          borderRadius: '20px',
+          padding: '40px 32px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.08)'
         }}>
-          <div>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {/* Username */}
-              <div>
-                <label htmlFor="username" style={{ 
-                  display: 'block', 
-                  fontSize: '0.875rem', 
-                  fontWeight: '500', 
-                  color: 'white',
-                  marginBottom: '0.5rem',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                }}>
-                  اسم المستخدم
-                </label>
-                <input
-                  id="username"
-                  type="text"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    background: 'rgba(255,255,255,0.95)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    borderRadius: '12px',
-                    fontSize: '1rem',
-                    transition: 'all 0.3s ease',
-                    outline: 'none',
-                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
-                    fontFamily: 'inherit'
-                  }}
-                  placeholder="أدخل اسم المستخدم"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  disabled={loading}
-                  autoComplete="username"
-                  onFocus={(e) => {
-                    e.target.style.background = 'white';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(212,165,116,0.2), inset 0 2px 4px rgba(0,0,0,0.05)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.background = 'rgba(255,255,255,0.95)';
-                    e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.05)';
-                  }}
-                />
-              </div>
+          {redirectMessage && (
+            <div style={{
+              background: '#FEF3C7',
+              border: `1px solid #FCD34D`,
+              borderRadius: '12px',
+              padding: '14px 16px',
+              color: '#92400E',
+              fontSize: '14px',
+              marginBottom: '24px',
+              textAlign: 'center',
+              fontWeight: '600',
+              animation: 'fadeIn 0.3s ease-out'
+            }}>
+              ⚠️ {redirectMessage}
+            </div>
+          )}
 
-              {/* Password */}
-              <div>
-                <label htmlFor="password" style={{ 
-                  display: 'block', 
-                  fontSize: '0.875rem', 
-                  fontWeight: '500', 
-                  color: 'white',
-                  marginBottom: '0.5rem',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                }}>
-                  كلمة المرور
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.875rem 1rem',
-                    background: 'rgba(255,255,255,0.95)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    borderRadius: '12px',
-                    fontSize: '1rem',
-                    transition: 'all 0.3s ease',
-                    outline: 'none',
-                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
-                    fontFamily: 'inherit'
-                  }}
-                  placeholder="أدخل كلمة المرور"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  autoComplete="current-password"
-                  onFocus={(e) => {
-                    e.target.style.background = 'white';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(212,165,116,0.2), inset 0 2px 4px rgba(0,0,0,0.05)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.background = 'rgba(255,255,255,0.95)';
-                    e.target.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.05)';
-                  }}
-                />
-              </div>
+          <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <FloatingInput
+              label={currentLang.username}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              clearable
+              onClear={() => setUsername('')}
+            />
 
-              {/* Error Message */}
-              {error && (
-                <div style={{
-                  background: 'rgba(239,68,68,0.9)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(220,38,38,0.5)',
-                  color: 'white',
-                  padding: '0.875rem 1rem',
-                  borderRadius: '12px',
-                  fontSize: '0.875rem',
-                  animation: 'fadeIn 0.3s ease-out',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                }}>
-                  {error}
-                </div>
+            <FloatingInput
+              label={currentLang.password}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+
+            {error && (
+              <div style={{
+                background: '#FEE2E2',
+                border: `1px solid #FCA5A5`,
+                borderRadius: '12px',
+                padding: '14px 16px',
+                color: '#991B1B',
+                fontSize: '14px',
+                textAlign: 'center',
+                fontWeight: '600',
+                animation: 'shake 0.3s ease-out'
+              }}>
+                ❌ {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '16px',
+                background: loading 
+                  ? COLORS.gray300 
+                  : `linear-gradient(135deg, ${COLORS.primary} 0%, #764ba2 100%)`,
+                border: 'none',
+                borderRadius: '12px',
+                color: COLORS.white,
+                fontSize: '16px',
+                fontWeight: '700',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                boxShadow: loading 
+                  ? 'none'
+                  : '0 4px 16px rgba(45, 27, 78, 0.3)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: 'scale(1)'
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(45, 27, 78, 0.4)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(45, 27, 78, 0.3)'
+                }
+              }}
+            >
+              {loading ? (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <span style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTop: '2px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite'
+                  }}></span>
+                  {currentLang.loading}
+                </span>
+              ) : (
+                currentLang.login
               )}
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                style={{ 
-                  width: '100%',
-                  padding: '1rem',
-                  background: loading 
-                    ? 'rgba(212,165,116,0.7)' 
-                    : 'linear-gradient(135deg, #D4A574 0%, #E67E22 100%)',
-                  border: 'none',
-                  borderRadius: '12px',
-                  color: 'white',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: loading 
-                    ? 'none' 
-                    : '0 4px 15px rgba(212,165,116,0.4)',
-                  transform: loading ? 'scale(1)' : 'scale(1)',
-                  fontFamily: 'inherit'
-                }}
-                onMouseEnter={(e) => {
-                  if (!loading) {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(212,165,116,0.5)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!loading) {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(212,165,116,0.4)';
-                  }
-                }}
-              >
-                {loading ? (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                    <span className="spinner" style={{ width: '16px', height: '16px' }}></span>
-                    جاري تسجيل الدخول...
-                  </span>
-                ) : (
-                  'تسجيل الدخول'
-                )}
-              </button>
-            </form>
-          </div>
+            </button>
+          </form>
         </div>
 
         {/* Footer */}
         <div style={{ 
           textAlign: 'center', 
-          marginTop: '2rem',
-          animation: 'fadeIn 0.6s ease-out 0.4s backwards'
+          marginTop: '24px',
+          animation: 'fadeIn 0.5s ease-out 0.2s backwards'
         }}>
           <p style={{ 
-            color: 'rgba(255,255,255,0.6)', 
-            fontSize: '0.813rem',
-            fontWeight: '300',
-            textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+            color: COLORS.gray400, 
+            fontSize: '13px',
+            fontWeight: '500'
           }}>
-            © 2026 مدارس الباسم - جميع الحقوق محفوظة
+            © 2026 {language === 'ar' ? 'مدارس الباسم' : 'Albassam Schools'} - {language === 'ar' ? 'جميع الحقوق محفوظة' : 'All rights reserved'}
           </p>
         </div>
       </div>
 
-      {/* Inline Keyframes */}
+      {/* Animations */}
       <style jsx>{`
         @keyframes fadeIn {
           from {
@@ -313,17 +305,42 @@ export default function LoginPage() {
           }
         }
         
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.8;
-            transform: scale(1.05);
-          }
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-8px); }
+          75% { transform: translateX(8px); }
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
       `}</style>
-    </div>
-  );
+    </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main dir="rtl" style={{
+        minHeight: '100vh',
+        background: '#F9FAFB',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          border: '4px solid #E5E7EB',
+          borderTop: `4px solid ${COLORS.primary}`,
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite'
+        }}></div>
+        <style jsx>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </main>
+    }>
+      <LoginForm />
+    </Suspense>
+  )
 }
