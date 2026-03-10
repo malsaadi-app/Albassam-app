@@ -6,6 +6,11 @@ type User = {
   id: string;
   username: string;
   displayName: string;
+  roleId: string | null;
+  systemRole: {
+    name: string;
+    nameAr: string;
+  } | null;
 };
 
 type Props = {
@@ -23,21 +28,25 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
 
-  // Get available users (not already assigned to this role)
+  // Get assigned user IDs
   const assignedUserIds = new Set(users.map(u => u.id));
-  const availableUsers = useMemo(() => {
-    return allUsers.filter(u => !assignedUserIds.has(u.id));
-  }, [allUsers, assignedUserIds]);
 
-  // Filter users by search query
+  // Filter all users by search query (including assigned ones for visibility)
   const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) return availableUsers;
+    if (!searchQuery.trim()) {
+      // Show only available users when no search
+      return allUsers.filter(u => !assignedUserIds.has(u.id));
+    }
+    
+    // When searching, show ALL users (including assigned)
     const query = searchQuery.toLowerCase();
-    return availableUsers.filter(u =>
+    return allUsers.filter(u =>
       u.displayName.toLowerCase().includes(query) ||
-      u.username.toLowerCase().includes(query)
+      u.username.toLowerCase().includes(query) ||
+      u.systemRole?.nameAr?.includes(query) ||
+      u.systemRole?.name?.toLowerCase().includes(query)
     );
-  }, [availableUsers, searchQuery]);
+  }, [allUsers, assignedUserIds, searchQuery]);
 
   const handleToggleUser = (userId: string) => {
     const newSelected = new Set(selectedUserIds);
@@ -50,12 +59,16 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
   };
 
   const handleSelectAll = () => {
-    if (selectedUserIds.size === filteredUsers.length && filteredUsers.length > 0) {
+    // Get only selectable users (not already assigned)
+    const selectableUsers = filteredUsers.filter(u => !assignedUserIds.has(u.id));
+    const selectableIds = selectableUsers.map(u => u.id);
+    
+    if (selectedUserIds.size === selectableIds.length && selectableIds.length > 0) {
       // Deselect all
       setSelectedUserIds(new Set());
     } else {
-      // Select all filtered
-      setSelectedUserIds(new Set(filteredUsers.map(u => u.id)));
+      // Select all selectable
+      setSelectedUserIds(new Set(selectableIds));
     }
   };
 
@@ -133,7 +146,7 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
           ➕ ربط مستخدمين جدد
         </h3>
         
-        {availableUsers.length === 0 ? (
+        {allUsers.filter(u => !assignedUserIds.has(u.id)).length === 0 ? (
           <div style={{ 
             background: 'rgba(255, 255, 255, 0.8)',
             padding: '1rem',
@@ -170,36 +183,47 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
             </div>
 
             {/* Select All Checkbox */}
-            {filteredUsers.length > 0 && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.75rem',
-                background: 'rgba(102, 126, 234, 0.05)',
-                borderRadius: '0.5rem',
-                cursor: 'pointer'
-              }}
-              onClick={handleSelectAll}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedUserIds.size === filteredUsers.length && filteredUsers.length > 0}
-                  onChange={handleSelectAll}
-                  style={{
-                    cursor: 'pointer',
-                    width: '18px',
-                    height: '18px'
-                  }}
-                />
-                <span style={{ fontWeight: '600', color: '#4a5568' }}>
-                  {selectedUserIds.size === filteredUsers.length && filteredUsers.length > 0
-                    ? `✅ تم تحديد الكل (${filteredUsers.length})`
-                    : `☐ تحديد جميع النتائج (${filteredUsers.length})`
-                  }
-                </span>
-              </div>
-            )}
+            {(() => {
+              const selectableUsers = filteredUsers.filter(u => !assignedUserIds.has(u.id));
+              const selectableCount = selectableUsers.length;
+              
+              if (filteredUsers.length === 0) return null;
+              
+              return (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem',
+                  background: 'rgba(102, 126, 234, 0.05)',
+                  borderRadius: '0.5rem',
+                  cursor: selectableCount > 0 ? 'pointer' : 'not-allowed',
+                  opacity: selectableCount > 0 ? 1 : 0.6
+                }}
+                onClick={selectableCount > 0 ? handleSelectAll : undefined}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedUserIds.size === selectableCount && selectableCount > 0}
+                    onChange={handleSelectAll}
+                    disabled={selectableCount === 0}
+                    style={{
+                      cursor: selectableCount > 0 ? 'pointer' : 'not-allowed',
+                      width: '18px',
+                      height: '18px'
+                    }}
+                  />
+                  <span style={{ fontWeight: '600', color: '#4a5568' }}>
+                    {selectableCount === 0 
+                      ? `جميع النتائج مربوطة (${filteredUsers.length})`
+                      : selectedUserIds.size === selectableCount && selectableCount > 0
+                        ? `✅ تم تحديد الكل (${selectableCount})`
+                        : `☐ تحديد جميع النتائج (${selectableCount})`
+                    }
+                  </span>
+                </div>
+              );
+            })()}
 
             {/* Users List */}
             <div style={{
@@ -215,49 +239,101 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
                   لا توجد نتائج بحث
                 </div>
               ) : (
-                filteredUsers.map(user => (
-                  <div
-                    key={user.id}
-                    onClick={() => handleToggleUser(user.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.75rem',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      background: selectedUserIds.has(user.id) ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
-                      transition: 'all 0.2s',
-                      borderLeft: selectedUserIds.has(user.id) ? '3px solid #667eea' : '3px solid transparent'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(102, 126, 234, 0.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = selectedUserIds.has(user.id) ? 'rgba(102, 126, 234, 0.1)' : 'transparent';
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedUserIds.has(user.id)}
-                      onChange={() => handleToggleUser(user.id)}
+                filteredUsers.map(user => {
+                  const isAlreadyAssigned = assignedUserIds.has(user.id);
+                  const hasOtherRole = user.roleId && user.roleId !== roleId;
+                  
+                  return (
+                    <div
+                      key={user.id}
+                      onClick={() => !isAlreadyAssigned && handleToggleUser(user.id)}
                       style={{
-                        cursor: 'pointer',
-                        width: '18px',
-                        height: '18px'
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.75rem',
+                        borderRadius: '0.5rem',
+                        cursor: isAlreadyAssigned ? 'not-allowed' : 'pointer',
+                        background: isAlreadyAssigned 
+                          ? 'rgba(72, 187, 120, 0.1)' 
+                          : selectedUserIds.has(user.id) 
+                            ? 'rgba(102, 126, 234, 0.1)' 
+                            : 'transparent',
+                        transition: 'all 0.2s',
+                        borderLeft: isAlreadyAssigned
+                          ? '3px solid #48bb78'
+                          : selectedUserIds.has(user.id) 
+                            ? '3px solid #667eea' 
+                            : '3px solid transparent',
+                        opacity: isAlreadyAssigned ? 0.7 : 1
                       }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '600', color: '#1a202c' }}>
-                        {user.displayName}
-                      </div>
-                      <div style={{ fontSize: '0.875rem', color: '#718096' }}>
-                        @{user.username}
+                      onMouseEnter={(e) => {
+                        if (!isAlreadyAssigned) {
+                          e.currentTarget.style.background = 'rgba(102, 126, 234, 0.05)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isAlreadyAssigned) {
+                          e.currentTarget.style.background = selectedUserIds.has(user.id) ? 'rgba(102, 126, 234, 0.1)' : 'transparent';
+                        } else {
+                          e.currentTarget.style.background = 'rgba(72, 187, 120, 0.1)';
+                        }
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isAlreadyAssigned || selectedUserIds.has(user.id)}
+                        disabled={isAlreadyAssigned}
+                        onChange={() => !isAlreadyAssigned && handleToggleUser(user.id)}
+                        style={{
+                          cursor: isAlreadyAssigned ? 'not-allowed' : 'pointer',
+                          width: '18px',
+                          height: '18px'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ 
+                          fontWeight: '600', 
+                          color: '#1a202c',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          flexWrap: 'wrap'
+                        }}>
+                          <span>{user.displayName}</span>
+                          {isAlreadyAssigned && (
+                            <span style={{
+                              fontSize: '0.75rem',
+                              background: '#48bb78',
+                              color: 'white',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontWeight: '600'
+                            }}>
+                              ✓ مربوط
+                            </span>
+                          )}
+                          {hasOtherRole && user.systemRole && (
+                            <span style={{
+                              fontSize: '0.75rem',
+                              background: '#ed8936',
+                              color: 'white',
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              fontWeight: '600'
+                            }}>
+                              {user.systemRole.nameAr || user.systemRole.name}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#718096' }}>
+                          @{user.username}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 

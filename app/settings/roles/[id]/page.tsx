@@ -28,7 +28,14 @@ export default async function RoleDetailPage(props: { params: Promise<{ id: stri
         select: {
           id: true,
           username: true,
-          displayName: true
+          displayName: true,
+          roleId: true,
+          systemRole: {
+            select: {
+              name: true,
+              nameAr: true
+            }
+          }
         }
       }
     }
@@ -55,12 +62,19 @@ export default async function RoleDetailPage(props: { params: Promise<{ id: stri
   // Get current role permission IDs
   const rolePermissionIds = new Set(role.permissions.map(rp => rp.permissionId));
 
-  // Fetch all users for assignment
+  // Fetch all users for assignment (with their current roles)
   const allUsers = await prisma.user.findMany({
     select: {
       id: true,
       username: true,
-      displayName: true
+      displayName: true,
+      roleId: true,
+      systemRole: {
+        select: {
+          name: true,
+          nameAr: true
+        }
+      }
     },
     orderBy: { displayName: 'asc' }
   });
