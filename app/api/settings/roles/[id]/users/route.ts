@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 
-// POST: Assign user to role
+// POST: Assign user(s) to role
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -18,10 +18,13 @@ export async function POST(
 
   const roleId = params.id
   const body = await request.json().catch(() => ({}))
-  const { userId } = body
+  const { userId, userIds } = body
 
-  if (!userId) {
-    return NextResponse.json({ error: 'userId is required' }, { status: 400 })
+  // Support both single user (userId) and multiple users (userIds)
+  const idsToAssign = userIds || (userId ? [userId] : [])
+
+  if (!idsToAssign || idsToAssign.length === 0) {
+    return NextResponse.json({ error: 'userId or userIds is required' }, { status: 400 })
   }
 
   try {
@@ -34,18 +37,18 @@ export async function POST(
       return NextResponse.json({ error: 'Role not found' }, { status: 404 })
     }
 
-    // Verify user exists
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
+    // Verify all users exist
+    const users = await prisma.user.findMany({
+      where: { id: { in: idsToAssign } }
     })
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    if (users.length !== idsToAssign.length) {
+      return NextResponse.json({ error: 'Some users not found' }, { status: 404 })
     }
 
-    // Update user's roleId
-    await prisma.user.update({
-      where: { id: userId },
+    // Update all users' roleId
+    await prisma.user.updateMany({
+      where: { id: { in: idsToAssign } },
       data: { roleId: roleId }
     })
 
@@ -65,12 +68,12 @@ export async function POST(
 
     return NextResponse.json({
       ok: true,
-      message: `تم ربط ${user.displayName} بدور ${role.nameAr}`,
+      message: `تم ربط ${idsToAssign.length} مستخدم بدور ${role.nameAr}`,
       users: updatedRole?.users || []
     })
   } catch (error) {
-    console.error('Error assigning user to role:', error)
-    return NextResponse.json({ error: 'Failed to assign user' }, { status: 500 })
+    console.error('Error assigning users to role:', error)
+    return NextResponse.json({ error: 'Failed to assign users' }, { status: 500 })
   }
 }
 

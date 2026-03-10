@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 type User = {
   id: string;
@@ -18,39 +18,74 @@ type Props = {
 
 export default function RoleUsersManager({ roleId, roleName, roleNameAr, initialUsers, allUsers }: Props) {
   const [users, setUsers] = useState<User[]>(initialUsers);
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
 
   // Get available users (not already assigned to this role)
   const assignedUserIds = new Set(users.map(u => u.id));
-  const availableUsers = allUsers.filter(u => !assignedUserIds.has(u.id));
+  const availableUsers = useMemo(() => {
+    return allUsers.filter(u => !assignedUserIds.has(u.id));
+  }, [allUsers, assignedUserIds]);
 
-  const handleAssignUser = async () => {
-    if (!selectedUserId) {
-      alert('الرجاء اختيار مستخدم');
+  // Filter users by search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return availableUsers;
+    const query = searchQuery.toLowerCase();
+    return availableUsers.filter(u =>
+      u.displayName.toLowerCase().includes(query) ||
+      u.username.toLowerCase().includes(query)
+    );
+  }, [availableUsers, searchQuery]);
+
+  const handleToggleUser = (userId: string) => {
+    const newSelected = new Set(selectedUserIds);
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId);
+    } else {
+      newSelected.add(userId);
+    }
+    setSelectedUserIds(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedUserIds.size === filteredUsers.length && filteredUsers.length > 0) {
+      // Deselect all
+      setSelectedUserIds(new Set());
+    } else {
+      // Select all filtered
+      setSelectedUserIds(new Set(filteredUsers.map(u => u.id)));
+    }
+  };
+
+  const handleAssignUsers = async () => {
+    if (selectedUserIds.size === 0) {
+      alert('الرجاء اختيار مستخدمين');
       return;
     }
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/settings/roles/${roleId}/users`, {
+      const userIds = Array.from(selectedUserIds);
+      const res = await fetch(`/api/settings/roles/${roleId}/users/batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: selectedUserId })
+        body: JSON.stringify({ userIds })
       });
 
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users);
-        setSelectedUserId('');
-        alert(`✅ تم ربط المستخدم بالدور بنجاح`);
+        setSelectedUserIds(new Set());
+        setSearchQuery('');
+        alert(`✅ تم ربط ${userIds.length} مستخدمين بالدور بنجاح`);
       } else {
         const error = await res.json();
         alert(`❌ خطأ: ${error.error || 'فشلت العملية'}`);
       }
     } catch (error) {
-      console.error('Error assigning user:', error);
+      console.error('Error assigning users:', error);
       alert('❌ فشلت عملية الربط');
     } finally {
       setSaving(false);
@@ -86,7 +121,7 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
 
   return (
     <div>
-      {/* Add User Section */}
+      {/* Add Users Section */}
       <div style={{
         background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
         padding: '1.5rem',
@@ -94,8 +129,8 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
         marginBottom: '1.5rem',
         border: '1px solid rgba(102, 126, 234, 0.1)'
       }}>
-        <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#1a202c', marginBottom: '1rem' }}>
-          ➕ ربط مستخدم جديد
+        <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#1a202c', marginBottom: '1.5rem' }}>
+          ➕ ربط مستخدمين جدد
         </h3>
         
         {availableUsers.length === 0 ? (
@@ -109,14 +144,17 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
             ✅ تم ربط جميع المستخدمين بهذا الدور
           </div>
         ) : (
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ flex: 1, minWidth: '250px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Search Box */}
+            <div>
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#4a5568', marginBottom: '0.5rem' }}>
-                اختر المستخدم
+                🔍 ابحث عن مستخدم
               </label>
-              <select
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
+              <input
+                type="text"
+                placeholder="اكتب الاسم أو اسم المستخدم..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '0.75rem',
@@ -124,49 +162,156 @@ export default function RoleUsersManager({ roleId, roleName, roleNameAr, initial
                   border: '2px solid #e2e8f0',
                   fontSize: '1rem',
                   background: 'white',
-                  cursor: 'pointer',
                   transition: 'all 0.2s'
                 }}
                 onFocus={(e) => e.target.style.borderColor = '#667eea'}
                 onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
-              >
-                <option value="">-- اختر مستخدم --</option>
-                {availableUsers.map(user => (
-                  <option key={user.id} value={user.id}>
-                    {user.displayName} (@{user.username})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
-            
-            <button
-              onClick={handleAssignUser}
-              disabled={!selectedUserId || saving}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: selectedUserId && !saving ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#cbd5e0',
-                color: 'white',
-                border: 'none',
+
+            {/* Select All Checkbox */}
+            {filteredUsers.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.75rem',
+                background: 'rgba(102, 126, 234, 0.05)',
                 borderRadius: '0.5rem',
-                fontSize: '1rem',
-                fontWeight: '600',
-                cursor: selectedUserId && !saving ? 'pointer' : 'not-allowed',
-                transition: 'all 0.2s',
-                boxShadow: selectedUserId && !saving ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none'
+                cursor: 'pointer'
               }}
-              onMouseEnter={(e) => {
-                if (selectedUserId && !saving) {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = selectedUserId && !saving ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none';
-              }}
-            >
-              {saving ? '⏳ جاري الربط...' : '✅ ربط المستخدم'}
-            </button>
+              onClick={handleSelectAll}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedUserIds.size === filteredUsers.length && filteredUsers.length > 0}
+                  onChange={handleSelectAll}
+                  style={{
+                    cursor: 'pointer',
+                    width: '18px',
+                    height: '18px'
+                  }}
+                />
+                <span style={{ fontWeight: '600', color: '#4a5568' }}>
+                  {selectedUserIds.size === filteredUsers.length && filteredUsers.length > 0
+                    ? `✅ تم تحديد الكل (${filteredUsers.length})`
+                    : `☐ تحديد جميع النتائج (${filteredUsers.length})`
+                  }
+                </span>
+              </div>
+            )}
+
+            {/* Users List */}
+            <div style={{
+              maxHeight: '300px',
+              overflowY: 'auto',
+              border: '1px solid #e2e8f0',
+              borderRadius: '0.5rem',
+              padding: '0.75rem',
+              background: 'white'
+            }}>
+              {filteredUsers.length === 0 ? (
+                <div style={{ color: '#a0aec0', textAlign: 'center', padding: '1rem' }}>
+                  لا توجد نتائج بحث
+                </div>
+              ) : (
+                filteredUsers.map(user => (
+                  <div
+                    key={user.id}
+                    onClick={() => handleToggleUser(user.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.75rem',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      background: selectedUserIds.has(user.id) ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
+                      transition: 'all 0.2s',
+                      borderLeft: selectedUserIds.has(user.id) ? '3px solid #667eea' : '3px solid transparent'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(102, 126, 234, 0.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = selectedUserIds.has(user.id) ? 'rgba(102, 126, 234, 0.1)' : 'transparent';
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedUserIds.has(user.id)}
+                      onChange={() => handleToggleUser(user.id)}
+                      style={{
+                        cursor: 'pointer',
+                        width: '18px',
+                        height: '18px'
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: '600', color: '#1a202c' }}>
+                        {user.displayName}
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: '#718096' }}>
+                        @{user.username}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            {selectedUserIds.size > 0 && (
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  onClick={handleAssignUsers}
+                  disabled={saving}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem 1.5rem',
+                    background: saving ? '#cbd5e0' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: saving ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!saving) {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = saving ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)';
+                  }}
+                >
+                  {saving ? `⏳ جاري ربط ${selectedUserIds.size} مستخدمين...` : `✅ ربط ${selectedUserIds.size} مستخدمين`}
+                </button>
+                <button
+                  onClick={() => setSelectedUserIds(new Set())}
+                  disabled={saving}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: '#f0f0f0',
+                    color: '#4a5568',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  ❌ إلغاء
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
