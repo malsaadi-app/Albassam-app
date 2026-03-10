@@ -1,0 +1,272 @@
+/* Toast Notifications */
+
+.toastContainer {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.toastContainerTopRight {
+  top: 20px;
+  right: 20px;
+}
+
+.toastContainerTopLeft {
+  top: 20px;
+  left: 20px;
+}
+
+.toastContainerBottomRight {
+  bottom: 20px;
+  right: 20px;
+}
+
+.toastContainerBottomLeft {
+  bottom: 20px;
+  left: 20px;
+}
+
+.toastContainerTopCenter {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.toastContainerBottomCenter {
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 300px;
+  max-width: 500px;
+  padding: 16px 20px;
+  background: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  margin-bottom: 12px;
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toastExiting {
+  animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+.toastIcon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.toastIconSuccess {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10B981;
+}
+
+.toastIconError {
+  background: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
+}
+
+.toastIconWarning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #F59E0B;
+}
+
+.toastIconInfo {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3B82F6;
+}
+
+.toastContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.toastTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1E293B;
+  margin: 0 0 4px 0;
+  line-height: 1.4;
+}
+
+.toastMessage {
+  font-size: 14px;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.toastClose {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #94A3B8;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.toastClose:hover {
+  background: #F1F5F9;
+  color: #64748B;
+}
+
+.toastProgress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.05);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  overflow: hidden;
+}
+
+.toastProgressBar {
+  height: 100%;
+  background: currentColor;
+  transition: width 0.1s linear;
+}
+
+.toastSuccess .toastProgressBar {
+  background: #10B981;
+}
+
+.toastError .toastProgressBar {
+  background: #EF4444;
+}
+
+.toastWarning .toastProgressBar {
+  background: #F59E0B;
+}
+
+.toastInfo .toastProgressBar {
+  background: #3B82F6;
+}
+
+/* Left position animations */
+.toastContainerTopLeft .toast,
+.toastContainerBottomLeft .toast {
+  animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toastContainerTopLeft .toastExiting,
+.toastContainerBottomLeft .toastExiting {
+  animation: slideOutLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideOutLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-400px);
+    opacity: 0;
+  }
+}
+
+/* Center position animations */
+.toastContainerTopCenter .toast {
+  animation: slideInDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-100px) translateX(-50%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) translateX(-50%);
+    opacity: 1;
+  }
+}
+
+.toastContainerBottomCenter .toast {
+  animation: slideInUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100px) translateX(-50%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) translateX(-50%);
+    opacity: 1;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+  .toast {
+    min-width: calc(100vw - 40px);
+    max-width: calc(100vw - 40px);
+  }
+  
+  .toastContainer {
+    left: 20px !important;
+    right: 20px !important;
+    transform: none !important;
+  }
+}
+
+/* RTL Support */
+[dir="rtl"] .toast {
+  animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[dir="rtl"] .toastExiting {
+  animation: slideOutLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

@@ -41,6 +41,5 @@ export {
 export {
   ToastProvider,
   useToast,
-  toast,
-  setGlobalToast,
 } from './Toast';
+export type { Toast, ToastType, ToastPosition } from './Toast';

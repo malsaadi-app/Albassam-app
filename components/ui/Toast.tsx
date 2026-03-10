@@ -1,123 +1,34 @@
-/**
- * Toast Notifications
- * 
- * Lightweight notification system:
- * - Success/Error/Warning/Info toasts
- * - Auto-dismiss
- * - Stackable
- * - Animated
- */
-
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import styles from './Toast.module.css';
+import { HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineExclamationCircle, HiOutlineInformationCircle, HiOutlineX } from 'react-icons/hi';
 
-/**
- * Toast types
- */
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
+export type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
 
-/**
- * Toast interface
- */
 export interface Toast {
   id: string;
   type: ToastType;
+  title?: string;
   message: string;
   duration?: number;
+  onClose?: () => void;
 }
 
-/**
- * Toast icons
- */
-const TOAST_ICONS: Record<ToastType, string> = {
-  success: '✅',
-  error: '❌',
-  warning: '⚠️',
-  info: 'ℹ️',
-};
-
-/**
- * Toast colors
- */
-const TOAST_COLORS: Record<ToastType, { bg: string; border: string; text: string }> = {
-  success: {
-    bg: '#D1FAE5',
-    border: '#10B981',
-    text: '#065F46',
-  },
-  error: {
-    bg: '#FEE2E2',
-    border: '#EF4444',
-    text: '#991B1B',
-  },
-  warning: {
-    bg: '#FEF3C7',
-    border: '#F59E0B',
-    text: '#92400E',
-  },
-  info: {
-    bg: '#DBEAFE',
-    border: '#3B82F6',
-    text: '#1E40AF',
-  },
-};
-
-/**
- * Toast context
- */
 interface ToastContextValue {
   toasts: Toast[];
-  addToast: (type: ToastType, message: string, duration?: number) => void;
-  removeToast: (id: string) => void;
-  success: (message: string, duration?: number) => void;
-  error: (message: string, duration?: number) => void;
-  warning: (message: string, duration?: number) => void;
-  info: (message: string, duration?: number) => void;
+  showToast: (toast: Omit<Toast, 'id'>) => string;
+  hideToast: (id: string) => void;
+  success: (message: string, title?: string) => string;
+  error: (message: string, title?: string) => string;
+  warning: (message: string, title?: string) => string;
+  info: (message: string, title?: string) => string;
 }
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
-/**
- * Toast provider
- */
-export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const addToast = (type: ToastType, message: string, duration: number = 3000) => {
-    const id = Math.random().toString(36).substring(2, 9);
-    const toast: Toast = { id, type, message, duration };
-
-    setToasts((prev) => [...prev, toast]);
-
-    // Auto-dismiss
-    if (duration > 0) {
-      setTimeout(() => {
-        removeToast(id);
-      }, duration);
-    }
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
-
-  const success = (message: string, duration?: number) => addToast('success', message, duration);
-  const error = (message: string, duration?: number) => addToast('error', message, duration);
-  const warning = (message: string, duration?: number) => addToast('warning', message, duration);
-  const info = (message: string, duration?: number) => addToast('info', message, duration);
-
-  return (
-    <ToastContext.Provider value={{ toasts, addToast, removeToast, success, error, warning, info }}>
-      {children}
-      <ToastContainer toasts={toasts} onDismiss={removeToast} />
-    </ToastContext.Provider>
-  );
-}
-
-/**
- * Use toast hook
- */
 export function useToast() {
   const context = useContext(ToastContext);
   if (!context) {
@@ -126,199 +37,165 @@ export function useToast() {
   return context;
 }
 
-/**
- * Toast container
- */
-function ToastContainer({
-  toasts,
-  onDismiss,
-}: {
-  toasts: Toast[];
-  onDismiss: (id: string) => void;
-}) {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: '1rem',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 10000,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.75rem',
-        minWidth: '320px',
-        maxWidth: '500px',
-        width: '90%',
-      }}
-    >
-      {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
-      ))}
-    </div>
-  );
+interface ToastProviderProps {
+  children: React.ReactNode;
+  position?: ToastPosition;
+  maxToasts?: number;
 }
 
-/**
- * Toast item
- */
-function ToastItem({
-  toast,
-  onDismiss,
-}: {
-  toast: Toast;
-  onDismiss: (id: string) => void;
-}) {
-  const [isVisible, setIsVisible] = useState(false);
+export function ToastProvider({ 
+  children, 
+  position = 'top-right',
+  maxToasts = 5
+}: ToastProviderProps) {
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
-  useEffect(() => {
-    // Animate in
-    setTimeout(() => setIsVisible(true), 10);
+  const showToast = useCallback((toast: Omit<Toast, 'id'>) => {
+    const id = Math.random().toString(36).substring(7);
+    const newToast: Toast = {
+      ...toast,
+      id,
+      duration: toast.duration ?? 5000
+    };
+
+    setToasts((prev) => {
+      const updated = [newToast, ...prev];
+      return updated.slice(0, maxToasts);
+    });
+
+    return id;
+  }, [maxToasts]);
+
+  const hideToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const handleDismiss = () => {
-    setIsVisible(false);
-    setTimeout(() => onDismiss(toast.id), 300);
+  const success = useCallback((message: string, title?: string) => {
+    return showToast({ type: 'success', message, title });
+  }, [showToast]);
+
+  const error = useCallback((message: string, title?: string) => {
+    return showToast({ type: 'error', message, title });
+  }, [showToast]);
+
+  const warning = useCallback((message: string, title?: string) => {
+    return showToast({ type: 'warning', message, title });
+  }, [showToast]);
+
+  const info = useCallback((message: string, title?: string) => {
+    return showToast({ type: 'info', message, title });
+  }, [showToast]);
+
+  const value: ToastContextValue = {
+    toasts,
+    showToast,
+    hideToast,
+    success,
+    error,
+    warning,
+    info
   };
 
-  const colors = TOAST_COLORS[toast.type];
-
   return (
-    <div
-      style={{
-        backgroundColor: colors.bg,
-        border: `2px solid ${colors.border}`,
-        borderRadius: '8px',
-        padding: '1rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-        opacity: isVisible ? 1 : 0,
-        transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
-        transition: 'all 0.3s ease',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
-        <span style={{ fontSize: '1.25rem' }}>{TOAST_ICONS[toast.type]}</span>
-        <span
-          style={{
-            color: colors.text,
-            fontSize: '0.875rem',
-            fontWeight: '500',
-          }}
-        >
-          {toast.message}
-        </span>
-      </div>
-      <button
-        onClick={handleDismiss}
-        style={{
-          backgroundColor: 'transparent',
-          border: 'none',
-          color: colors.text,
-          cursor: 'pointer',
-          fontSize: '1.25rem',
-          padding: 0,
-          lineHeight: 1,
-          opacity: 0.7,
-          transition: 'opacity 0.2s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.opacity = '1';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.opacity = '0.7';
-        }}
-      >
-        ×
-      </button>
-    </div>
+    <ToastContext.Provider value={value}>
+      {children}
+      <ToastContainer toasts={toasts} position={position} onClose={hideToast} />
+    </ToastContext.Provider>
   );
 }
 
-/**
- * Standalone toast functions (without context)
- * For use in API calls, utilities, etc.
- */
-let globalToastFn: ((type: ToastType, message: string, duration?: number) => void) | null = null;
-
-export function setGlobalToast(fn: (type: ToastType, message: string, duration?: number) => void) {
-  globalToastFn = fn;
+interface ToastContainerProps {
+  toasts: Toast[];
+  position: ToastPosition;
+  onClose: (id: string) => void;
 }
 
-export const toast = {
-  success: (message: string, duration?: number) => {
-    if (globalToastFn) globalToastFn('success', message, duration);
-  },
-  error: (message: string, duration?: number) => {
-    if (globalToastFn) globalToastFn('error', message, duration);
-  },
-  warning: (message: string, duration?: number) => {
-    if (globalToastFn) globalToastFn('warning', message, duration);
-  },
-  info: (message: string, duration?: number) => {
-    if (globalToastFn) globalToastFn('info', message, duration);
-  },
-};
+function ToastContainer({ toasts, position, onClose }: ToastContainerProps) {
+  const positionClass = styles[`toastContainer${position.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('')}`];
 
-/**
- * Usage Examples:
- * 
- * 1. Setup ToastProvider (in layout):
- * export default function RootLayout({ children }) {
- *   return (
- *     <html>
- *       <body>
- *         <ToastProvider>
- *           {children}
- *         </ToastProvider>
- *       </body>
- *     </html>
- *   );
- * }
- * 
- * 2. Use toast in component:
- * const toast = useToast();
- * 
- * toast.success('تم الحفظ بنجاح!');
- * toast.error('حدث خطأ في الحفظ');
- * toast.warning('تحذير: البيانات غير كاملة');
- * toast.info('معلومة: يمكنك استخدام Ctrl+S للحفظ');
- * 
- * 3. Custom duration:
- * toast.success('تم الحفظ', 5000); // 5 seconds
- * 
- * 4. In API calls (standalone):
- * import { toast } from '@/components/ui/Toast';
- * 
- * try {
- *   await saveData();
- *   toast.success('تم الحفظ بنجاح!');
- * } catch (error) {
- *   toast.error('حدث خطأ في الحفظ');
- * }
- * 
- * 5. Enable global toast (in layout):
- * 'use client';
- * 
- * import { ToastProvider, setGlobalToast, useToast } from '@/components/ui/Toast';
- * 
- * function ToastSetup() {
- *   const { addToast } = useToast();
- *   useEffect(() => {
- *     setGlobalToast(addToast);
- *   }, [addToast]);
- *   return null;
- * }
- * 
- * export default function Layout({ children }) {
- *   return (
- *     <ToastProvider>
- *       <ToastSetup />
- *       {children}
- *     </ToastProvider>
- *   );
- * }
- */
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  return createPortal(
+    <div className={`${styles.toastContainer} ${positionClass}`}>
+      {toasts.map((toast) => (
+        <ToastItem key={toast.id} toast={toast} onClose={onClose} />
+      ))}
+    </div>,
+    document.body
+  );
+}
+
+interface ToastItemProps {
+  toast: Toast;
+  onClose: (id: string) => void;
+}
+
+function ToastItem({ toast, onClose }: ToastItemProps) {
+  const [isExiting, setIsExiting] = useState(false);
+  const [progress, setProgress] = useState(100);
+
+  useEffect(() => {
+    if (!toast.duration) return;
+
+    const startTime = Date.now();
+    const endTime = startTime + toast.duration;
+    const duration = toast.duration; // Store in const for TypeScript
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const remaining = Math.max(0, endTime - now);
+      const percentage = (remaining / duration) * 100;
+      setProgress(percentage);
+
+      if (remaining === 0) {
+        clearInterval(interval);
+        handleClose();
+      }
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [toast.duration]);
+
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onClose(toast.id);
+      toast.onClose?.();
+    }, 300);
+  };
+
+  const icons = {
+    success: <HiOutlineCheckCircle size={24} />,
+    error: <HiOutlineXCircle size={24} />,
+    warning: <HiOutlineExclamationCircle size={24} />,
+    info: <HiOutlineInformationCircle size={24} />
+  };
+
+  return (
+    <div className={`${styles.toast} ${isExiting ? styles.toastExiting : ''} ${styles[`toast${toast.type.charAt(0).toUpperCase()}${toast.type.slice(1)}`]}`}>
+      <div className={`${styles.toastIcon} ${styles[`toastIcon${toast.type.charAt(0).toUpperCase()}${toast.type.slice(1)}`]}`}>
+        {icons[toast.type]}
+      </div>
+      
+      <div className={styles.toastContent}>
+        {toast.title && <div className={styles.toastTitle}>{toast.title}</div>}
+        <div className={styles.toastMessage}>{toast.message}</div>
+      </div>
+
+      <button className={styles.toastClose} onClick={handleClose} aria-label="Close">
+        <HiOutlineX size={18} />
+      </button>
+
+      {toast.duration && (
+        <div className={styles.toastProgress}>
+          <div 
+            className={styles.toastProgressBar}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
