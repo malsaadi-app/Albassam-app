@@ -6,6 +6,7 @@ import Link from 'next/link';
 import RolePermissionsManager from './RolePermissionsManager';
 import RoleEditButtons from './RoleEditButtons';
 import RoleEmployeesManager from './RoleEmployeesManager';
+import RoleUsersManager from './RoleUsersManager';
 
 export default async function RoleDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -65,6 +66,16 @@ export default async function RoleDetailPage(props: { params: Promise<{ id: stri
 
   // Get current role permission IDs
   const rolePermissionIds = new Set(role.permissions.map(rp => rp.permissionId));
+
+  // Fetch all users for assignment
+  const allUsers = await prisma.user.findMany({
+    select: {
+      id: true,
+      username: true,
+      displayName: true
+    },
+    orderBy: { displayName: 'asc' }
+  });
 
   return (
     <>
@@ -193,40 +204,20 @@ export default async function RoleDetailPage(props: { params: Promise<{ id: stri
           />
         </div>
 
-        {/* Users with this role (legacy - keep for backward compatibility) */}
-        {role.users.length > 0 && (
-          <div style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a202c', marginBottom: '1.5rem' }}>
-              🔐 مستخدمي النظام ({role.users.length})
-            </h2>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-              {role.users.map(user => (
-                <Link
-                  key={user.id}
-                  href={`/settings/users/${user.id}`}
-                  className="user-card"
-                  style={{
-                    background: '#f7fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '0.5rem',
-                    padding: '1rem',
-                    textDecoration: 'none',
-                    transition: 'all 0.2s',
-                    display: 'block'
-                  }}
-                >
-                  <div style={{ fontWeight: 'bold', color: '#1a202c', marginBottom: '0.25rem' }}>
-                    {user.displayName}
-                  </div>
-                  <div style={{ fontSize: '0.875rem', color: '#718096' }}>
-                    @{user.username}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Users Manager */}
+        <div style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1a202c', marginBottom: '1.5rem' }}>
+            🔐 إدارة مستخدمي النظام
+          </h2>
+          
+          <RoleUsersManager
+            roleId={role.id}
+            roleName={role.name}
+            roleNameAr={role.nameAr}
+            initialUsers={role.users}
+            allUsers={allUsers}
+          />
+        </div>
 
         {/* Back Button */}
         <div style={{ textAlign: 'center' }}>
