@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { StatsCard } from '@/components/ui/CardEnhanced';
+import { CardEnhanced, CardHeader, CardBody } from '@/components/ui/CardEnhanced';
+import { ResponsiveContainer, ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
+import { SkeletonCard } from '@/components/ui/LoadingStates';
+import { Badge } from '@/components/ui/TableEnhanced';
+import { HiOutlineClipboardList, HiOutlineClock, HiOutlineUserGroup, HiOutlineDocumentText, HiOutlineChartBar } from 'react-icons/hi';
 
 interface Stats {
   tasks: { total: number; pending: number; inProgress: number; completed: number };
@@ -37,196 +43,172 @@ export default function DashboardPage() {
     }).catch(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        minHeight: '80vh' 
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ 
-            width: '48px', 
-            height: '48px', 
-            border: '4px solid #e5e7eb', 
-            borderTopColor: '#2D1B4E', 
-            borderRadius: '50%', 
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 16px'
-          }}></div>
-          <p style={{ color: '#64748b' }}>جاري التحميل...</p>
-        </div>
-        <style jsx>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'HR';
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ 
-          fontSize: '32px', 
-          fontWeight: '700', 
-          color: '#1e293b', 
-          marginBottom: '8px' 
-        }}>
-          مرحباً، {user?.fullNameAr || 'المستخدم'} 👋
-        </h1>
-        <p style={{ color: '#64748b', fontSize: '16px' }}>
-          {new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </p>
-      </div>
-
-      {/* Quick Actions */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '16px',
-        marginBottom: '32px'
-      }}>
-        <ActionCard href="/tasks" icon="📋" title="المهام" color="#3b82f6" />
-        <ActionCard href="/attendance" icon="⏰" title="الحضور" color="#10b981" />
-        {isAdmin && <ActionCard href="/hr/employees" icon="👥" title="الموارد البشرية" color="#8b5cf6" />}
-        <ActionCard href="/reports" icon="📊" title="التقارير" color="#f59e0b" />
-      </div>
-
-      {/* Stats Grid */}
-      {stats && (
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
-          gap: '20px',
-          marginBottom: '32px'
-        }}>
-          <StatCard 
-            title="المهام" 
-            value={stats.tasks.total}
-            subtitle={`${stats.tasks.pending} معلقة`}
-            color="#3b82f6"
-            icon="📋"
-          />
-          <StatCard 
-            title="الحضور اليوم" 
-            value={`${stats.attendance.rate}%`}
-            subtitle={`${stats.attendance.present} حاضر`}
-            color="#10b981"
-            icon="✅"
-          />
-          {isAdmin && stats.hrRequests && (
-            <StatCard 
-              title="طلبات HR" 
-              value={stats.hrRequests.pending}
-              subtitle="بانتظار المراجعة"
-              color="#f59e0b"
-              icon="📝"
-            />
-          )}
-          {stats.leaves && (
-            <StatCard 
-              title="رصيد الإجازات" 
-              value={stats.leaves.balance}
-              subtitle={`${stats.leaves.pending} طلب معلق`}
-              color="#8b5cf6"
-              icon="🏖️"
-            />
-          )}
-        </div>
-      )}
-
-      {/* Recent Tasks */}
-      {tasks.length > 0 && (
-        <div style={{ 
-          background: 'white', 
-          borderRadius: '16px', 
-          padding: '24px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            marginBottom: '20px'
+    <div dir="rtl" style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
+      <ResponsiveContainer size="xl">
+        {/* Header */}
+        <div style={{ marginBottom: '32px' }}>
+          <h1 style={{ 
+            fontSize: '32px', 
+            fontWeight: '800', 
+            color: '#1e293b', 
+            marginBottom: '8px' 
           }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#1e293b' }}>
-              المهام الأخيرة
-            </h2>
-            <Link href="/tasks" style={{ 
-              color: '#3b82f6', 
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500'
-            }}>
-              عرض الكل ←
-            </Link>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {tasks.map(task => (
-              <Link 
-                key={task.id}
-                href={`/tasks/${task.id}`}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '16px',
-                  background: '#f8fafc',
-                  borderRadius: '12px',
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  border: '1px solid #e2e8f0',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#f1f5f9';
-                  e.currentTarget.style.borderColor = '#cbd5e1';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#f8fafc';
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
-                    {task.title}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#64748b' }}>
-                    {task.dueDate ? `مطلوب: ${new Date(task.dueDate).toLocaleDateString('ar-SA')}` : ''}
-                  </div>
-                </div>
-                <StatusBadge status={task.status} />
-              </Link>
-            ))}
-          </div>
+            مرحباً، {user?.fullNameAr || 'المستخدم'} 👋
+          </h1>
+          <p style={{ color: '#64748b', fontSize: '16px' }}>
+            {new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
         </div>
-      )}
+
+        {/* Quick Actions */}
+        <ResponsiveGrid columns={{ mobile: 2, tablet: 4, desktop: 4 }} gap="md" style={{ marginBottom: '32px' }}>
+          <ActionCard href="/tasks" icon={<HiOutlineClipboardList size={28} />} title="المهام" color="#3b82f6" />
+          <ActionCard href="/attendance" icon={<HiOutlineClock size={28} />} title="الحضور" color="#10b981" />
+          {isAdmin && <ActionCard href="/hr/employees" icon={<HiOutlineUserGroup size={28} />} title="الموارد البشرية" color="#8b5cf6" />}
+          <ActionCard href="/reports" icon={<HiOutlineChartBar size={28} />} title="التقارير" color="#f59e0b" />
+        </ResponsiveGrid>
+
+        {/* Stats Grid */}
+        {loading ? (
+          <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 4 }} gap="md" style={{ marginBottom: '32px' }}>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </ResponsiveGrid>
+        ) : stats ? (
+          <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 4 }} gap="md" style={{ marginBottom: '32px' }}>
+            <StatsCard 
+              icon={<HiOutlineClipboardList size={28} />}
+              label="المهام"
+              value={stats.tasks.total.toString()}
+              change={{ value: `${stats.tasks.pending} معلقة`, isPositive: false }}
+              variant="gradient"
+              hoverable
+            />
+            <StatsCard 
+              icon={<HiOutlineClock size={28} />}
+              label="الحضور اليوم"
+              value={`${stats.attendance.rate}%`}
+              change={{ value: `${stats.attendance.present} حاضر`, isPositive: true }}
+              variant="success"
+              hoverable
+            />
+            {isAdmin && stats.hrRequests && (
+              <StatsCard 
+                icon={<HiOutlineDocumentText size={28} />}
+                label="طلبات HR"
+                value={stats.hrRequests.pending.toString()}
+                change={{ value: 'بانتظار المراجعة', isPositive: false }}
+                variant="warning"
+                hoverable
+              />
+            )}
+            {stats.leaves && (
+              <StatsCard 
+                icon={<HiOutlineDocumentText size={28} />}
+                label="رصيد الإجازات"
+                value={stats.leaves.balance.toString()}
+                change={{ value: `${stats.leaves.pending} طلب معلق`, isPositive: false }}
+                variant="stats"
+                hoverable
+              />
+            )}
+          </ResponsiveGrid>
+        ) : null}
+
+        {/* Recent Tasks */}
+        {tasks.length > 0 && (
+          <CardEnhanced variant="default">
+            <CardHeader
+              icon={<HiOutlineClipboardList size={24} />}
+              title="المهام الأخيرة"
+              subtitle="آخر 5 مهام تم إضافتها"
+              actions={
+                <Link href="/tasks" style={{ 
+                  color: '#3b82f6', 
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}>
+                  عرض الكل ←
+                </Link>
+              }
+            />
+            <CardBody>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {tasks.map(task => (
+                  <Link 
+                    key={task.id}
+                    href={`/tasks/${task.id}`}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '16px',
+                      background: '#f8fafc',
+                      borderRadius: '12px',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      border: '1px solid #e2e8f0',
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f1f5f9';
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#f8fafc';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
+                        {task.title}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#64748b' }}>
+                        {task.dueDate ? `مطلوب: ${new Date(task.dueDate).toLocaleDateString('ar-SA')}` : 'بدون موعد محدد'}
+                      </div>
+                    </div>
+                    <StatusBadge status={task.status} />
+                  </Link>
+                ))}
+              </div>
+            </CardBody>
+          </CardEnhanced>
+        )}
+      </ResponsiveContainer>
     </div>
   );
 }
 
-function ActionCard({ href, icon, title, color }: { href: string; icon: string; title: string; color: string }) {
+function ActionCard({ href, icon, title, color }: { href: string; icon: React.ReactNode; title: string; color: string }) {
   return (
     <Link 
       href={href}
       style={{
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         gap: '12px',
-        padding: '20px',
+        padding: '24px',
         background: 'white',
         borderRadius: '16px',
         textDecoration: 'none',
         color: '#1e293b',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         border: '1px solid #e2e8f0',
-        transition: 'all 0.2s'
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        textAlign: 'center'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)';
+        e.currentTarget.style.boxShadow = '0 12px 28px rgba(0,0,0,0.12)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
@@ -235,13 +217,14 @@ function ActionCard({ href, icon, title, color }: { href: string; icon: string; 
     >
       <div style={{ 
         fontSize: '32px',
-        width: '56px',
-        height: '56px',
+        width: '64px',
+        height: '64px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         background: `${color}15`,
-        borderRadius: '12px'
+        borderRadius: '16px',
+        color: color
       }}>
         {icon}
       </div>
@@ -250,64 +233,15 @@ function ActionCard({ href, icon, title, color }: { href: string; icon: string; 
   );
 }
 
-function StatCard({ title, value, subtitle, color, icon }: any) {
-  return (
-    <div style={{
-      background: 'white',
-      borderRadius: '16px',
-      padding: '24px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      border: '1px solid #e2e8f0'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '8px' }}>
-            {title}
-          </div>
-          <div style={{ fontSize: '32px', fontWeight: '700', color: '#1e293b', marginBottom: '4px' }}>
-            {value}
-          </div>
-          <div style={{ fontSize: '14px', color: '#64748b' }}>
-            {subtitle}
-          </div>
-        </div>
-        <div style={{
-          fontSize: '28px',
-          width: '48px',
-          height: '48px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: `${color}15`,
-          borderRadius: '12px'
-        }}>
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, { bg: string; text: string; label: string }> = {
-    PENDING: { bg: '#fef3c7', text: '#92400e', label: 'معلقة' },
-    IN_PROGRESS: { bg: '#dbeafe', text: '#1e40af', label: 'قيد التنفيذ' },
-    COMPLETED: { bg: '#d1fae5', text: '#065f46', label: 'مكتملة' },
-    CANCELLED: { bg: '#fee2e2', text: '#991b1b', label: 'ملغاة' }
+  const map: Record<string, { type: 'success' | 'warning' | 'danger' | 'info' | 'gray'; label: string }> = {
+    PENDING: { type: 'warning', label: 'معلقة' },
+    IN_PROGRESS: { type: 'info', label: 'قيد التنفيذ' },
+    COMPLETED: { type: 'success', label: 'مكتملة' },
+    CANCELLED: { type: 'danger', label: 'ملغاة' }
   };
   
-  const style = colors[status] || colors.PENDING;
+  const config = map[status] || map.PENDING;
   
-  return (
-    <span style={{
-      padding: '6px 12px',
-      borderRadius: '8px',
-      fontSize: '13px',
-      fontWeight: '600',
-      background: style.bg,
-      color: style.text
-    }}>
-      {style.label}
-    </span>
-  );
+  return <Badge type={config.type}>{config.label}</Badge>;
 }
