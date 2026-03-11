@@ -391,8 +391,15 @@ export default function SidebarEnhanced() {
           ))}
         </nav>
 
+        {/* Spacer - Push footer to bottom */}
+        <div style={{ flex: 1 }} />
+
         {/* Attendance Quick Widget */}
-        <div style={{ padding: '0 16px 16px' }}>
+        <div style={{ 
+          padding: '16px', 
+          borderTop: '1px solid rgba(226, 232, 240, 0.6)',
+          background: 'linear-gradient(180deg, rgba(249, 250, 251, 0) 0%, rgba(249, 250, 251, 0.5) 100%)'
+        }}>
           <AttendanceQuickWidget />
         </div>
 

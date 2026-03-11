@@ -93,39 +93,49 @@ export function AttendanceQuickWidget() {
 
   return (
     <div style={{
-      background: 'white',
-      border: '1px solid #E5E7EB',
+      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+      border: '1px solid rgba(102, 126, 234, 0.15)',
       borderRadius: '12px',
-      padding: '16px',
-      marginBottom: '16px'
+      padding: '12px',
+      margin: '0'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '20px' }}>⏰</span>
-          <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+      {/* Header - Compact */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        marginBottom: '10px' 
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '16px' }}>⏰</span>
+          <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>
             تسجيل سريع
           </span>
         </div>
         <div style={{
-          width: '8px',
-          height: '8px',
+          width: '6px',
+          height: '6px',
           borderRadius: '50%',
           background: getStatusColor(),
-          boxShadow: `0 0 8px ${getStatusColor()}`
+          boxShadow: `0 0 6px ${getStatusColor()}`
         }} />
       </div>
 
+      {/* Status - Compact */}
       {todayStatus?.checkInTime && (
         <div style={{
           fontSize: '11px',
-          color: '#6B7280',
-          marginBottom: '12px',
+          color: '#64748b',
+          marginBottom: '10px',
           padding: '6px 8px',
-          background: '#F9FAFB',
-          borderRadius: '6px'
+          background: 'white',
+          borderRadius: '6px',
+          textAlign: 'center'
         }}>
-          {todayStatus.isCheckedIn ? '✅ حاضر' : '✓ سجلت اليوم'}
-          <div style={{ fontSize: '10px', marginTop: '2px' }}>
+          <span style={{ fontWeight: '600' }}>
+            {todayStatus.isCheckedIn ? '✅ مسجل دخول' : '✓ حضرت اليوم'}
+          </span>
+          <div style={{ fontSize: '10px', marginTop: '2px', opacity: 0.8 }}>
             {new Date(todayStatus.checkInTime).toLocaleTimeString('ar-SA', {
               hour: '2-digit',
               minute: '2-digit',
@@ -135,65 +145,96 @@ export function AttendanceQuickWidget() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '8px' }}>
+      {/* Buttons - Compact */}
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
         <button
           onClick={() => handleQuickAction('check-in')}
           disabled={actionLoading || todayStatus?.isCheckedIn}
           style={{
             flex: 1,
-            background: todayStatus?.isCheckedIn ? '#F3F4F6' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+            background: todayStatus?.isCheckedIn 
+              ? '#F3F4F6' 
+              : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
             color: todayStatus?.isCheckedIn ? '#9CA3AF' : 'white',
             border: 'none',
-            padding: '8px',
+            padding: '10px 8px',
             borderRadius: '8px',
             fontSize: '12px',
             fontWeight: '600',
             cursor: todayStatus?.isCheckedIn || actionLoading ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s'
+            transition: 'all 0.2s',
+            boxShadow: todayStatus?.isCheckedIn ? 'none' : '0 2px 8px rgba(16, 185, 129, 0.3)'
+          }}
+          onMouseEnter={(e) => {
+            if (!todayStatus?.isCheckedIn && !actionLoading) {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = todayStatus?.isCheckedIn ? 'none' : '0 2px 8px rgba(16, 185, 129, 0.3)';
           }}
         >
-          {actionLoading ? '...' : '🟢'}
+          {actionLoading ? '⏳' : '🟢 دخول'}
         </button>
         <button
           onClick={() => handleQuickAction('check-out')}
           disabled={actionLoading || !todayStatus?.isCheckedIn}
           style={{
             flex: 1,
-            background: !todayStatus?.isCheckedIn ? '#F3F4F6' : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+            background: !todayStatus?.isCheckedIn 
+              ? '#F3F4F6' 
+              : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
             color: !todayStatus?.isCheckedIn ? '#9CA3AF' : 'white',
             border: 'none',
-            padding: '8px',
+            padding: '10px 8px',
             borderRadius: '8px',
             fontSize: '12px',
             fontWeight: '600',
             cursor: !todayStatus?.isCheckedIn || actionLoading ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s'
+            transition: 'all 0.2s',
+            boxShadow: !todayStatus?.isCheckedIn ? 'none' : '0 2px 8px rgba(239, 68, 68, 0.3)'
+          }}
+          onMouseEnter={(e) => {
+            if (todayStatus?.isCheckedIn && !actionLoading) {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = !todayStatus?.isCheckedIn ? 'none' : '0 2px 8px rgba(239, 68, 68, 0.3)';
           }}
         >
-          {actionLoading ? '...' : '🔴'}
+          {actionLoading ? '⏳' : '🔴 خروج'}
         </button>
       </div>
 
+      {/* Link - Compact */}
       <Link
         href="/attendance/dashboard"
         style={{
-          display: 'block',
-          marginTop: '12px',
-          padding: '8px',
-          background: '#F9FAFB',
-          borderRadius: '8px',
-          textAlign: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '4px',
+          padding: '6px',
+          background: 'white',
+          borderRadius: '6px',
           textDecoration: 'none',
           color: '#667eea',
-          fontSize: '12px',
+          fontSize: '11px',
           fontWeight: '600',
           transition: 'all 0.2s'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = '#E5E7EB';
+          e.currentTarget.style.background = '#F9FAFB';
+          e.currentTarget.style.color = '#764ba2';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = '#F9FAFB';
+          e.currentTarget.style.background = 'white';
+          e.currentTarget.style.color = '#667eea';
         }}
       >
         📊 لوحة الحضور
