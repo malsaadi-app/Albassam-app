@@ -1,50 +1,45 @@
 'use client';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   HiOutlineClock,
   HiOutlineClipboardList,
   HiOutlineUserGroup,
+  HiOutlineCheckCircle,
+  HiOutlineXCircle,
 } from 'react-icons/hi';
 
-type PendingApproval = {
+type ApprovalDetail = {
   id: string;
-  type: string;
-  title: string;
-  submittedBy: string;
-  submittedAt: string;
+  requestType: string;
+  requestId: string;
+  workflowName: string;
+  workflowModule: string;
+  stepName: string;
+  stepOrder: number;
   status: string;
-  action: string;
-  url: string;
+  level: string | null;
+  createdAt: string;
+  request: any;
+  metadata: any;
 };
 
-function ApprovalsContent() {
-  const searchParams = useSearchParams();
-  const typeParam = searchParams.get('type');
-  
-  const [approvals, setApprovals] = useState<PendingApproval[]>([]);
+export default function ApprovalsPage() {
+  const router = useRouter();
+  const [approvals, setApprovals] = useState<ApprovalDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('ALL');
+  const [selectedApproval, setSelectedApproval] = useState<ApprovalDetail | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [actionType, setActionType] = useState<'approve' | 'reject'>('approve');
+  const [comments, setComments] = useState('');
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     fetchPendingApprovals();
-    
-    // Set filter based on URL parameter
-    if (typeParam) {
-      const typeMap: Record<string, string> = {
-        'hr': 'hr_request',
-        'maintenance': 'maintenance_request',
-        'purchase': 'purchase_request',
-        'attendance': 'attendance_request'
-      };
-      const mappedType = typeMap[typeParam];
-      if (mappedType) {
-        setFilter(mappedType);
-      }
-    }
-  }, [typeParam]);
+  }, []);
 
   const fetchPendingApprovals = async () => {
     try {
@@ -60,44 +55,85 @@ function ApprovalsContent() {
     }
   };
 
+  const handleAction = async () => {
+    if (!selectedApproval) return;
+    
+    if (actionType === 'reject' && !comments.trim()) {
+      alert('يرجى إدخال سبب الرفض');
+      return;
+    }
+
+    setProcessing(true);
+
+    try {
+      const endpoint = actionType === 'approve' 
+        ? `/api/workflows/runtime/${selectedApproval.id}/approve`
+        : `/api/workflows/runtime/${selectedApproval.id}/reject`;
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comments: comments.trim() || undefined })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        alert(data.message || (actionType === 'approve' ? 'تمت الموافقة بنجاح' : 'تم الرفض بنجاح'));
+        setShowModal(false);
+        setComments('');
+        fetchPendingApprovals(); // Refresh
+      } else {
+        const error = await res.json();
+        alert(error.error || 'حدث خطأ');
+      }
+    } catch (error) {
+      console.error('Error processing approval:', error);
+      alert('حدث خطأ أثناء معالجة الطلب');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      hr_request: 'طلب موارد بشرية',
-      purchase_request: 'طلب شراء',
-      purchase_order: 'أمر شراء',
-      supplier_request: 'طلب مورد',
-      maintenance_request: 'طلب صيانة',
-      finance_request: 'طلب مالي',
-      petty_cash_settlement: 'تسوية عهدة',
-      petty_cash_topup: 'زيادة عهدة'
+      HR_REQUEST: 'طلب موارد بشرية',
+      PURCHASE_REQUEST: 'طلب شراء',
+      MAINTENANCE_REQUEST: 'طلب صيانة',
+      ATTENDANCE_CORRECTION: 'تصحيح حضور'
     };
     return labels[type] || type;
   };
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
-      hr_request: '#10B981',
-      purchase_request: '#3B82F6',
-      purchase_order: '#2563EB',
-      supplier_request: '#0EA5E9',
-      maintenance_request: '#F59E0B',
-      finance_request: '#111827',
-      petty_cash_settlement: '#7C3AED',
-      petty_cash_topup: '#DB2777'
+      HR_REQUEST: '#10B981',
+      PURCHASE_REQUEST: '#3B82F6',
+      MAINTENANCE_REQUEST: '#F59E0B',
+      ATTENDANCE_CORRECTION: '#8B5CF6'
     };
     return colors[type] || '#6B7280';
   };
 
+  const getModuleArabic = (module: string) => {
+    const modules: Record<string, string> = {
+      HR: 'الموارد البشرية',
+      PROCUREMENT: 'المشتريات',
+      MAINTENANCE: 'الصيانة',
+      ATTENDANCE: 'الحضور'
+    };
+    return modules[module] || module;
+  };
+
   const filteredApprovals = filter === 'ALL'
     ? approvals
-    : approvals.filter(a => a.type === filter);
+    : approvals.filter(a => a.requestType === filter);
 
   const stats = {
     total: approvals.length,
-    hr: approvals.filter(a => a.type === 'hr_request').length,
-    procurement: approvals.filter(a => a.type === 'purchase_request' || a.type === 'purchase_order' || a.type === 'supplier_request').length,
-    maintenance: approvals.filter(a => a.type === 'maintenance_request').length,
-    urgent: 0
+    hr: approvals.filter(a => a.requestType === 'HR_REQUEST').length,
+    procurement: approvals.filter(a => a.requestType === 'PURCHASE_REQUEST').length,
+    maintenance: approvals.filter(a => a.requestType === 'MAINTENANCE_REQUEST').length,
+    attendance: approvals.filter(a => a.requestType === 'ATTENDANCE_CORRECTION').length
   };
 
   if (loading) {
@@ -159,8 +195,12 @@ function ApprovalsContent() {
             background: 'white',
             borderRadius: '12px',
             padding: '20px',
-            border: '1px solid #E5E7EB'
-          }}>
+            border: '1px solid #E5E7EB',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            ...(filter === 'HR_REQUEST' && { borderColor: '#10B981', borderWidth: '2px' })
+          }}
+          onClick={() => setFilter(filter === 'HR_REQUEST' ? 'ALL' : 'HR_REQUEST')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
                 width: '40px',
@@ -187,8 +227,12 @@ function ApprovalsContent() {
             background: 'white',
             borderRadius: '12px',
             padding: '20px',
-            border: '1px solid #E5E7EB'
-          }}>
+            border: '1px solid #E5E7EB',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            ...(filter === 'PURCHASE_REQUEST' && { borderColor: '#3B82F6', borderWidth: '2px' })
+          }}
+          onClick={() => setFilter(filter === 'PURCHASE_REQUEST' ? 'ALL' : 'PURCHASE_REQUEST')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
                 width: '40px',
@@ -198,16 +242,15 @@ function ApprovalsContent() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'white',
-                fontSize: '20px'
+                color: 'white'
               }}>
-                🛒
+                <HiOutlineClipboardList size={20} />
               </div>
               <div>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>
                   {stats.procurement}
                 </div>
-                <div style={{ fontSize: '13px', color: '#6B7280' }}>مشتريات</div>
+                <div style={{ fontSize: '13px', color: '#6B7280' }}>المشتريات</div>
               </div>
             </div>
           </div>
@@ -216,14 +259,18 @@ function ApprovalsContent() {
             background: 'white',
             borderRadius: '12px',
             padding: '20px',
-            border: '1px solid #E5E7EB'
-          }}>
+            border: '1px solid #E5E7EB',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            ...(filter === 'MAINTENANCE_REQUEST' && { borderColor: '#F59E0B', borderWidth: '2px' })
+          }}
+          onClick={() => setFilter(filter === 'MAINTENANCE_REQUEST' ? 'ALL' : 'MAINTENANCE_REQUEST')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{
                 width: '40px',
                 height: '40px',
                 borderRadius: '10px',
-                background: '#EF4444',
+                background: '#F59E0B',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -233,214 +280,139 @@ function ApprovalsContent() {
               </div>
               <div>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>
-                  {stats.urgent}
+                  {stats.maintenance}
                 </div>
-                <div style={{ fontSize: '13px', color: '#6B7280' }}>عاجلة (+3 أيام)</div>
+                <div style={{ fontSize: '13px', color: '#6B7280' }}>الصيانة</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Filter Tabs */}
-        <div style={{
-          background: 'white',
-          borderRadius: '16px',
-          padding: '8px',
-          marginBottom: '24px',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-          display: 'flex',
-          gap: '8px',
-          flexWrap: 'wrap'
-        }}>
-          {[
-            { value: 'ALL', label: 'الكل', icon: '📊', count: stats.total },
-            { value: 'hr_request', label: 'موارد بشرية', icon: '👥', count: stats.hr },
-            { value: 'purchase_request', label: 'مشتريات', icon: '📦', count: stats.procurement },
-            { value: 'maintenance_request', label: 'صيانة', icon: '🔧', count: stats.maintenance },
-            { value: 'finance_request', label: 'مالية', icon: '💰', count: approvals.filter(a => a.type === 'finance_request').length }
-          ].map(f => (
-            <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              style={{
-                flex: '1 1 auto',
-                minWidth: '140px',
-                padding: '14px 20px',
-                background: filter === f.value ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'transparent',
-                color: filter === f.value ? 'white' : '#6B7280',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '15px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                boxShadow: filter === f.value ? '0 4px 12px rgba(102, 126, 234, 0.3)' : 'none',
-                transform: filter === f.value ? 'translateY(-2px)' : 'translateY(0)'
-              }}
-              onMouseEnter={(e) => {
-                if (filter !== f.value) {
-                  e.currentTarget.style.background = '#F3F4F6';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (filter !== f.value) {
-                  e.currentTarget.style.background = 'transparent';
-                }
-              }}
-            >
-              <span style={{ fontSize: '20px' }}>{f.icon}</span>
-              <span>{f.label}</span>
-              {f.count > 0 && (
-                <span style={{
-                  background: filter === f.value ? 'rgba(255, 255, 255, 0.3)' : '#E5E7EB',
-                  color: filter === f.value ? 'white' : '#374151',
-                  padding: '2px 8px',
-                  borderRadius: '10px',
-                  fontSize: '12px',
-                  fontWeight: '800'
-                }}>
-                  {f.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
         {/* Approvals List */}
-        <div style={{
-          background: 'white',
-          borderRadius: '12px',
-          border: '1px solid #E5E7EB',
-          overflow: 'hidden'
-        }}>
+        <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+          <div style={{ padding: '20px', borderBottom: '1px solid #E5E7EB' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+              {filter === 'ALL' ? 'جميع الطلبات' : getTypeLabel(filter)}
+              {' '}
+              ({filteredApprovals.length})
+            </h2>
+          </div>
+
           {filteredApprovals.length === 0 ? (
-            <div style={{ padding: '60px 24px', textAlign: 'center' }}>
-              <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+            <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📭</div>
+              <div style={{ fontSize: '16px', color: '#6B7280' }}>
                 لا توجد طلبات معلقة
-              </h3>
-              <p style={{ fontSize: '14px', color: '#6B7280' }}>
-                جميع الطلبات تمت معالجتها
-              </p>
+              </div>
             </div>
           ) : (
             <div>
-              {filteredApprovals.map((approval, index) => (
+              {filteredApprovals.map((approval) => (
                 <div
                   key={approval.id}
                   style={{
-                    padding: '24px',
-                    borderBottom: index < filteredApprovals.length - 1 ? '1px solid #E5E7EB' : 'none',
-                    transition: 'background 0.2s'
+                    padding: '20px',
+                    borderBottom: '1px solid #E5E7EB',
+                    transition: 'background 0.2s',
+                    cursor: 'pointer'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.background = '#F9FAFB'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                  onClick={() => {
+                    setSelectedApproval(approval);
+                    setShowModal(true);
+                    setActionType('approve');
+                    setComments('');
+                  }}
                 >
-                  <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-                    {/* Left: Info */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                        <span style={{
-                          background: getTypeColor(approval.type),
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <div style={{
+                          padding: '4px 12px',
+                          borderRadius: '6px',
+                          background: getTypeColor(approval.requestType),
                           color: 'white',
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          padding: '4px 10px',
-                          borderRadius: '12px'
-                        }}>
-                          {getTypeLabel(approval.type)}
-                        </span>
-                        {false && (
-                          <span style={{
-                            background: '#FEE2E2',
-                            color: '#DC2626',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            padding: '4px 10px',
-                            borderRadius: '12px'
-                          }}>
-                            عاجل
-                          </span>
-                        )}
-                      </div>
-
-                      <h3 style={{
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        color: '#111827',
-                        marginBottom: '8px'
-                      }}>
-                        <Link href={approval.url} style={{ color: '#111827', textDecoration: 'none' }}>
-                          {approval.title}
-                        </Link>
-                      </h3>
-
-                      <div style={{
-                        display: 'flex',
-                        gap: '16px',
-                        fontSize: '13px',
-                        color: '#6B7280',
-                        marginBottom: '12px'
-                      }}>
-                        <span>👤 {approval.submittedBy}</span>
-                        <span>•</span>
-                        <span>📋 {approval.action}</span>
-                      </div>
-
-                      {/* Progress */}
-                      <div>
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
                           fontSize: '12px',
-                          color: '#6B7280',
-                          marginBottom: '6px'
+                          fontWeight: '500'
                         }}>
-                          <span>{approval.action}</span>
-                          <span>{new Date(approval.submittedAt).toLocaleDateString('ar-SA')}</span>
+                          {getTypeLabel(approval.requestType)}
                         </div>
                         <div style={{
-                          width: '100%',
-                          height: '6px',
-                          background: '#E5E7EB',
-                          borderRadius: '3px',
-                          overflow: 'hidden'
+                          padding: '4px 12px',
+                          borderRadius: '6px',
+                          background: '#F3F4F6',
+                          color: '#374151',
+                          fontSize: '12px'
                         }}>
-                          <div style={{
-                            width: `70%`,
-                            height: '100%',
-                            background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-                            transition: 'width 0.3s'
-                          }} />
+                          {getModuleArabic(approval.workflowModule)}
                         </div>
+                      </div>
+
+                      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
+                        {approval.workflowName}
+                      </div>
+
+                      <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '8px' }}>
+                        المرحلة: {approval.stepName} ({approval.stepOrder}/{approval.metadata?.totalSteps || '?'})
+                      </div>
+
+                      <div style={{ fontSize: '13px', color: '#9CA3AF' }}>
+                        <HiOutlineClock style={{ display: 'inline', marginLeft: '4px' }} />
+                        {new Date(approval.createdAt).toLocaleString('ar-SA')}
                       </div>
                     </div>
 
-                    {/* Right: Open */}
-                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                      <Link
-                        href={approval.url}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
                         style={{
+                          padding: '8px 16px',
+                          background: '#10B981',
+                          color: 'white',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '8px',
-                          padding: '10px 16px',
-                          background: '#111827',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          textDecoration: 'none'
+                          gap: '6px'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedApproval(approval);
+                          setActionType('approve');
+                          setShowModal(true);
                         }}
                       >
-                        فتح
-                      </Link>
+                        <HiOutlineCheckCircle size={18} />
+                        موافقة
+                      </button>
+
+                      <button
+                        style={{
+                          padding: '8px 16px',
+                          background: '#EF4444',
+                          color: 'white',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedApproval(approval);
+                          setActionType('reject');
+                          setShowModal(true);
+                        }}
+                      >
+                        <HiOutlineXCircle size={18} />
+                        رفض
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -448,43 +420,120 @@ function ApprovalsContent() {
             </div>
           )}
         </div>
+      </div>
 
-        {/* Note */}
+      {/* Modal */}
+      {showModal && selectedApproval && (
         <div style={{
-          background: '#DBEAFE',
-          borderRadius: '12px',
-          padding: '16px 20px',
-          marginTop: '24px',
-          fontSize: '13px',
-          color: '#1E40AF'
-        }}>
-          💡 <strong>ملاحظة:</strong> هذه الصفحة تعرض الطلبات التي تحتاج موافقتك فقط. يمكنك الموافقة أو الرفض مباشرة من هنا.
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function WorkflowApprovalsPage() {
-  return (
-    <Suspense fallback={
-      <div style={{ minHeight: '100vh', background: '#F9FAFB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}
+        onClick={() => !processing && setShowModal(false)}>
           <div style={{
-            width: '48px',
-            height: '48px',
-            border: '4px solid #E5E7EB',
-            borderTop: '4px solid #667eea',
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite',
-            margin: '0 auto 16px'
-          }}></div>
-          <div style={{ fontSize: '14px', color: '#6B7280' }}>جاري التحميل...</div>
+            background: 'white',
+            borderRadius: '12px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}
+          onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: '24px', borderBottom: '1px solid #E5E7EB' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+                {actionType === 'approve' ? 'تأكيد الموافقة' : 'تأكيد الرفض'}
+              </h3>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '4px' }}>
+                  سير العمل
+                </div>
+                <div style={{ fontSize: '16px', fontWeight: '500', color: '#111827' }}>
+                  {selectedApproval.workflowName}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '14px', color: '#6B7280', marginBottom: '4px' }}>
+                  المرحلة الحالية
+                </div>
+                <div style={{ fontSize: '16px', fontWeight: '500', color: '#111827' }}>
+                  {selectedApproval.stepName} ({selectedApproval.stepOrder}/{selectedApproval.metadata?.totalSteps || '?'})
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+                  {actionType === 'approve' ? 'ملاحظات (اختياري)' : 'سبب الرفض (مطلوب)'}
+                  {actionType === 'reject' && <span style={{ color: '#EF4444' }}> *</span>}
+                </label>
+                <textarea
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  placeholder={actionType === 'approve' ? 'أضف ملاحظات إن وجدت...' : 'أدخل سبب الرفض...'}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    resize: 'vertical',
+                    minHeight: '100px',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #E5E7EB', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => !processing && setShowModal(false)}
+                disabled={processing}
+                style={{
+                  padding: '10px 20px',
+                  background: '#F3F4F6',
+                  color: '#374151',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: processing ? 'not-allowed' : 'pointer',
+                  opacity: processing ? 0.5 : 1
+                }}
+              >
+                إلغاء
+              </button>
+
+              <button
+                onClick={handleAction}
+                disabled={processing || (actionType === 'reject' && !comments.trim())}
+                style={{
+                  padding: '10px 20px',
+                  background: actionType === 'approve' ? '#10B981' : '#EF4444',
+                  color: 'white',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: (processing || (actionType === 'reject' && !comments.trim())) ? 'not-allowed' : 'pointer',
+                  opacity: (processing || (actionType === 'reject' && !comments.trim())) ? 0.5 : 1
+                }}
+              >
+                {processing ? 'جاري المعالجة...' : (actionType === 'approve' ? 'تأكيد الموافقة' : 'تأكيد الرفض')}
+              </button>
+            </div>
+          </div>
         </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    }>
-      <ApprovalsContent />
-    </Suspense>
+      )}
+    </div>
   );
 }
