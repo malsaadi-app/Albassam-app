@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/db';
 
-// GET /api/requests/pending-count - Get count of pending requests awaiting user action
+// GET /api/requests/pending-count - Get count of pending requests awaiting CURRENT USER action
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -15,50 +15,53 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    // Count HR Requests awaiting review or approval
-    // (Those in pending status that may need action from this user)
-    const hrRequests = await prisma.hRRequest.count({
+    // Count workflow approval logs that are:
+    // 1. Status = PENDING
+    // 2. Assigned to current user (approverId)
+    
+    const pendingApprovals = await prisma.workflowApprovalLog.findMany({
       where: {
-        status: {
-          in: ['PENDING_REVIEW', 'PENDING_APPROVAL']
-        }
-      }
-    });
-
-    // Count Maintenance Requests awaiting action
-    const maintenanceRequests = await prisma.maintenanceRequest.count({
-      where: {
-        status: {
-          in: ['SUBMITTED', 'UNDER_REVIEW', 'ASSIGNED']
-        }
-      }
-    });
-
-    // Count Purchase Requests awaiting review or approval
-    const purchaseRequests = await prisma.purchaseRequest.count({
-      where: {
-        status: {
-          in: ['PENDING_REVIEW', 'REVIEWED']
-        }
-      }
-    });
-
-    // Count Attendance Requests pending review
-    const attendanceRequests = await prisma.attendanceRequest.count({
-      where: {
+        approverId: userId,
         status: 'PENDING'
+      },
+      select: {
+        requestType: true
       }
     });
 
-    const total = hrRequests + maintenanceRequests + purchaseRequests + attendanceRequests;
+    // Count by type
+    let hrCount = 0;
+    let maintenanceCount = 0;
+    let purchaseCount = 0;
+    let attendanceCount = 0;
+
+    for (const approval of pendingApprovals) {
+      const type = approval.requestType;
+      
+      // Map request types to categories
+      if (type === 'HR_REQUEST' || type.startsWith('LEAVE') || type.startsWith('HR_')) {
+        hrCount++;
+      } else if (type === 'MAINTENANCE_REQUEST' || type.startsWith('MAINTENANCE')) {
+        maintenanceCount++;
+      } else if (type === 'PURCHASE_REQUEST' || type.startsWith('PURCHASE') || type.startsWith('PROCUREMENT')) {
+        purchaseCount++;
+      } else if (type.includes('ATTENDANCE') || type === 'ATTENDANCE_CORRECTION') {
+        attendanceCount++;
+      } else {
+        // Unknown type - add to HR by default
+        hrCount++;
+      }
+    }
+
+    const total = hrCount + maintenanceCount + purchaseCount + attendanceCount;
 
     return NextResponse.json({
       total,
       breakdown: {
-        hr: hrRequests,
-        maintenance: maintenanceRequests,
-        purchase: purchaseRequests,
-        attendance: attendanceRequests
+        hr: hrCount,
+        maintenance: maintenanceCount,
+        purchase: purchaseCount,
+        attendance: attendanceCount
       }
     });
   } catch (error) {
