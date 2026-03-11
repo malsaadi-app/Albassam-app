@@ -16,10 +16,24 @@ interface ProblematicDay {
   checkIn: string;
   checkOut: string | null;
   workHours: number | null;
+  requiredHours: number;
+  missingHours: number;
   status: string;
+  problemReason: string;
+  expectedDeduction: number;
   hasExcuseRequest: boolean;
   excuseRequestStatus: string | null;
-  problemReason?: string; // سبب المشكلة
+}
+
+interface ApiResponse {
+  records: ProblematicDay[];
+  summary: {
+    totalDays: number;
+    totalDeductions: number;
+    pendingRequests: number;
+    approvedRequests: number;
+    rejectedRequests: number;
+  };
 }
 
 export default function NewAttendanceRequestPageEnhanced() {
@@ -27,6 +41,7 @@ export default function NewAttendanceRequestPageEnhanced() {
   const [loading, setLoading] = useState(false);
   const [loadingDays, setLoadingDays] = useState(true);
   const [problematicDays, setProblematicDays] = useState<ProblematicDay[]>([]);
+  const [summary, setSummary] = useState<ApiResponse['summary'] | null>(null);
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     type: 'EXCUSE',
@@ -46,33 +61,15 @@ export default function NewAttendanceRequestPageEnhanced() {
       setLoadingDays(true);
       const res = await fetch('/api/hr/attendance/problematic-days');
       if (res.ok) {
-        const data = await res.json();
-        
-        // Add problem reason for each day
-        const enhancedData = data.map((day: ProblematicDay) => ({
-          ...day,
-          problemReason: getProblemReason(day)
-        }));
-        
-        setProblematicDays(enhancedData);
+        const data: ApiResponse = await res.json();
+        setProblematicDays(data.records);
+        setSummary(data.summary);
       }
     } catch (error) {
       console.error('Error fetching problematic days:', error);
     } finally {
       setLoadingDays(false);
     }
-  };
-
-  const getProblemReason = (day: ProblematicDay): string => {
-    if (day.status === 'ABSENT') return 'غياب كامل';
-    if (day.status === 'LATE') {
-      if (!day.checkIn) return 'لم يتم تسجيل الحضور';
-      if (!day.checkOut) return 'لم يتم تسجيل الانصراف';
-      return 'تأخر عن موعد الحضور';
-    }
-    if (!day.checkOut) return 'لم يتم تسجيل الانصراف';
-    if (!day.checkIn) return 'لم يتم تسجيل الحضور';
-    return 'مشكلة في الحضور';
   };
 
   const toggleDate = (dateStr: string) => {
@@ -324,6 +321,59 @@ export default function NewAttendanceRequestPageEnhanced() {
               </CardBody>
             </CardEnhanced>
 
+            {/* Summary Statistics */}
+            {formData.type === 'EXCUSE' && summary && !loadingDays && (
+              <ResponsiveGrid columns={{ mobile: 2, tablet: 4, desktop: 4 }} gap="md" style={{ marginBottom: '24px' }}>
+                <CardEnhanced variant="elevated">
+                  <CardBody compact>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>📋</div>
+                      <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '6px' }}>إجمالي الأيام</div>
+                      <div style={{ fontSize: '28px', fontWeight: '800', color: '#EF4444' }}>
+                        {summary.totalDays}
+                      </div>
+                    </div>
+                  </CardBody>
+                </CardEnhanced>
+
+                <CardEnhanced variant="warning">
+                  <CardBody compact>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>💰</div>
+                      <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '6px' }}>الخصومات المتوقعة</div>
+                      <div style={{ fontSize: '20px', fontWeight: '800', color: '#F59E0B' }}>
+                        {summary.totalDeductions.toFixed(2)} ر.س
+                      </div>
+                    </div>
+                  </CardBody>
+                </CardEnhanced>
+
+                <CardEnhanced variant="gradient">
+                  <CardBody compact>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>⏳</div>
+                      <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '6px' }}>قيد المراجعة</div>
+                      <div style={{ fontSize: '28px', fontWeight: '800', color: '#667eea' }}>
+                        {summary.pendingRequests}
+                      </div>
+                    </div>
+                  </CardBody>
+                </CardEnhanced>
+
+                <CardEnhanced variant="success">
+                  <CardBody compact>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
+                      <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '6px' }}>تمت الموافقة</div>
+                      <div style={{ fontSize: '28px', fontWeight: '800', color: '#10B981' }}>
+                        {summary.approvedRequests}
+                      </div>
+                    </div>
+                  </CardBody>
+                </CardEnhanced>
+              </ResponsiveGrid>
+            )}
+
             {/* Date Selection */}
             {formData.type === 'EXCUSE' && (
               <CardEnhanced variant="elevated">
@@ -404,11 +454,33 @@ export default function NewAttendanceRequestPageEnhanced() {
                               <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: '600', marginBottom: '6px' }}>
                                 {day.problemReason}
                               </div>
-                              <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                                <span>🕐 دخول: {formatTime(day.checkIn)}</span>
-                                <span>🕐 خروج: {formatTime(day.checkOut)}</span>
-                                {day.workHours !== null && <span>⏱️ ساعات: {day.workHours.toFixed(1)}</span>}
+                              <div style={{ fontSize: '12px', color: '#6B7280', display: 'grid', gap: '6px', marginBottom: '8px' }}>
+                                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                                  <span>🕐 دخول: {formatTime(day.checkIn)}</span>
+                                  <span>🕐 خروج: {formatTime(day.checkOut)}</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                                  {day.workHours !== null && <span>⏱️ ساعات عمل: {day.workHours.toFixed(1)} / {day.requiredHours}</span>}
+                                  {day.missingHours > 0 && (
+                                    <span style={{ color: '#F59E0B', fontWeight: '600' }}>
+                                      ⚠️ ناقص: {day.missingHours.toFixed(1)} ساعة
+                                    </span>
+                                  )}
+                                </div>
                               </div>
+                              {day.expectedDeduction > 0 && (
+                                <div style={{
+                                  fontSize: '13px',
+                                  fontWeight: '700',
+                                  color: '#EF4444',
+                                  background: '#FEE2E2',
+                                  padding: '6px 12px',
+                                  borderRadius: '8px',
+                                  display: 'inline-block'
+                                }}>
+                                  💰 خصم متوقع: {day.expectedDeduction.toFixed(2)} ر.س
+                                </div>
+                              )}
                             </div>
 
                             {/* Status Badge */}

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { getSession } from '@/lib/session';
 import { rejectStep } from '@/lib/workflow-runtime';
 import { prisma } from '@/lib/db';
+import { processExcuseStatusChange } from '@/lib/attendance-deductions';
 
 /**
  * POST /api/workflows/runtime/[id]/reject
@@ -107,10 +108,24 @@ export async function POST(
         data: { status: 'REJECTED' }
       });
     } else if (approval.requestType === 'ATTENDANCE_CORRECTION') {
-      await prisma.attendanceRequest.update({
+      const attendanceReq = await prisma.attendanceRequest.update({
         where: { id: approval.requestId },
         data: { status: 'REJECTED' }
       });
+      
+      // Create attendance deduction if excuse is rejected
+      if (attendanceReq.userId) {
+        try {
+          await processExcuseStatusChange(
+            attendanceReq.id,
+            'REJECTED',
+            attendanceReq.userId
+          );
+        } catch (error) {
+          console.error('Failed to process attendance deduction:', error);
+          // Don't block the rejection - just log the error
+        }
+      }
     }
 
     // Send notification to requester
