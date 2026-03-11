@@ -11,8 +11,8 @@ interface AttendanceRecord {
   date: Date;
   status: string;
   workHours: number | null;
-  checkIn: string | null;
-  checkOut: string | null;
+  checkIn: Date | null;
+  checkOut: Date | null;
 }
 
 /**
@@ -182,14 +182,28 @@ export async function processExcuseStatusChange(
   try {
     // Get the attendance request
     const request = await prisma.attendanceRequest.findUnique({
-      where: { id: requestId },
-      include: {
-        attendanceRecord: true
+      where: { id: requestId }
+    });
+    
+    if (!request || !request.attendanceRecordId) {
+      throw new Error('Attendance request not found or no attendance record linked');
+    }
+    
+    // Get the attendance record
+    const attendanceRecord = await prisma.attendanceRecord.findUnique({
+      where: { id: request.attendanceRecordId },
+      select: { 
+        id: true,
+        date: true, 
+        status: true, 
+        workHours: true,
+        checkIn: true,
+        checkOut: true
       }
     });
     
-    if (!request || !request.attendanceRecord) {
-      throw new Error('Attendance request or record not found');
+    if (!attendanceRecord) {
+      throw new Error('Attendance record not found');
     }
     
     // Get employee ID from user ID
@@ -210,14 +224,21 @@ export async function processExcuseStatusChange(
       await removeAttendanceDeduction(employeeId, request.requestDate);
     } else if (newStatus === 'REJECTED') {
       // Create deduction if excuse is rejected
-      const deductionAmount = calculateAttendanceDeduction(request.attendanceRecord);
+      const dailySalary = 300; // TODO: Get from employee.basicSalary
+      const requiredHours = 8;
+      
+      const deductionAmount = calculateAttendanceDeduction(
+        attendanceRecord,
+        dailySalary,
+        requiredHours
+      );
       
       if (deductionAmount > 0) {
         await createAttendanceDeduction(
           employeeId,
-          request.attendanceRecord.id,
+          request.attendanceRecordId!,
           deductionAmount,
-          request.attendanceRecord
+          attendanceRecord
         );
       }
     }

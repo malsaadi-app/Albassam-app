@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import * as path from 'path'
 
 // Bundle analyzer (enable with ANALYZE=true npm run build)
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -9,6 +10,10 @@ const nextConfig: NextConfig = {
   // Build output directory (standard .next)
   reactStrictMode: true,
   poweredByHeader: false,
+  output: 'standalone',
+  
+  // Fix: Tell Next.js the correct project root (fixes multiple package-lock.json issue)
+  outputFileTracingRoot: path.join(__dirname),
   
   // Prisma: disable webpack cache for Prisma Client
   webpack: (config, { isServer }) => {

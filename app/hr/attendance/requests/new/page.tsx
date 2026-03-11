@@ -681,7 +681,7 @@ export default function NewAttendanceRequestPageEnhanced() {
               <CardEnhanced variant="elevated">
                 <CardHeader 
                   title="📊 إحصائيات التصحيحات" 
-                  action={
+                  actions={
                     <button
                       onClick={() => setShowHistory(!showHistory)}
                       style={{
