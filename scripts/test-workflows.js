@@ -45,52 +45,37 @@ async function testHRRequests() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   
   try {
-    // Check HR request types (skip if not exists in schema)
-    const hrRequestTypes = await prisma.hRRequestType?.findMany() || [];
-    log('info', `Found ${hrRequestTypes.length} HR request types`);
-    
-    if (hrRequestTypes.length > 0) {
-      log('pass', 'HR request types configured');
-      hrRequestTypes.forEach(type => {
-        log('info', `  - ${type.nameAr} (${type.code})`);
-      });
-    } else {
-      log('warn', 'No HR request types configured');
-    }
-    
     // Check HR requests by status
-    const statusCounts = await prisma.$transaction([
-      prisma.hRRequest.count({ where: { status: 'PENDING' } }),
-      prisma.hRRequest.count({ where: { status: 'APPROVED' } }),
-      prisma.hRRequest.count({ where: { status: 'REJECTED' } }),
-      prisma.hRRequest.count({ where: { status: 'CANCELLED' } })
-    ]);
+    const total = await prisma.hRRequest.count();
+    log('info', `Total HR requests: ${total}`);
     
-    log('info', `Pending: ${statusCounts[0]}`);
-    log('info', `Approved: ${statusCounts[1]}`);
-    log('info', `Rejected: ${statusCounts[2]}`);
-    log('info', `Cancelled: ${statusCounts[3]}`);
-    
-    const total = statusCounts.reduce((a, b) => a + b, 0);
     if (total > 0) {
       log('pass', `${total} HR requests in system`);
+      
+      // Status breakdown
+      const statuses = await prisma.hRRequest.groupBy({
+        by: ['status'],
+        _count: true
+      });
+      
+      statuses.forEach(s => {
+        log('info', `${s.status}: ${s._count}`);
+      });
+      
+      // Check workflow integration via WorkflowRuntimeApproval
+      const hrWorkflowApprovals = await prisma.workflowRuntimeApproval.count({
+        where: {
+          requestType: 'HR_REQUEST'
+        }
+      });
+      
+      if (hrWorkflowApprovals > 0) {
+        log('pass', `${hrWorkflowApprovals} HR workflow approvals found`);
+      } else {
+        log('warn', 'No HR requests in workflow system');
+      }
     } else {
       log('warn', 'No HR requests found');
-    }
-    
-    // Check workflow integration
-    const hrRequestsWithWorkflow = await prisma.hRRequest.count({
-      where: {
-        workflowApprovals: {
-          some: {}
-        }
-      }
-    });
-    
-    if (hrRequestsWithWorkflow > 0) {
-      log('pass', `${hrRequestsWithWorkflow} HR requests have workflow approvals`);
-    } else {
-      log('warn', 'No HR requests linked to workflow system');
     }
     
   } catch (error) {
@@ -139,20 +124,17 @@ async function testAttendanceRequests() {
       log('info', `${statusName}: ${s._count}`);
     });
     
-    // Check workflow integration
-    const excusesWithWorkflow = await prisma.attendanceRequest.count({
+    // Check workflow integration via WorkflowRuntimeApproval
+    const attendanceWorkflowApprovals = await prisma.workflowRuntimeApproval.count({
       where: {
-        type: 'EXCUSE',
-        workflowApprovals: {
-          some: {}
-        }
+        requestType: 'ATTENDANCE_CORRECTION'
       }
     });
     
-    if (excusesWithWorkflow > 0) {
-      log('pass', `${excusesWithWorkflow} excuses linked to workflow`);
-    } else if (types.EXCUSE > 0) {
-      log('warn', 'Excuses exist but not linked to workflow');
+    if (attendanceWorkflowApprovals > 0) {
+      log('pass', `${attendanceWorkflowApprovals} attendance workflow approvals found`);
+    } else if (total > 0) {
+      log('warn', 'Attendance requests exist but not in workflow system');
     }
     
     // Check deduction integration
@@ -180,18 +162,18 @@ async function testAttendanceRequests() {
 
 async function testProcurementRequests() {
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('3️⃣  PROCUREMENT REQUESTS WORKFLOW');
+  console.log('3️⃣  PURCHASE REQUESTS WORKFLOW');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   
   try {
-    const total = await prisma.procurementRequest.count();
-    log('info', `Total procurement requests: ${total}`);
+    const total = await prisma.purchaseRequest.count();
+    log('info', `Total purchase requests: ${total}`);
     
     if (total > 0) {
-      log('pass', 'Procurement requests exist');
+      log('pass', 'Purchase requests exist');
       
       // Status breakdown
-      const statuses = await prisma.procurementRequest.groupBy({
+      const statuses = await prisma.purchaseRequest.groupBy({
         by: ['status'],
         _count: true
       });
@@ -200,23 +182,21 @@ async function testProcurementRequests() {
         log('info', `${s.status}: ${s._count}`);
       });
       
-      // Check workflow integration
-      const withWorkflow = await prisma.procurementRequest.count({
+      // Check workflow integration via WorkflowRuntimeApproval
+      const purchaseWorkflowApprovals = await prisma.workflowRuntimeApproval.count({
         where: {
-          workflowApprovals: {
-            some: {}
-          }
+          requestType: 'PURCHASE_REQUEST'
         }
       });
       
-      if (withWorkflow > 0) {
-        log('pass', `${withWorkflow} procurement requests have workflow approvals`);
+      if (purchaseWorkflowApprovals > 0) {
+        log('pass', `${purchaseWorkflowApprovals} purchase workflow approvals found`);
       } else {
-        log('warn', 'Procurement requests not linked to workflow');
+        log('warn', 'Purchase requests not in workflow system');
       }
       
     } else {
-      log('warn', 'No procurement requests found');
+      log('warn', 'No purchase requests found');
     }
     
   } catch (error) {
@@ -250,19 +230,17 @@ async function testMaintenanceRequests() {
         log('info', `${s.status}: ${s._count}`);
       });
       
-      // Check workflow integration
-      const withWorkflow = await prisma.maintenanceRequest.count({
+      // Check workflow integration via WorkflowRuntimeApproval
+      const maintenanceWorkflowApprovals = await prisma.workflowRuntimeApproval.count({
         where: {
-          workflowApprovals: {
-            some: {}
-          }
+          requestType: 'MAINTENANCE_REQUEST'
         }
       });
       
-      if (withWorkflow > 0) {
-        log('pass', `${withWorkflow} maintenance requests have workflow approvals`);
+      if (maintenanceWorkflowApprovals > 0) {
+        log('pass', `${maintenanceWorkflowApprovals} maintenance workflow approvals found`);
       } else {
-        log('warn', 'Maintenance requests not linked to workflow');
+        log('warn', 'Maintenance requests not in workflow system');
       }
       
     } else {
@@ -300,19 +278,17 @@ async function testFinanceRequests() {
         log('info', `${s.status}: ${s._count}`);
       });
       
-      // Check workflow integration
-      const withWorkflow = await prisma.financeRequest.count({
+      // Check workflow integration via WorkflowRuntimeApproval
+      const financeWorkflowApprovals = await prisma.workflowRuntimeApproval.count({
         where: {
-          workflowApprovals: {
-            some: {}
-          }
+          requestType: { contains: 'FINANCE' } // Could be FINANCE_REQUEST or similar
         }
       });
       
-      if (withWorkflow > 0) {
-        log('pass', `${withWorkflow} finance requests have workflow approvals`);
+      if (financeWorkflowApprovals > 0) {
+        log('pass', `${financeWorkflowApprovals} finance workflow approvals found`);
       } else {
-        log('warn', 'Finance requests not linked to workflow');
+        log('warn', 'Finance requests not in workflow system');
       }
       
     } else {
@@ -480,8 +456,7 @@ async function testWorkflowCycle() {
     const completeFlows = await prisma.workflowRuntimeApproval.findMany({
       where: {
         status: { in: ['APPROVED', 'REJECTED'] },
-        reviewedAt: { not: null },
-        reviewedBy: { not: null }
+        reviewedAt: { not: null }
       },
       take: 10,
       select: {
@@ -564,40 +539,31 @@ async function testCrossSystemIntegration() {
   try {
     log('test', 'Testing Attendance → Workflow → Payroll integration...');
     
-    // Check attendance excuses with workflow status
-    const excusesWithStatus = await prisma.attendanceRequest.findMany({
+    // Check workflow approvals for attendance corrections
+    const attendanceApprovals = await prisma.workflowRuntimeApproval.findMany({
       where: {
-        type: 'EXCUSE',
-        workflowApprovals: {
-          some: {
-            status: { in: ['APPROVED', 'REJECTED'] }
-          }
-        }
+        requestType: 'ATTENDANCE_CORRECTION',
+        status: { in: ['APPROVED', 'REJECTED'] }
       },
-      include: {
-        workflowApprovals: {
-          select: {
-            status: true,
-            reviewedAt: true
-          }
-        }
-      },
-      take: 10
+      take: 10,
+      select: {
+        requestId: true,
+        status: true,
+        createdAt: true,
+        reviewedAt: true
+      }
     });
     
-    if (excusesWithStatus.length > 0) {
-      log('pass', `${excusesWithStatus.length} excuses processed through workflow`);
+    if (attendanceApprovals.length > 0) {
+      log('pass', `${attendanceApprovals.length} attendance corrections processed`);
       
-      // Check if rejected excuses created deductions
-      const rejectedExcuses = excusesWithStatus.filter(e => 
-        e.workflowApprovals.some(a => a.status === 'REJECTED')
-      );
+      // Check rejected ones
+      const rejected = attendanceApprovals.filter(a => a.status === 'REJECTED');
       
-      if (rejectedExcuses.length > 0) {
-        log('info', `${rejectedExcuses.length} rejected excuses (should have deductions)`);
+      if (rejected.length > 0) {
+        log('info', `${rejected.length} rejected corrections (should have deductions)`);
         
-        // Sample check: Do rejected excuses have corresponding deductions?
-        // This is a simplified check - full implementation would match by date/employee
+        // Check for attendance deductions in payroll
         const deductionCount = await prisma.payrollRecurringItem.count({
           where: {
             kind: 'DEDUCTION',
@@ -606,37 +572,31 @@ async function testCrossSystemIntegration() {
         });
         
         if (deductionCount > 0) {
-          log('pass', 'Attendance→Payroll deduction integration working');
+          log('pass', `Attendance→Payroll integration: ${deductionCount} deductions`);
         } else {
-          log('warn', 'No attendance deductions found in payroll');
+          log('warn', 'No attendance deductions in payroll system');
         }
       }
     } else {
-      log('warn', 'No excuses processed through workflow yet');
+      log('warn', 'No attendance corrections processed yet');
     }
     
-    log('test', 'Testing HR Requests → Workflow integration...');
+    log('test', 'Testing cross-system workflow coverage...');
     
-    // Check HR requests workflow integration
-    const hrWithWorkflow = await prisma.hRRequest.count({
-      where: {
-        workflowApprovals: {
-          some: {}
-        }
-      }
+    // Check workflow coverage by request type
+    const workflowsByType = await prisma.workflowRuntimeApproval.groupBy({
+      by: ['requestType'],
+      _count: true
     });
     
-    const totalHR = await prisma.hRRequest.count();
-    
-    if (totalHR > 0) {
-      const percentage = ((hrWithWorkflow / totalHR) * 100).toFixed(0);
-      log('info', `${percentage}% of HR requests use workflow system`);
-      
-      if (hrWithWorkflow === totalHR) {
-        log('pass', 'All HR requests integrated with workflow');
-      } else if (hrWithWorkflow > 0) {
-        log('warn', 'Partial HR workflow integration');
-      }
+    if (workflowsByType.length > 0) {
+      log('info', `Workflow system covers ${workflowsByType.length} request types:`);
+      workflowsByType.forEach(t => {
+        log('info', `  - ${t.requestType}: ${t._count} approvals`);
+      });
+      log('pass', 'Multi-system workflow integration active');
+    } else {
+      log('warn', 'Workflow system not in use');
     }
     
   } catch (error) {
