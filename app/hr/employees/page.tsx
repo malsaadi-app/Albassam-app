@@ -30,8 +30,8 @@ export default function EmployeesPage() {
   const router = useRouter();
   const toast = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [department, setDepartment] = useState('');
   const [status, setStatus] = useState('');
   const [branchId, setBranchId] = useState('');
@@ -42,9 +42,17 @@ export default function EmployeesPage() {
   const [currentUserRole, setCurrentUserRole] = useState<string>('');
 
   useEffect(() => {
-    fetchEmployees();
     fetchCurrentUser();
   }, []);
+
+  // Debounced search - wait 500ms after user stops typing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchEmployees();
+    }, searchQuery ? 500 : 0); // Debounce only for search, instant for filters
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, department, status, branchId, stageId]);
 
   useEffect(() => {
     fetch('/api/branches')
@@ -72,23 +80,7 @@ export default function EmployeesPage() {
       .catch(() => setStages([]));
   }, [branchId]);
 
-  // Apply filters
-  useEffect(() => {
-    let filtered = [...employees];
-
-    if (department) {
-      filtered = filtered.filter(e => e.department === department);
-    }
-
-    if (status) {
-      filtered = filtered.filter(e => e.status === status);
-    }
-
-    // Note: branchId and stageId filtering would require backend support
-    // For now, keeping them as UI elements
-
-    setFilteredEmployees(filtered);
-  }, [employees, department, status, branchId, stageId]);
+  // Note: Filters are now applied server-side in fetchEmployees()
 
   const fetchCurrentUser = async () => {
     try {
@@ -104,12 +96,25 @@ export default function EmployeesPage() {
 
   const fetchEmployees = async () => {
     try {
-      const res = await fetch(`/api/hr/employees`);
+      setLoading(true);
+
+      // Build query string with all filters
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('search', searchQuery);
+      if (department) params.append('department', department);
+      if (status) params.append('status', status);
+      if (branchId) params.append('branchId', branchId);
+      if (stageId) params.append('stageId', stageId);
+
+      const queryString = params.toString();
+      const url = `/api/hr/employees${queryString ? `?${queryString}` : ''}`;
+
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setEmployees(data.employees);
-        setFilteredEmployees(data.employees);
 
+        // Get unique departments for filter dropdown
         const uniqueDepts = [...new Set(data.employees.map((e: Employee) => e.department))].filter(Boolean);
         setDepartments(uniqueDepts as string[]);
       }
@@ -267,13 +272,14 @@ export default function EmployeesPage() {
   ];
 
   const handleClearFilters = () => {
+    setSearchQuery('');
     setDepartment('');
     setStatus('');
     setBranchId('');
     setStageId('');
   };
 
-  const hasActiveFilters = department || status || branchId || stageId;
+  const hasActiveFilters = searchQuery || department || status || branchId || stageId;
 
   return (
     <div dir="rtl" style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
@@ -296,9 +302,32 @@ export default function EmployeesPage() {
           }
         />
 
-        {/* Filters */}
+        {/* Search & Filters */}
         <CardEnhanced variant="default" style={{ marginBottom: '20px' }}>
           <CardBody compact>
+            {/* Search Box */}
+            <div style={{ marginBottom: '16px' }}>
+              <input
+                type="text"
+                placeholder="🔍 ابحث بالاسم، رقم الموظف، رقم الهوية، الجوال..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  fontSize: '15px',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '8px',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+                onFocus={(e) => e.target.style.borderColor = COLORS.primary}
+                onBlur={(e) => e.target.style.borderColor = '#D1D5DB'}
+              />
+            </div>
+
+            {/* Filters Grid */}
             <ResponsiveGrid columns={{ mobile: 1, tablet: 2, desktop: 5 }} gap="md">
               <FloatingSelect
                 label="الفرع"
@@ -361,10 +390,10 @@ export default function EmployeesPage() {
 
         {/* Table */}
         <TableEnhanced
-          data={filteredEmployees}
+          data={employees}
           columns={columns}
           loading={loading}
-          searchable={true}
+          searchable={false}
           exportable={true}
           pageSize={25}
           emptyMessage="لا يوجد موظفين"
