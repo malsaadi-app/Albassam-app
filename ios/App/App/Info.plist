@@ -47,5 +47,36 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	
+	<!-- Biometric Authentication (Face ID) -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>نحتاج للتحقق من هويتك باستخدام Face ID لتسجيل الدخول الآمن إلى نظام البسام</string>
+	
+	<!-- Camera (if needed in future) -->
+	<!-- <key>NSCameraUsageDescription</key>
+	<string>نحتاج الكاميرا لتحميل الصور والمستندات</string> -->
+	
+	<!-- Photo Library (if needed) -->
+	<!-- <key>NSPhotoLibraryUsageDescription</key>
+	<string>نحتاج الوصول للمعرض لاختيار الصور</string> -->
+	
+	<!-- Location (if needed for attendance) -->
+	<!-- <key>NSLocationWhenInUseUsageDescription</key>
+	<string>نحتاج موقعك لتسجيل الحضور والتحقق من موقع العمل</string> -->
+	
+	<!-- App Transport Security -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+	</dict>
+	
+	<!-- Disable landscape on iPhone (portrait only) -->
+	<key>UIRequiresFullScreen</key>
+	<false/>
+	
+	<!-- RTL Support -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>ar</string>
 </dict>
 </plist>
