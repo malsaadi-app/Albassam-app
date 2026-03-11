@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 App Icons Preview - نظام البسام</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+        
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.3em;
+            opacity: 0.9;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        
+        .icon-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .icon-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+        }
+        
+        .icon-preview {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            display: block;
+        }
+        
+        .icon-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .icon-description {
+            color: #666;
+            font-size: 0.95em;
+            text-align: center;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .download-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            border-radius: 10px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        .download-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .info-box {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        
+        .info-box h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .info-box li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .info-box li:last-child {
+            border-bottom: none;
+        }
+        
+        .recommendation {
+            background: #fff3cd;
+            border-right: 5px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .recommendation strong {
+            color: #856404;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 معاينة الأيقونات</h1>
+            <p class="subtitle">تم توليد 4 تصاميم احترافية - اختر الأفضل!</p>
+        </header>
+
+        <div class="info-box">
+            <h2>📊 ملخص التوليد</h2>
+            <ul>
+                <li>✅ <strong>عدد الأيقونات:</strong> 4 تصاميم</li>
+                <li>✅ <strong>الدقة:</strong> 1024x1024 pixels (App Store ready)</li>
+                <li>✅ <strong>الجودة:</strong> Professional grade (DALL-E 3)</li>
+                <li>💰 <strong>التكلفة:</strong> $0.16 (4 صور × $0.04)</li>
+                <li>⏱️ <strong>وقت التوليد:</strong> ~2 دقيقة</li>
+            </ul>
+        </div>
+
+        <div class="recommendation">
+            <strong>⭐ التوصية:</strong> التصميم رقم 2 (حرف "ب" ذهبي) أو رقم 4 (بنفسجي داكن + ذهبي) - الأكثر وضوحاً و احترافية!
+        </div>
+
+        <div class="grid">
+            <div class="icon-card">
+                <img src="icon-purple-white-ba.png" alt="Icon 1" class="icon-preview">
+                <div class="icon-name">1️⃣ حرف "ب" أبيض</div>
+                <div class="icon-description">
+                    خلفية بنفسجية متدرجة + حرف "ب" أبيض كبير<br>
+                    <strong>الأسلوب:</strong> نظيف و بسيط<br>
+                    <strong>مناسب لـ:</strong> Light mode apps
+                </div>
+                <a href="icon-purple-white-ba.png" download class="download-btn">📥 تحميل (1.7 MB)</a>
+            </div>
+
+            <div class="icon-card">
+                <img src="icon-purple-gold-ba.png" alt="Icon 2" class="icon-preview">
+                <div class="icon-name">2️⃣ حرف "ب" ذهبي ⭐</div>
+                <div class="icon-description">
+                    خلفية بنفسجية متدرجة + حرف "ب" ذهبي كبير<br>
+                    <strong>الأسلوب:</strong> فخم و احترافي<br>
+                    <strong>مناسب لـ:</strong> Premium apps (موصى به!)
+                </div>
+                <a href="icon-purple-gold-ba.png" download class="download-btn">📥 تحميل (1.5 MB)</a>
+            </div>
+
+            <div class="icon-card">
+                <img src="icon-purple-white-border.png" alt="Icon 3" class="icon-preview">
+                <div class="icon-name">3️⃣ حرف "ب" أبيض + إطار</div>
+                <div class="icon-description">
+                    خلفية بنفسجية + حرف "ب" أبيض + حدود ذهبية<br>
+                    <strong>الأسلوب:</strong> مميز مع تفاصيل إضافية<br>
+                    <strong>مناسب لـ:</strong> Apps تحب التفاصيل
+                </div>
+                <a href="icon-purple-white-border.png" download class="download-btn">📥 تحميل (1.2 MB)</a>
+            </div>
+
+            <div class="icon-card">
+                <img src="icon-dark-purple-gold.png" alt="Icon 4" class="icon-preview">
+                <div class="icon-name">4️⃣ بنفسجي داكن + ذهبي ⭐</div>
+                <div class="icon-description">
+                    خلفية بنفسجية داكنة + حرف "ب" ذهبي لامع<br>
+                    <strong>الأسلوب:</strong> أنيق جداً مع تباين عالي<br>
+                    <strong>مناسب لـ:</strong> Professional corporate apps
+                </div>
+                <a href="icon-dark-purple-gold.png" download class="download-btn">📥 تحميل (1.7 MB)</a>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h2>📋 الخطوات التالية</h2>
+            <ol style="padding-right: 20px; line-height: 2;">
+                <li><strong>اختر التصميم المفضل</strong> - حمّله من زر التحميل</li>
+                <li><strong>استخدم Icon Kitchen</strong> - اذهب إلى <a href="https://icon.kitchen/" target="_blank">icon.kitchen</a></li>
+                <li><strong>ارفع الأيقونة</strong> - Upload الـ PNG (1024x1024)</li>
+                <li><strong>اختر iOS</strong> - اختر منصة iOS من الخيارات</li>
+                <li><strong>Generate</strong> - اضغط توليد</li>
+                <li><strong>Download ZIP</strong> - حمّل ملف ZIP يحتوي كل الأحجام (13 حجم)</li>
+                <li><strong>Extract</strong> - فك الضغط عن الملف</li>
+                <li><strong>Copy to Xcode</strong> - انسخ الملفات إلى <code>ios/App/App/Assets.xcassets/AppIcon.appiconset/</code></li>
+                <li><strong>Commit & Push</strong> - ارفع التغييرات إلى GitHub</li>
+                <li><strong>Build!</strong> 🚀</li>
+            </ol>
+        </div>
+
+        <div class="info-box">
+            <h2>💡 نصائح احترافية</h2>
+            <ul>
+                <li>✅ <strong>اختبر على خلفيات مختلفة</strong> - شوف الأيقونة على home screen أبيض و أسود</li>
+                <li>✅ <strong>اسأل رأي زملاءك</strong> - خل 5-10 أشخاص يصوتون</li>
+                <li>✅ <strong>احفظ كل التصاميم</strong> - ممكن تحتاجها لاحقاً</li>
+                <li>✅ <strong>التصميم رقم 2 أو 4</strong> - الأكثر احترافية و وضوح</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 50px; color: white;">
+            <p style="font-size: 1.2em;">✨ تم التوليد بنجاح! اختر المفضل و أكمل! ✨</p>
+            <p style="margin-top: 10px; opacity: 0.8;">Generated with ❤️ using DALL-E 3</p>
+        </div>
+    </div>
+</body>
+</html>
