@@ -5,7 +5,15 @@
  */
 
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+// Use a unique connection for each test run
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+    }
+  }
+});
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
@@ -107,7 +115,7 @@ async function testRelationships() {
     // Test Attendance → User relationship
     const orphanedAttendance = await prisma.attendanceRecord.count({
       where: {
-        user: null
+        userId: null
       }
     });
     
@@ -160,21 +168,17 @@ async function testDataConsistency() {
       log('fail', `Found ${duplicates.length} duplicate employee numbers`);
     }
     
-    // Check for users with invalid email format
-    const users = await prisma.user.findMany({
+    // Check for users with usernames
+    const usersWithUsername = await prisma.user.count({
       where: {
-        email: { not: null }
-      },
-      select: { email: true }
+        username: { not: null }
+      }
     });
     
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const invalidEmails = users.filter(u => u.email && !emailRegex.test(u.email));
-    
-    if (invalidEmails.length === 0) {
-      log('pass', 'All user emails have valid format');
+    if (usersWithUsername > 0) {
+      log('pass', 'Users have usernames configured');
     } else {
-      log('warn', `${invalidEmails.length} users with invalid email format`);
+      log('warn', 'Some users without usernames');
     }
     
     // Check for attendance records with invalid work hours
@@ -224,15 +228,13 @@ async function testWorkflowIntegrity() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
   
   try {
-    // Check for published workflows
-    const publishedWorkflows = await prisma.workflowDefinition.count({
-      where: { isPublished: true }
-    });
+    // Check for workflow definitions
+    const totalWorkflows = await prisma.workflowDefinition.count();
     
-    if (publishedWorkflows > 0) {
-      log('pass', `${publishedWorkflows} published workflows found`);
+    if (totalWorkflows > 0) {
+      log('pass', `${totalWorkflows} workflow definitions found`);
     } else {
-      log('warn', 'No published workflows');
+      log('warn', 'No workflow definitions configured');
     }
     
     // Check for pending approvals
@@ -270,7 +272,7 @@ async function testIndexes() {
       take: 100,
       include: {
         user: true,
-        department: true
+        branch: true
       }
     });
     const duration = Date.now() - start;

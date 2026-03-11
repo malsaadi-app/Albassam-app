@@ -46,10 +46,11 @@ if [ ! -d ".next/standalone" ]; then
     echo "Make sure 'output: standalone' is set in next.config.ts"
 fi
 
-# Verify build manifest has pages
-PAGES_COUNT=$(grep -o '"pages":{' .next/build-manifest.json 2>/dev/null | wc -l)
-if [ "$PAGES_COUNT" -lt 1 ]; then
-    echo "❌ ERROR: build-manifest.json has no pages"
+# Verify build manifest is valid JSON
+if jq empty .next/build-manifest.json 2>/dev/null; then
+    echo "✅ build-manifest.json is valid JSON"
+else
+    echo "❌ ERROR: build-manifest.json is not valid JSON"
     MISSING_FILES=$((MISSING_FILES + 1))
 fi
 

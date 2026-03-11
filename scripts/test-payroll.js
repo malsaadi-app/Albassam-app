@@ -11,7 +11,14 @@ const {
   getEmployeePayrollHistory 
 } = require('../lib/payroll');
 
-const prisma = new PrismaClient();
+// Use a unique connection for each test run
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+    }
+  }
+});
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
@@ -142,7 +149,7 @@ async function testPayrollRunGeneration() {
       log('info', 'Generating test payroll run...');
       
       try {
-        const result = await generatePayrollRun(year, month, userId!);
+        const result = await generatePayrollRun(year, month, userId);
         
         if (result.runId) {
           log('pass', `Payroll run created: ${result.runId}`);

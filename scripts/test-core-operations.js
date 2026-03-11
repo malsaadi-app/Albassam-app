@@ -5,7 +5,15 @@
  */
 
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+// Use a unique connection for each test run
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+    }
+  }
+});
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';

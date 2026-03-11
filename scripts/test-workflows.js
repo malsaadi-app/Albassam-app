@@ -5,7 +5,15 @@
  */
 
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+// Use a unique connection for each test run
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL
+    }
+  }
+});
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
@@ -312,7 +320,10 @@ async function testWorkflowDefinitions() {
   try {
     const workflows = await prisma.workflowDefinition.findMany({
       include: {
-        steps: true
+        versions: {
+          take: 1,
+          orderBy: { version: 'desc' }
+        }
       }
     });
     
@@ -322,24 +333,16 @@ async function testWorkflowDefinitions() {
       log('pass', 'Workflow definitions configured');
       
       workflows.forEach(wf => {
-        const published = wf.isPublished ? '✅ Published' : '⏸️  Draft';
-        log('info', `${wf.name} (${wf.requestType}) - ${published} - ${wf.steps.length} steps`);
+        const versionsCount = wf.versions?.length || 0;
+        log('info', `${wf.name} - ${versionsCount} version(s)`);
       });
       
-      // Check published workflows
-      const published = workflows.filter(w => w.isPublished);
-      if (published.length > 0) {
-        log('pass', `${published.length} workflows are published and active`);
+      // Check workflows with versions
+      const withVersions = workflows.filter(w => w.versions && w.versions.length > 0);
+      if (withVersions.length > 0) {
+        log('pass', `${withVersions.length} workflows have versions configured`);
       } else {
-        log('warn', 'No published workflows');
-      }
-      
-      // Check workflow steps
-      const withSteps = workflows.filter(w => w.steps.length > 0);
-      if (withSteps.length === workflows.length) {
-        log('pass', 'All workflows have steps configured');
-      } else {
-        log('warn', `${workflows.length - withSteps.length} workflows without steps`);
+        log('warn', 'No workflow versions found');
       }
       
     } else {

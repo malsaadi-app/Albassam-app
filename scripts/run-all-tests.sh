@@ -61,8 +61,13 @@ run_suite() {
     fi
     
     echo ""
-    echo "Press Enter to continue to next suite..."
-    read -r
+    if [ -z "$AUTO_MODE" ]; then
+        echo "Press Enter to continue to next suite..."
+        read -r
+    else
+        echo "Auto mode: Continuing to next suite..."
+        sleep 2
+    fi
 }
 
 # Start testing
