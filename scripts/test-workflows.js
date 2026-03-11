@@ -396,7 +396,9 @@ async function testRuntimeApprovals() {
       
       // Check for escalated approvals
       const escalated = await prisma.workflowRuntimeApproval.count({
-        where: { isEscalated: true }
+        where: { 
+          escalatedAt: { not: { equals: null } }
+        }
       });
       
       if (escalated > 0) {
@@ -486,7 +488,7 @@ async function testWorkflowCycle() {
     // Test 2: Check for orphaned approvals (no request link)
     const orphaned = await prisma.workflowRuntimeApproval.count({
       where: {
-        requestId: null
+        requestId: { equals: null }
       }
     });
     

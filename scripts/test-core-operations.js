@@ -71,9 +71,9 @@ async function testEmployeeCreationFlow() {
     const employeesWithBasicData = await prisma.employee.count({
       where: {
         AND: [
-          { fullNameAr: { not: null } },
-          { employeeNumber: { not: null } },
-          { nationalId: { not: null } }
+          { fullNameAr: { not: { equals: null } } },
+          { employeeNumber: { not: { equals: null } } },
+          { nationalId: { not: { equals: null } } }
         ]
       }
     });
