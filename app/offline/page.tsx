@@ -1,210 +1,147 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { COLORS } from '@/lib/colors';
+import Link from 'next/link';
 
 export default function OfflinePage() {
-  const router = useRouter();
-  const [isOnline, setIsOnline] = useState(false);
-
-  useEffect(() => {
-    // Check online status
-    const checkOnline = () => {
-      setIsOnline(navigator.onLine);
-      if (navigator.onLine) {
-        // Auto-redirect when back online
-        setTimeout(() => {
-          router.push('/');
-        }, 1000);
-      }
-    };
-
-    checkOnline();
-
-    window.addEventListener('online', checkOnline);
-    window.addEventListener('offline', checkOnline);
-
-    return () => {
-      window.removeEventListener('online', checkOnline);
-      window.removeEventListener('offline', checkOnline);
-    };
-  }, [router]);
-
   return (
     <div style={{
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: COLORS.background,
-      padding: '20px'
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      padding: '20px',
+      textAlign: 'center'
     }}>
       <div style={{
-        background: COLORS.white,
-        border: `1px solid ${COLORS.gray200}`,
+        background: 'white',
         borderRadius: '24px',
-        padding: '48px',
+        padding: '48px 32px',
         maxWidth: '500px',
         width: '100%',
-        textAlign: 'center',
-        boxShadow: `0 8px 32px ${COLORS.shadowMd}`
+        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
       }}>
-        {/* Icon */}
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{
-            width: '120px',
-            height: '120px',
-            margin: '0 auto',
-            background: isOnline ? COLORS.successLighter : COLORS.dangerLighter,
-            borderRadius: '24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '64px',
-            border: `3px solid ${isOnline ? COLORS.success : COLORS.danger}`
-          }}>
-            {isOnline ? '🌐' : '📡'}
-          </div>
+        {/* Offline Icon */}
+        <div style={{
+          width: '120px',
+          height: '120px',
+          margin: '0 auto 24px',
+          background: 'linear-gradient(135deg, #FEF3C7 0%, #FCD34D 100%)',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '56px'
+        }}>
+          📡
         </div>
 
-        {/* Status */}
+        {/* Title */}
         <h1 style={{
-          color: COLORS.gray900,
           fontSize: '32px',
-          marginBottom: '16px',
-          fontWeight: '800'
+          fontWeight: '800',
+          color: '#111827',
+          marginBottom: '16px'
         }}>
-          {isOnline ? 'عُدت متصلاً!' : 'أنت غير متصل'}
+          لا يوجد اتصال بالإنترنت
         </h1>
 
+        {/* Description */}
         <p style={{
-          color: COLORS.gray600,
-          fontSize: '18px',
-          lineHeight: '1.6',
-          marginBottom: '32px',
-          fontWeight: '500'
-        }}>
-          {isOnline 
-            ? 'يتم إعادة الاتصال الآن...'
-            : 'لا يوجد اتصال بالإنترنت. يرجى التحقق من الاتصال والمحاولة مرة أخرى.'
-          }
-        </p>
-
-        {/* Animated indicator */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '8px',
+          fontSize: '16px',
+          color: '#6B7280',
+          lineHeight: '1.8',
           marginBottom: '32px'
         }}>
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                background: isOnline ? COLORS.success : COLORS.danger,
-                animation: isOnline ? `pulse 1.5s ease-in-out ${i * 0.2}s infinite` : 'none',
-                opacity: isOnline ? 1 : 0.5
-              }}
-            />
-          ))}
+          يبدو أنك غير متصل بالإنترنت. تحقق من الاتصال وحاول مرة أخرى.
+        </p>
+
+        {/* Offline Features */}
+        <div style={{
+          background: '#F9FAFB',
+          borderRadius: '16px',
+          padding: '24px',
+          marginBottom: '32px',
+          textAlign: 'right'
+        }}>
+          <h3 style={{
+            fontSize: '16px',
+            fontWeight: '700',
+            color: '#111827',
+            marginBottom: '16px'
+          }}>
+            💡 ما زال بإمكانك:
+          </h3>
+          <ul style={{
+            listStyle: 'none',
+            padding: 0,
+            margin: 0,
+            fontSize: '14px',
+            color: '#6B7280',
+            lineHeight: '2'
+          }}>
+            <li>✅ تصفح البيانات المحفوظة مسبقاً</li>
+            <li>✅ عرض الصفحات التي زرتها من قبل</li>
+            <li>✅ العمل مع المحتوى المحلي</li>
+          </ul>
         </div>
 
-        {/* Actions */}
+        {/* Action Buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <button
             onClick={() => window.location.reload()}
             style={{
-              background: COLORS.primary,
-              color: COLORS.white,
+              width: '100%',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
               border: 'none',
               borderRadius: '12px',
-              padding: '16px 32px',
+              padding: '16px',
               fontSize: '16px',
               fontWeight: '700',
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              boxShadow: `0 4px 12px ${COLORS.shadowMd}`
+              transition: 'transform 0.2s',
             }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = `0 6px 16px ${COLORS.shadowMd}`;
-              e.currentTarget.style.background = COLORS.primaryLight;
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = `0 4px 12px ${COLORS.shadowMd}`;
-              e.currentTarget.style.background = COLORS.primary;
-            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
             🔄 إعادة المحاولة
           </button>
 
-          <button
-            onClick={() => router.push('/')}
-            style={{
-              background: COLORS.white,
-              color: COLORS.gray900,
-              border: `1px solid ${COLORS.gray200}`,
-              borderRadius: '12px',
-              padding: '16px 32px',
-              fontSize: '16px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = COLORS.gray50;
-              e.currentTarget.style.borderColor = COLORS.gray300;
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = COLORS.white;
-              e.currentTarget.style.borderColor = COLORS.gray200;
-            }}
-          >
-            🏠 العودة للرئيسية
-          </button>
+          <Link href="/">
+            <button
+              style={{
+                width: '100%',
+                background: 'white',
+                color: '#667eea',
+                border: '2px solid #667eea',
+                borderRadius: '12px',
+                padding: '14px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              ← العودة للرئيسية
+            </button>
+          </Link>
         </div>
 
-        {/* Info */}
+        {/* Help Text */}
         <div style={{
           marginTop: '32px',
-          padding: '16px',
-          background: isOnline ? COLORS.successLighter : COLORS.warningLighter,
-          borderRadius: '12px',
-          border: `1px solid ${isOnline ? COLORS.successLight : COLORS.warningLight}`
+          paddingTop: '24px',
+          borderTop: '1px solid #E5E7EB',
+          fontSize: '13px',
+          color: '#9CA3AF',
+          lineHeight: '1.6'
         }}>
-          <p style={{
-            color: isOnline ? COLORS.successText : COLORS.warningText,
-            fontSize: '14px',
-            fontWeight: '700',
-            margin: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px'
-          }}>
-            <span>{isOnline ? '✅' : 'ℹ️'}</span>
-            <span>
-              {isOnline 
-                ? 'يمكنك الآن استخدام جميع الميزات'
-                : 'بعض البيانات المحفوظة متاحة دون اتصال'
-              }
-            </span>
+          <p style={{ margin: 0 }}>
+            <strong>نصيحة:</strong> قم بتثبيت التطبيق على جهازك للحصول على تجربة أفضل دون اتصال.
           </p>
         </div>
       </div>
-
-      {/* Animation keyframes */}
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.4; transform: scale(0.8); }
-          50% { opacity: 1; transform: scale(1.2); }
-        }
-      `}</style>
     </div>
   );
 }
