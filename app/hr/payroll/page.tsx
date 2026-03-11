@@ -30,10 +30,6 @@ export default function PayrollPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 
   useEffect(() => {
-    if (!permLoading && !hasPermission('payroll.manage')) {
-      router.push('/');
-      return;
-    }
     if (!permLoading) {
       fetchRuns();
     }
@@ -286,6 +282,63 @@ export default function PayrollPage() {
       <div dir="rtl" style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
         <ResponsiveContainer size="xl">
           <SkeletonTable rows={5} />
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  if (!hasPermission('payroll.manage')) {
+    return (
+      <div dir="rtl" style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
+        <ResponsiveContainer size="xl">
+          <CardEnhanced variant="danger">
+            <CardBody>
+              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div style={{ fontSize: '80px', marginBottom: '24px' }}>🚫</div>
+                <h2 style={{ fontSize: '28px', fontWeight: '800', color: '#DC2626', marginBottom: '12px' }}>
+                  ليس لديك صلاحية
+                </h2>
+                <p style={{ fontSize: '16px', color: '#6B7280', marginBottom: '32px' }}>
+                  هذه الصفحة متاحة للمديرين فقط. يمكنك عرض كشوف رواتبك من قسم الخدمة الذاتية.
+                </p>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <Link href="/profile/payslips">
+                    <button
+                      style={{
+                        padding: '14px 28px',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '10px',
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
+                      }}
+                    >
+                      💰 كشوف رواتبي
+                    </button>
+                  </Link>
+                  <Link href="/dashboard">
+                    <button
+                      style={{
+                        padding: '14px 28px',
+                        background: 'white',
+                        color: '#667eea',
+                        border: '2px solid #667eea',
+                        borderRadius: '10px',
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ← الرئيسية
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            </CardBody>
+          </CardEnhanced>
         </ResponsiveContainer>
       </div>
     );
