@@ -37,10 +37,11 @@ export function startWorkflowEscalationCron() {
           where: {
             OR: [
               { role: 'ADMIN' },
-              { role: 'SUPER_ADMIN' }
+              { roleId: { not: null } }
             ]
           },
-          select: { id: true }
+          select: { id: true },
+          take: 10
         });
 
         for (const admin of admins) {
