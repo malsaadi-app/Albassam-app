@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مركز الدعم - نظام البسام</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Cairo', sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin: 30px 0 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        h3 {
+            color: #764ba2;
+            font-size: 1.3em;
+            margin: 20px 0 10px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border-right: 4px solid #667eea;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .card h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        
+        .faq-item {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border-right: 3px solid #764ba2;
+        }
+        
+        .faq-item h4 {
+            color: #764ba2;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .contact-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .contact-box a {
+            color: #ffd700;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        
+        .button:hover {
+            background: #764ba2;
+        }
+        
+        ul {
+            margin: 15px 0;
+            padding-right: 30px;
+        }
+        
+        li {
+            margin: 10px 0;
+            color: #555;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 10px;
+            border-right: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+        
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+            text-align: center;
+            color: #999;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💬 مركز الدعم والمساعدة</h1>
+            <p class="subtitle">نحن هنا لمساعدتك!</p>
+        </header>
+
+        <div class="highlight">
+            <strong>🚀 مرحباً بك في نظام البسام!</strong><br>
+            نحن ملتزمون بتقديم أفضل دعم لك. إذا واجهت أي مشكلة أو كان لديك أي استفسار، نحن هنا للمساعدة!
+        </div>
+
+        <section>
+            <h2>📱 البدء السريع</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>🔐 تسجيل الدخول</h3>
+                    <p><strong>الخطوات:</strong></p>
+                    <ol>
+                        <li>افتح التطبيق</li>
+                        <li>أدخل اسم المستخدم وكلمة المرور</li>
+                        <li>(اختياري) فعّل Face ID للدخول السريع</li>
+                        <li>ابدأ الاستخدام!</li>
+                    </ol>
+                    <p><strong>نسيت كلمة المرور؟</strong> تواصل مع قسم الموارد البشرية</p>
+                </div>
+
+                <div class="card">
+                    <h3>👆 تفعيل البصمة</h3>
+                    <p><strong>الخطوات:</strong></p>
+                    <ol>
+                        <li>سجّل الدخول بالطريقة العادية</li>
+                        <li>اضغط "تفعيل Face ID" عند ظهور الرسالة</li>
+                        <li>وافق على الصلاحيات</li>
+                        <li>في المرة القادمة، استخدم البصمة مباشرة!</li>
+                    </ol>
+                </div>
+
+                <div class="card">
+                    <h3>✅ تسجيل الحضور</h3>
+                    <p><strong>الخطوات:</strong></p>
+                    <ol>
+                        <li>افتح التطبيق عند وصولك</li>
+                        <li>اضغط زر "تسجيل الحضور"</li>
+                        <li>تأكد من التسجيل الناجح</li>
+                        <li>عند المغادرة، اضغط "تسجيل الانصراف"</li>
+                    </ol>
+                </div>
+
+                <div class="card">
+                    <h3>📝 طلب إجازة</h3>
+                    <p><strong>الخطوات:</strong></p>
+                    <ol>
+                        <li>اذهب إلى قسم "الطلبات"</li>
+                        <li>اختر "طلب جديد" → "إجازة"</li>
+                        <li>املأ التفاصيل (التاريخ، السبب)</li>
+                        <li>أرسل الطلب</li>
+                        <li>تابع حالة الطلب من "طلباتي"</li>
+                    </ol>
+                </div>
+
+                <div class="card">
+                    <h3>💰 عرض كشف الراتب</h3>
+                    <p><strong>الخطوات:</strong></p>
+                    <ol>
+                        <li>اذهب إلى "الملف الشخصي"</li>
+                        <li>اختر "كشوف الرواتب"</li>
+                        <li>اضغط على الشهر المطلوب</li>
+                        <li>شاهد التفاصيل أو حمّل PDF</li>
+                    </ol>
+                </div>
+
+                <div class="card">
+                    <h3>📊 التقارير</h3>
+                    <p><strong>الخطوات:</strong></p>
+                    <ol>
+                        <li>اذهب إلى "لوحة التحكم"</li>
+                        <li>شاهد الإحصائيات المباشرة</li>
+                        <li>للمدراء: اضغط "التقارير المفصلة"</li>
+                        <li>اختر نوع التقرير وصدّره</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>❓ الأسئلة الشائعة (FAQ)</h2>
+
+            <div class="faq-item">
+                <h4>❓ لماذا لا يعمل Face ID؟</h4>
+                <p><strong>الحل:</strong></p>
+                <ul>
+                    <li>تأكد من تفعيل Face ID في إعدادات الجهاز</li>
+                    <li>أعط التطبيق صلاحية استخدام Face ID</li>
+                    <li>تأكد أن وجهك واضح ومضاء جيداً</li>
+                    <li>جرّب تعطيل وإعادة تفعيل الميزة من الإعدادات</li>
+                </ul>
+            </div>
+
+            <div class="faq-item">
+                <h4>❓ التطبيق لا يفتح أو يتوقف فجأة</h4>
+                <p><strong>الحل:</strong></p>
+                <ul>
+                    <li>أعد تشغيل جهاز iPhone</li>
+                    <li>تأكد من تحديث iOS لآخر إصدار</li>
+                    <li>احذف التطبيق وأعد تثبيته</li>
+                    <li>إذا استمرت المشكلة، تواصل مع الدعم</li>
+                </ul>
+            </div>
+
+            <div class="faq-item">
+                <h4>❓ لا أرى سجل الحضور</h4>
+                <p><strong>الحل:</strong></p>
+                <ul>
+                    <li>اسحب للأسفل لتحديث الصفحة</li>
+                    <li>تحقق من اتصال الإنترنت</li>
+                    <li>تأكد أنك مسجل دخول</li>
+                    <li>إذا كانت البيانات مفقودة، تواصل مع قسم الموارد البشرية</li>
+                </ul>
+            </div>
+
+            <div class="faq-item">
+                <h4>❓ لا أستطيع تحميل كشف الراتب PDF</h4>
+                <p><strong>الحل:</strong></p>
+                <ul>
+                    <li>تحقق من اتصال الإنترنت</li>
+                    <li>تأكد من وجود مساحة كافية في الجهاز</li>
+                    <li>جرّب مرة أخرى بعد قليل</li>
+                    <li>إذا استمرت المشكلة، تواصل مع الدعم</li>
+                </ul>
+            </div>
+
+            <div class="faq-item">
+                <h4>❓ رصيد إجازاتي غير صحيح</h4>
+                <p><strong>الحل:</strong></p>
+                <ul>
+                    <li>تحقق من طلبات الإجازات المعتمدة</li>
+                    <li>الرصيد يُحدّث تلقائياً بعد الموافقة</li>
+                    <li>إذا كان هناك خطأ، تواصل مع قسم الموارد البشرية</li>
+                </ul>
+            </div>
+
+            <div class="faq-item">
+                <h4>❓ كيف أغير اللغة؟</h4>
+                <p><strong>الحل:</strong></p>
+                <ul>
+                    <li>اذهب إلى "الإعدادات"</li>
+                    <li>اختر "اللغة"</li>
+                    <li>اختر العربية أو الإنجليزية</li>
+                    <li>التطبيق سيُحدّث تلقائياً</li>
+                </ul>
+            </div>
+
+            <div class="faq-item">
+                <h4>❓ أين أجد رقم الموظف؟</h4>
+                <p><strong>الحل:</strong></p>
+                <ul>
+                    <li>اذهب إلى "الملف الشخصي"</li>
+                    <li>ستجد رقم الموظف في أعلى الصفحة</li>
+                    <li>أو تواصل مع قسم الموارد البشرية</li>
+                </ul>
+            </div>
+
+            <div class="faq-item">
+                <h4>❓ كيف أحدّث بياناتي الشخصية؟</h4>
+                <p><strong>الحل:</strong></p>
+                <ul>
+                    <li>بعض البيانات يمكنك تحديثها من "الملف الشخصي"</li>
+                    <li>للتغييرات الرسمية (العنوان، الهاتف، إلخ)، تواصل مع قسم الموارد البشرية</li>
+                </ul>
+            </div>
+
+            <div class="faq-item">
+                <h4>❓ لا أستلم الإشعارات</h4>
+                <p><strong>الحل:</strong></p>
+                <ul>
+                    <li>تحقق من إعدادات الإشعارات في الجهاز</li>
+                    <li>افتح الإعدادات → الإشعارات → نظام البسام → فعّل الإشعارات</li>
+                    <li>تأكد من عدم تفعيل وضع "عدم الإزعاج"</li>
+                </ul>
+            </div>
+
+            <div class="faq-item">
+                <h4>❓ هل يمكنني استخدام التطبيق بدون إنترنت؟</h4>
+                <p><strong>الجواب:</strong></p>
+                <ul>
+                    <li>يمكنك عرض بعض البيانات المخزنة مسبقاً</li>
+                    <li>لكن لتسجيل الحضور، الطلبات، والرواتب، تحتاج إنترنت</li>
+                    <li>التطبيق يحفظ بعض البيانات للعمل offline</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>🐛 الإبلاغ عن مشكلة</h2>
+            
+            <p>إذا واجهت خطأ أو مشكلة تقنية، ساعدنا في حلها بإرسال التفاصيل التالية:</p>
+            
+            <div class="card">
+                <h3>📋 المعلومات المطلوبة:</h3>
+                <ul>
+                    <li><strong>نوع المشكلة:</strong> (مثال: التطبيق يتوقف، لا أستطيع تسجيل الدخول)</li>
+                    <li><strong>جهاز iPhone:</strong> (مثال: iPhone 14 Pro)</li>
+                    <li><strong>إصدار iOS:</strong> (الإعدادات → عام → عن الجهاز)</li>
+                    <li><strong>إصدار التطبيق:</strong> (الإعدادات → عن التطبيق)</li>
+                    <li><strong>الخطوات لإعادة المشكلة:</strong> (ماذا فعلت قبل المشكلة؟)</li>
+                    <li><strong>لقطة شاشة:</strong> (إن أمكن)</li>
+                </ul>
+                
+                <p style="margin-top: 15px;">
+                    <strong>أرسل إلى:</strong> support@albassam-app.com
+                </p>
+            </div>
+        </section>
+
+        <section>
+            <h2>💡 اقتراحات وتحسينات</h2>
+            
+            <p>لديك فكرة لتحسين التطبيق؟ نحب أن نسمعها!</p>
+            
+            <div class="card">
+                <h3>✨ شاركنا أفكارك:</h3>
+                <ul>
+                    <li>ميزة جديدة تريدها</li>
+                    <li>تحسين في التصميم</li>
+                    <li>تبسيط عملية معينة</li>
+                    <li>أي اقتراح آخر!</li>
+                </ul>
+                
+                <p style="margin-top: 15px;">
+                    <strong>أرسل إلى:</strong> feedback@albassam-app.com
+                </p>
+            </div>
+        </section>
+
+        <section>
+            <h2>📋 متطلبات النظام</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>📱 iOS (iPhone/iPad)</h3>
+                    <ul>
+                        <li><strong>الأجهزة:</strong> iPhone 6s أو أحدث</li>
+                        <li><strong>النظام:</strong> iOS 13.0 أو أحدث</li>
+                        <li><strong>المساحة:</strong> 100 MB على الأقل</li>
+                        <li><strong>الإنترنت:</strong> مطلوب للمزامنة</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h3>🌐 المتصفح (Web)</h3>
+                    <ul>
+                        <li><strong>Chrome:</strong> آخر إصدار</li>
+                        <li><strong>Safari:</strong> آخر إصدار</li>
+                        <li><strong>Firefox:</strong> آخر إصدار</li>
+                        <li><strong>Edge:</strong> آخر إصدار</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>🔄 التحديثات</h2>
+            
+            <p>نقوم بتحديث التطبيق بانتظام لإضافة ميزات جديدة وتحسين الأداء.</p>
+            
+            <div class="card">
+                <h3>كيفية التحديث:</h3>
+                <ul>
+                    <li><strong>تلقائي:</strong> التطبيق يُحدّث نفسه عند الاتصال بـ WiFi</li>
+                    <li><strong>يدوي:</strong> App Store → التحديثات → نظام البسام → تحديث</li>
+                </ul>
+                
+                <p style="margin-top: 15px;">
+                    <strong>ننصح بتفعيل التحديث التلقائي للحصول على آخر المميزات!</strong>
+                </p>
+            </div>
+        </section>
+
+        <div class="contact-box">
+            <h2 style="color: white; margin-bottom: 20px;">📞 تواصل معنا</h2>
+            
+            <div class="grid" style="text-align: right;">
+                <div>
+                    <h3 style="color: #ffd700;">📧 البريد الإلكتروني</h3>
+                    <p>
+                        <strong>الدعم الفني:</strong><br>
+                        <a href="mailto:support@albassam-app.com">support@albassam-app.com</a>
+                    </p>
+                    <p>
+                        <strong>الاقتراحات:</strong><br>
+                        <a href="mailto:feedback@albassam-app.com">feedback@albassam-app.com</a>
+                    </p>
+                    <p>
+                        <strong>الخصوصية:</strong><br>
+                        <a href="mailto:privacy@albassam-app.com">privacy@albassam-app.com</a>
+                    </p>
+                </div>
+
+                <div>
+                    <h3 style="color: #ffd700;">🏢 قسم الموارد البشرية</h3>
+                    <p>
+                        للاستفسارات الإدارية، التوظيف، أو تحديث البيانات:<br>
+                        <strong>زيارة:</strong> مكتب الموارد البشرية<br>
+                        <strong>أوقات الدوام:</strong> الأحد - الخميس، 8 صباحاً - 4 مساءً
+                    </p>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h3 style="color: #ffd700;">⏰ أوقات الاستجابة</h3>
+                <p>
+                    <strong>ساعات العمل:</strong> رد خلال 24 ساعة<br>
+                    <strong>خارج ساعات العمل:</strong> رد خلال 48 ساعة<br>
+                    <strong>الطوارئ:</strong> تواصل مع قسم الموارد البشرية مباشرة
+                </p>
+            </div>
+        </div>
+
+        <section>
+            <h2>🔗 روابط مفيدة</h2>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="privacy.html" class="button">سياسة الخصوصية</a>
+                <a href="terms.html" class="button">شروط الاستخدام</a>
+                <a href="https://albassam-app.com" class="button">الموقع الرئيسي</a>
+            </div>
+        </section>
+
+        <footer>
+            <p>
+                <strong>© 2026 مدارس البسام</strong><br>
+                جميع الحقوق محفوظة<br>
+            </p>
+            <p style="margin-top: 20px; font-size: 0.9em;">
+                نسعد بخدمتك! 💙<br>
+                فريق الدعم الفني - نظام البسام
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
