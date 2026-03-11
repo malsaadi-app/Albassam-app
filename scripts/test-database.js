@@ -93,7 +93,7 @@ async function testRelationships() {
   try {
     // Test Employee → User relationship
     const employeesWithoutUser = await prisma.employee.count({
-      where: { userId: null }
+      where: { userId: { equals: null } }
     });
     
     if (employeesWithoutUser === 0) {
@@ -116,7 +116,7 @@ async function testRelationships() {
     // Test Attendance → User relationship
     const orphanedAttendance = await prisma.attendanceRecord.count({
       where: {
-        userId: null
+        userId: { equals: null }
       }
     });
     
