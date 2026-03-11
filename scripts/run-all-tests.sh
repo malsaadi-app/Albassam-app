@@ -81,7 +81,10 @@ run_suite "Database Integrity Test" "node scripts/test-database.js" "🗄️"
 # Test Suite 4: Payroll System
 run_suite "Payroll System Test" "node scripts/test-payroll.js" "💰"
 
-# Test Suite 5: Build Verification
+# Test Suite 5: Workflows & Requests
+run_suite "Workflows & Requests Test" "node scripts/test-workflows.js" "🔄"
+
+# Test Suite 6: Build Verification
 run_suite "Build Verification" "./scripts/verify-build.sh" "🔧"
 
 # Generate final report

@@ -68,7 +68,36 @@ node scripts/test-payroll.js
 
 ---
 
-### 4️⃣ **Build Verification Test** (`scripts/verify-build.sh`)
+### 4️⃣ **Workflows & Requests Test** (`scripts/test-workflows.js`)
+**Purpose:** Comprehensive testing of all request types and complete workflow cycles
+
+**Tests:**
+- ✅ HR requests (all types, status distribution, workflow integration)
+- ✅ Attendance corrections (excuse/permission/correction types)
+- ✅ Procurement requests (status, workflow links)
+- ✅ Maintenance requests (status, workflow integration)
+- ✅ Finance requests (status, workflow integration)
+- ✅ Workflow definitions (published status, steps configuration)
+- ✅ Runtime approvals (status distribution, escalation, approval times)
+- ✅ Complete workflow cycle (submission → approval/rejection)
+- ✅ Cross-system integration (Attendance→Workflow→Payroll)
+- ✅ Approver assignment validation
+- ✅ Stale approval detection (>30 days)
+
+**Coverage:**
+- 5 request types fully tested
+- Workflow cycle validation
+- Integration testing across systems
+- Performance metrics (approval times)
+
+**Usage:**
+```bash
+node scripts/test-workflows.js
+```
+
+---
+
+### 5️⃣ **Build Verification Test** (`scripts/verify-build.sh`)
 **Purpose:** Ensure production build is complete and valid
 
 **Tests:**
@@ -85,11 +114,11 @@ node scripts/test-payroll.js
 
 ---
 
-### 5️⃣ **Master Test Runner** (`scripts/run-all-tests.sh`)
+### 6️⃣ **Master Test Runner** (`scripts/run-all-tests.sh`)
 **Purpose:** Execute all test suites in sequence with comprehensive reporting
 
 **Features:**
-- ✅ Runs all 4 test suites sequentially
+- ✅ Runs all 6 test suites sequentially
 - ✅ Interactive (press Enter between suites)
 - ✅ Generates timestamped log file
 - ✅ Success rate calculation
@@ -121,6 +150,9 @@ node scripts/test-database.js
 
 # Payroll tests only
 node scripts/test-payroll.js
+
+# Workflows & requests tests only
+node scripts/test-workflows.js
 
 # Build verification only
 ./scripts/verify-build.sh
