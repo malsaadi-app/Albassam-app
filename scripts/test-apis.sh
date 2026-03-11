@@ -107,7 +107,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "6️⃣  WORKFLOW ENDPOINTS"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 test_endpoint GET "/api/workflows" 200 "List Workflows"
-test_endpoint GET "/api/workflows/approvals" 200 "Workflow Approvals"
+test_endpoint GET "/api/workflows/runtime" 200 "Workflow Approvals"
 test_endpoint GET "/api/settings/workflow-builder" 200 "Workflow Builder"
 echo ""
 
