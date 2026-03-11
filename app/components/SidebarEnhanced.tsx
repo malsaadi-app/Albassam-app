@@ -118,7 +118,7 @@ export default function SidebarEnhanced() {
         { href: '/hr/leaves', icon: <HiOutlineDocumentText size={18} />, label: t('leaves') },
         { href: '/hr/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('hrRequests') },
         { href: '/hr/attendance', icon: <HiOutlineClock size={18} />, label: t('attendance') },
-        { href: '/hr/attendance/correction', icon: <HiOutlinePencil size={18} />, label: t('attendanceRequests') },
+        { href: '/hr/attendance/requests/new', icon: <HiOutlinePencil size={18} />, label: t('attendanceRequests') },
         { href: '/hr/job-applications', icon: <HiOutlineUserAdd size={18} />, label: t('jobApplications') },
       ]
     },
