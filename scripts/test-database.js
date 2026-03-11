@@ -116,7 +116,7 @@ async function testRelationships() {
     // Test Attendance → User relationship
     const orphanedAttendance = await prisma.attendanceRecord.count({
       where: {
-        userId: { equals: null }
+        userId: null
       }
     });
     
@@ -172,7 +172,7 @@ async function testDataConsistency() {
     // Check for users with usernames
     const usersWithUsername = await prisma.user.count({
       where: {
-        username: { not: { equals: null } }
+        username: { not: null }
       }
     });
     
@@ -248,7 +248,7 @@ async function testWorkflowIntegrity() {
     // Check for stuck/escalated approvals
     const escalatedApprovals = await prisma.workflowRuntimeApproval.count({
       where: { 
-        escalatedAt: { not: { equals: null } }
+        escalatedAt: { not: null }
       }
     });
     
