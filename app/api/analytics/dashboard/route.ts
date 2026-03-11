@@ -114,20 +114,25 @@ export async function GET(request: NextRequest) {
       prisma.workflowRuntimeApproval.count({ where: { status: 'PENDING' } }),
       prisma.workflowRuntimeApproval.count({ where: { status: 'ESCALATED' } }),
       prisma.workflowRuntimeApproval.findMany({
-        where: { status: { in: ['APPROVED', 'REJECTED'] } },
+        where: { 
+          status: { in: ['APPROVED', 'REJECTED'] },
+          reviewedAt: { not: null }
+        },
         select: {
           createdAt: true,
-          updatedAt: true
+          reviewedAt: true
         },
         take: 100
       })
     ]);
 
     // Calculate average approval time (in hours)
-    const approvalTimes = completedApprovals.map(a => {
-      const diffMs = a.updatedAt.getTime() - a.createdAt.getTime();
-      return diffMs / (1000 * 60 * 60); // Convert to hours
-    });
+    const approvalTimes = completedApprovals
+      .filter(a => a.reviewedAt) // Extra safety check
+      .map(a => {
+        const diffMs = a.reviewedAt!.getTime() - a.createdAt.getTime();
+        return diffMs / (1000 * 60 * 60); // Convert to hours
+      });
 
     const averageApprovalTime = approvalTimes.length > 0
       ? approvalTimes.reduce((sum, time) => sum + time, 0) / approvalTimes.length

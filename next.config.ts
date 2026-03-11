@@ -6,15 +6,9 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 })
 
 const nextConfig: NextConfig = {
-  // Use a custom distDir to avoid permission issues if an old .next folder was created by a different user.
-  // NOTE: distDir name is rotated when permissions get stuck from old builds.
-  distDir: '.next_run7',
+  // Build output directory (standard .next)
   reactStrictMode: true,
   poweredByHeader: false,
-  generateBuildId: async () => {
-    // Force new build ID to bust cache
-    return `build-${Date.now()}`;
-  },
   
   // Prisma: disable webpack cache for Prisma Client
   webpack: (config, { isServer }) => {

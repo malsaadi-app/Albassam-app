@@ -87,8 +87,7 @@ export async function calculateEmployeePayroll(
   const items = recurringItems.map(item => ({
     kind: item.kind,
     title: item.title,
-    amount: item.amount,
-    notes: item.notes || undefined
+    amount: item.amount
   }));
 
   return {

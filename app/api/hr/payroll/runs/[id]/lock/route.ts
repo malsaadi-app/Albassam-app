@@ -18,7 +18,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
     }
 
-    const hasPermission = session.permissions?.includes('payroll.manage');
+    const hasPermission = session.user.permissions?.includes('payroll.manage');
     if (!hasPermission) {
       return NextResponse.json({ error: 'ليس لديك صلاحية' }, { status: 403 });
     }

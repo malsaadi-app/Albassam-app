@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check permission
-    const hasPermission = session.permissions?.includes('payroll.manage');
+    const hasPermission = session.user.permissions?.includes('payroll.manage');
     if (!hasPermission) {
       return NextResponse.json({ error: 'ليس لديك صلاحية إدارة الرواتب' }, { status: 403 });
     }
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check permission
-    const hasPermission = session.permissions?.includes('payroll.manage');
+    const hasPermission = session.user.permissions?.includes('payroll.manage');
     if (!hasPermission) {
       return NextResponse.json({ error: 'ليس لديك صلاحية إدارة الرواتب' }, { status: 403 });
     }
