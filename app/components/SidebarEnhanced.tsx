@@ -162,7 +162,9 @@ export default function SidebarEnhanced() {
       icon: <HiOutlineCurrencyDollar size={18} />,
       label: t('finance'),
       items: [
-        { href: '/hr/payroll', icon: <HiOutlineCurrencyDollar size={18} />, label: 'الرواتب' },
+        ...(userRole === 'ADMIN' ? [
+          { href: '/hr/payroll', icon: <HiOutlineCurrencyDollar size={18} />, label: 'إدارة الرواتب' }
+        ] : []),
         { href: '/finance/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('financeRequests') },
       ]
     },
