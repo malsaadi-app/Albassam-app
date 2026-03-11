@@ -162,6 +162,7 @@ export default function SidebarEnhanced() {
       icon: <HiOutlineCurrencyDollar size={18} />,
       label: t('finance'),
       items: [
+        { href: '/hr/payroll', icon: <HiOutlineCurrencyDollar size={18} />, label: 'الرواتب' },
         { href: '/finance/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('financeRequests') },
       ]
     },
@@ -170,6 +171,7 @@ export default function SidebarEnhanced() {
       icon: <HiOutlineChartBar size={18} />,
       label: t('reports'),
       items: [
+        { href: '/analytics', icon: <HiOutlineChartBar size={18} />, label: 'لوحة التحليلات' },
         { href: '/reports', icon: <HiOutlineChartBar size={18} />, label: t('allReports') },
         { href: '/reports/attendance', icon: <HiOutlineClock size={18} />, label: t('attendanceReports') },
         { href: '/reports/financial', icon: <HiOutlineCurrencyDollar size={18} />, label: t('financialReports') },
@@ -256,6 +258,16 @@ export default function SidebarEnhanced() {
           label: t('maintenance'),
           items: [
             { href: '/maintenance/requests', icon: <HiOutlineClipboardCheck size={18} />, label: t('maintenanceRequests') },
+          ]
+        },
+        {
+          id: 'profile',
+          icon: <HiOutlineUser size={18} />,
+          label: 'الخدمة الذاتية',
+          items: [
+            { href: '/profile/payslips', icon: <HiOutlineCurrencyDollar size={18} />, label: 'كشوف الرواتب' },
+            { href: '/profile/leave-balance', icon: <HiOutlineDocumentText size={18} />, label: 'رصيد الإجازات' },
+            { href: '/profile/attendance-history', icon: <HiOutlineClock size={18} />, label: 'سجل الحضور' },
           ]
         },
       ];
