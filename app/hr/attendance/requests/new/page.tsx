@@ -36,12 +36,39 @@ interface ApiResponse {
   };
 }
 
+interface HistoryItem {
+  id: string;
+  requestDate: Date;
+  reason: string;
+  status: string;
+  createdAt: Date;
+  reviewedAt: Date | null;
+  reviewerName: string | null;
+  daysSince: number;
+  attendanceRecord: {
+    status: string;
+    workHours: number | null;
+  } | null;
+}
+
+interface HistoryStats {
+  total: number;
+  approved: number;
+  rejected: number;
+  pending: number;
+  approvalRate: number;
+}
+
 export default function NewAttendanceRequestPageEnhanced() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [loadingDays, setLoadingDays] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [problematicDays, setProblematicDays] = useState<ProblematicDay[]>([]);
   const [summary, setSummary] = useState<ApiResponse['summary'] | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [historyStats, setHistoryStats] = useState<HistoryStats | null>(null);
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     type: 'EXCUSE',
@@ -53,6 +80,7 @@ export default function NewAttendanceRequestPageEnhanced() {
   useEffect(() => {
     if (formData.type === 'EXCUSE') {
       fetchProblematicDays();
+      fetchCorrectionHistory();
     }
   }, [formData.type]);
 
@@ -69,6 +97,22 @@ export default function NewAttendanceRequestPageEnhanced() {
       console.error('Error fetching problematic days:', error);
     } finally {
       setLoadingDays(false);
+    }
+  };
+
+  const fetchCorrectionHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const res = await fetch('/api/hr/attendance/correction-history');
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data.history || []);
+        setHistoryStats(data.stats || null);
+      }
+    } catch (error) {
+      console.error('Error fetching history:', error);
+    } finally {
+      setLoadingHistory(false);
     }
   };
 
@@ -396,6 +440,10 @@ export default function NewAttendanceRequestPageEnhanced() {
                       {problematicDays.map((day) => {
                         const isSelected = selectedDates.has(day.date);
                         const hasRequest = day.hasExcuseRequest;
+                        const dayDate = new Date(day.date);
+                        const daysOld = Math.floor((Date.now() - dayDate.getTime()) / (1000 * 60 * 60 * 24));
+                        const isOld = daysOld > 7 && !hasRequest;
+                        const isVeryOld = daysOld > 30 && !hasRequest;
 
                         return (
                           <button
@@ -443,13 +491,45 @@ export default function NewAttendanceRequestPageEnhanced() {
 
                             {/* Day Info */}
                             <div>
-                              <div style={{ fontSize: '15px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>
-                                {new Date(day.date).toLocaleDateString('ar-SA', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                })}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '15px', fontWeight: '700', color: '#111827' }}>
+                                  {new Date(day.date).toLocaleDateString('ar-SA', {
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}
+                                </span>
+                                {isVeryOld && (
+                                  <span style={{
+                                    fontSize: '11px',
+                                    padding: '3px 8px',
+                                    background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)',
+                                    color: '#991B1B',
+                                    borderRadius: '12px',
+                                    fontWeight: '700',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}>
+                                    ⚠️ قديم جداً ({daysOld} يوم)
+                                  </span>
+                                )}
+                                {isOld && !isVeryOld && (
+                                  <span style={{
+                                    fontSize: '11px',
+                                    padding: '3px 8px',
+                                    background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+                                    color: '#92400E',
+                                    borderRadius: '12px',
+                                    fontWeight: '700',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}>
+                                    ⏰ {daysOld} يوم
+                                  </span>
+                                )}
                               </div>
                               <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: '600', marginBottom: '6px' }}>
                                 {day.problemReason}
@@ -592,6 +672,222 @@ export default function NewAttendanceRequestPageEnhanced() {
             </div>
           </ResponsiveGrid>
         </form>
+
+        {/* History & Statistics Section */}
+        {formData.type === 'EXCUSE' && (
+          <div style={{ marginTop: '32px' }}>
+            {/* Statistics Panel */}
+            {historyStats && (
+              <CardEnhanced variant="elevated">
+                <CardHeader 
+                  title="📊 إحصائيات التصحيحات" 
+                  action={
+                    <button
+                      onClick={() => setShowHistory(!showHistory)}
+                      style={{
+                        padding: '8px 16px',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {showHistory ? '🔼 إخفاء السجل' : '🔽 عرض السجل'}
+                    </button>
+                  }
+                />
+                <CardBody>
+                  <ResponsiveGrid columns={{ mobile: 2, tablet: 4 }} gap="md">
+                    <div style={{ textAlign: 'center', padding: '16px', background: '#F9FAFB', borderRadius: '12px' }}>
+                      <div style={{ fontSize: '28px', fontWeight: '800', color: '#111827', marginBottom: '4px' }}>
+                        {historyStats.total}
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#6B7280' }}>إجمالي الطلبات</div>
+                    </div>
+
+                    <div style={{ textAlign: 'center', padding: '16px', background: 'linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%)', borderRadius: '12px' }}>
+                      <div style={{ fontSize: '28px', fontWeight: '800', color: '#065F46', marginBottom: '4px' }}>
+                        {historyStats.approved}
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#065F46' }}>تمت الموافقة</div>
+                    </div>
+
+                    <div style={{ textAlign: 'center', padding: '16px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', borderRadius: '12px' }}>
+                      <div style={{ fontSize: '28px', fontWeight: '800', color: '#991B1B', marginBottom: '4px' }}>
+                        {historyStats.rejected}
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#991B1B' }}>تم الرفض</div>
+                    </div>
+
+                    <div style={{ textAlign: 'center', padding: '16px', background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)', borderRadius: '12px' }}>
+                      <div style={{ fontSize: '28px', fontWeight: '800', color: '#667eea', marginBottom: '4px' }}>
+                        {historyStats.approvalRate.toFixed(0)}%
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#667eea' }}>نسبة الموافقة</div>
+                    </div>
+                  </ResponsiveGrid>
+
+                  {/* Approval Rate Progress Bar */}
+                  <div style={{ marginTop: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>نسبة نجاح التصحيحات</span>
+                      <span style={{ fontSize: '14px', fontWeight: '700', color: '#667eea' }}>
+                        {historyStats.approved} من {historyStats.total - historyStats.pending}
+                      </span>
+                    </div>
+                    <div style={{
+                      width: '100%',
+                      height: '12px',
+                      background: '#E5E7EB',
+                      borderRadius: '6px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        width: `${historyStats.approvalRate}%`,
+                        height: '100%',
+                        background: 'linear-gradient(90deg, #10B981 0%, #059669 100%)',
+                        borderRadius: '6px',
+                        transition: 'width 0.5s ease'
+                      }} />
+                    </div>
+                  </div>
+                </CardBody>
+              </CardEnhanced>
+            )}
+
+            {/* Timeline Section */}
+            {showHistory && (
+              <CardEnhanced variant="elevated" style={{ marginTop: '24px' }}>
+                <CardHeader title="📋 سجل التصحيحات السابقة" />
+                <CardBody>
+                  {loadingHistory ? (
+                    <SkeletonCard />
+                  ) : history.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                      <div style={{ fontSize: '64px', marginBottom: '16px' }}>📭</div>
+                      <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#6B7280' }}>
+                        لا توجد تصحيحات سابقة
+                      </h4>
+                    </div>
+                  ) : (
+                    <div style={{ position: 'relative' }}>
+                      {/* Timeline Line */}
+                      <div style={{
+                        position: 'absolute',
+                        right: '16px',
+                        top: '20px',
+                        bottom: '20px',
+                        width: '2px',
+                        background: 'linear-gradient(180deg, #667eea 0%, #764ba2 100%)',
+                        opacity: 0.3
+                      }} />
+
+                      {/* Timeline Items */}
+                      <div style={{ display: 'grid', gap: '16px' }}>
+                        {history.map((item, index) => {
+                          const isOld = item.daysSince > 30;
+                          const statusColor = 
+                            item.status === 'APPROVED' ? '#10B981' :
+                            item.status === 'REJECTED' ? '#EF4444' :
+                            '#F59E0B';
+                          const statusIcon =
+                            item.status === 'APPROVED' ? '✅' :
+                            item.status === 'REJECTED' ? '❌' :
+                            '⏳';
+
+                          return (
+                            <div
+                              key={item.id}
+                              style={{
+                                position: 'relative',
+                                paddingRight: '48px',
+                                paddingLeft: '16px',
+                                paddingTop: '16px',
+                                paddingBottom: '16px',
+                                background: index % 2 === 0 ? '#F9FAFB' : 'white',
+                                borderRadius: '12px',
+                                border: '1px solid #E5E7EB'
+                              }}
+                            >
+                              {/* Timeline Dot */}
+                              <div style={{
+                                position: 'absolute',
+                                right: '8px',
+                                top: '24px',
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                background: statusColor,
+                                border: '3px solid white',
+                                boxShadow: '0 0 0 2px ' + statusColor + '40'
+                              }} />
+
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '18px' }}>{statusIcon}</span>
+                                    <span style={{ fontSize: '15px', fontWeight: '700', color: '#111827' }}>
+                                      {new Date(item.requestDate).toLocaleDateString('ar-SA', {
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                      })}
+                                    </span>
+                                    {isOld && (
+                                      <span style={{
+                                        fontSize: '11px',
+                                        padding: '2px 8px',
+                                        background: '#FEF3C7',
+                                        color: '#92400E',
+                                        borderRadius: '12px',
+                                        fontWeight: '600'
+                                      }}>
+                                        قديم
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px', lineHeight: '1.6' }}>
+                                    {item.reason}
+                                  </div>
+
+                                  <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#9CA3AF', flexWrap: 'wrap' }}>
+                                    <span>📅 {item.daysSince} يوم مضى</span>
+                                    {item.reviewerName && <span>👤 {item.reviewerName}</span>}
+                                    {item.attendanceRecord && (
+                                      <span>🔖 {item.attendanceRecord.status === 'ABSENT' ? 'غياب' : 'تأخير'}</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div style={{
+                                  padding: '6px 12px',
+                                  background: statusColor + '20',
+                                  color: statusColor,
+                                  borderRadius: '8px',
+                                  fontSize: '13px',
+                                  fontWeight: '700'
+                                }}>
+                                  {item.status === 'APPROVED' ? 'موافق عليه' :
+                                   item.status === 'REJECTED' ? 'مرفوض' :
+                                   'قيد المراجعة'}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </CardBody>
+              </CardEnhanced>
+            )}
+          </div>
+        )}
       </ResponsiveContainer>
     </div>
   );
