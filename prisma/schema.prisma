@@ -2434,6 +2434,14 @@ enum WorkflowApprovalStatus {
   ESCALATED
 }
 
+// ==================== LEGACY WORKFLOW SYSTEM (DEPRECATED) ====================
+// ⚠️ DEPRECATED: This model is part of the old workflow system
+// New system uses: WorkflowDefinition → WorkflowVersion → WorkflowRuntimeApproval
+// Kept for backward compatibility and audit trail
+// Migration: 2026-03-11 - Data cleaned, models marked deprecated
+// DO NOT USE FOR NEW FEATURES
+// ==================================================================================
+
 model Workflow {
   id              String   @id @default(cuid())
   name            String
@@ -2454,6 +2462,7 @@ model Workflow {
   @@index([isActive])
 }
 
+// ⚠️ DEPRECATED: Part of old workflow system
 model WorkflowBranch {
   id         String   @id @default(cuid())
   workflowId String
@@ -2468,6 +2477,7 @@ model WorkflowBranch {
   @@index([branchId])
 }
 
+// ⚠️ DEPRECATED: Part of old workflow system
 model WorkflowStage {
   id         String   @id @default(cuid())
   workflowId String
@@ -2482,6 +2492,7 @@ model WorkflowStage {
   @@index([stageId])
 }
 
+// ⚠️ DEPRECATED: Part of old workflow system
 enum WorkflowApproverType {
   SPECIFIC_USER // موظف محدد
   ROLE // دور معين (مثل: مدير HR)
@@ -2489,6 +2500,7 @@ enum WorkflowApproverType {
   SYSTEM_ROLE // دور نظام (مثل: ADMIN)
 }
 
+// ⚠️ DEPRECATED: Part of old workflow system (see Workflow model comment)
 model WorkflowStep {
   id                 String               @id @default(cuid())
   workflowId         String
@@ -2519,6 +2531,7 @@ model WorkflowStep {
   @@index([approverType])
 }
 
+// ⚠️ DEPRECATED: Part of old workflow system
 model WorkflowRole {
   id          String        @id @default(cuid())
   slug        String        @unique // e.g., "stage_manager", "department_head", "ceo"
@@ -2534,6 +2547,8 @@ model WorkflowRole {
   @@index([level])
 }
 
+// ⚠️ DEPRECATED: Part of old workflow system
+// New system uses: WorkflowRuntimeApproval (with versioning support)
 model WorkflowApprovalLog {
   id             String                 @id @default(cuid())
   workflowStepId String
@@ -2577,6 +2592,7 @@ model EmployeeBranchCoverage {
   @@index([employeeId, module])
 }
 
+// ⚠️ DEPRECATED: Part of old workflow system
 model WorkflowReferral {
   id           String    @id @default(cuid())
   approvalId   String // الموافقة الأصلية
