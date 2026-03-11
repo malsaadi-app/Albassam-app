@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { CardEnhanced, CardBody, CardHeader } from '@/components/ui/CardEnhanced';
 import { ResponsiveContainer, ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
 import { SkeletonCard } from '@/components/ui/LoadingStates';
-import { exportAnalyticsToExcel } from '@/lib/excel-generator';
+import { generateAnalyticsExcel, downloadExcel, formatExcelFilename } from '@/lib/excel-generator';
 
 interface AnalyticsData {
   employees: {
@@ -64,7 +64,39 @@ export default function AnalyticsPage() {
   const handleExportExcel = () => {
     if (!data) return;
     try {
-      exportAnalyticsToExcel(data);
+      const excelData = {
+        employeeMetrics: {
+          total: data.employees.total,
+          active: data.employees.active,
+          onLeave: data.employees.onLeave,
+          resigned: data.employees.resigned,
+          terminated: data.employees.terminated
+        },
+        attendanceToday: {
+          present: data.attendance.present,
+          late: data.attendance.late,
+          absent: data.attendance.absent,
+          excused: data.attendance.excused,
+          rate: data.attendance.attendanceRate
+        },
+        hrRequests: {
+          pending: data.hr.pendingRequests,
+          approved: data.hr.approvedRequests,
+          rejected: data.hr.rejectedRequests,
+          total: data.hr.totalRequests
+        },
+        workflows: {
+          active: data.workflows.activeApprovals,
+          escalated: data.workflows.escalatedApprovals,
+          avgApprovalHours: data.workflows.averageApprovalTime
+        },
+        byDepartment: data.employees.byDepartment,
+        byBranch: data.employees.byBranch
+      };
+
+      const blob = generateAnalyticsExcel(excelData);
+      const filename = formatExcelFilename('analytics-dashboard');
+      downloadExcel(blob, filename);
     } catch (error) {
       console.error('Error exporting to Excel:', error);
       alert('حدث خطأ أثناء التصدير');

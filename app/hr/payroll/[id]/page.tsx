@@ -8,7 +8,7 @@ import { CardEnhanced, CardBody, CardHeader } from '@/components/ui/CardEnhanced
 import { ResponsiveContainer, ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
 import { TableEnhanced, Column } from '@/components/ui/TableEnhanced';
 import { SkeletonTable } from '@/components/ui/LoadingStates';
-import { exportPayrollToExcel } from '@/lib/excel-generator';
+import { generatePayrollRunExcel, downloadExcel, formatExcelFilename } from '@/lib/excel-generator';
 
 interface PayrollLine {
   id: string;
@@ -127,22 +127,44 @@ export default function PayrollDetailPage() {
   const exportToExcel = () => {
     if (!run) return;
 
-    const data = run.lines.map(line => ({
-      employeeNumber: line.employeeNumber || '',
-      employeeName: line.employeeName,
-      nationalId: line.nationalId,
-      basicSalary: line.basicSalary,
-      housingAllowance: line.housingAllowance,
-      transportAllowance: line.transportAllowance,
-      otherAllowances: line.otherAllowances,
-      additions: line.additions,
-      deductions: line.deductions,
-      totalSalary: line.totalSalary,
-      bankName: line.bankName || undefined,
-      iban: line.iban || undefined
-    }));
+    // Calculate summary
+    const totalBasicSalary = run.lines.reduce((sum, line) => sum + line.basicSalary, 0);
+    const totalAllowances = run.lines.reduce((sum, line) => 
+      sum + line.housingAllowance + line.transportAllowance + line.otherAllowances, 0);
+    const totalAdditions = run.lines.reduce((sum, line) => sum + line.additions, 0);
+    const totalDeductions = run.lines.reduce((sum, line) => sum + line.deductions, 0);
+    const totalNetSalary = run.lines.reduce((sum, line) => sum + line.totalSalary, 0);
 
-    exportPayrollToExcel(data, run.year, run.month);
+    const excelData = {
+      runId: run.id,
+      year: run.year,
+      month: run.month,
+      status: run.status,
+      employees: run.lines.map(line => ({
+        employeeName: line.employeeName,
+        employeeNumber: line.employeeNumber || '',
+        nationalId: line.nationalId,
+        basicSalary: line.basicSalary,
+        allowances: line.housingAllowance + line.transportAllowance + line.otherAllowances,
+        additions: line.additions,
+        deductions: line.deductions,
+        totalSalary: line.totalSalary,
+        bankName: line.bankName || undefined,
+        iban: line.iban || undefined
+      })),
+      summary: {
+        totalEmployees: run.lines.length,
+        totalBasicSalary,
+        totalAllowances,
+        totalAdditions,
+        totalDeductions,
+        totalNetSalary
+      }
+    };
+
+    const blob = generatePayrollRunExcel(excelData);
+    const filename = formatExcelFilename(`payroll-${run.year}-${run.month}`);
+    downloadExcel(blob, filename);
   };
 
   const columns: Column<PayrollLine>[] = [

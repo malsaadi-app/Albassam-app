@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { COLORS } from '@/lib/colors';
+import { generateEmployeeListExcel, downloadExcel, formatExcelFilename } from '@/lib/excel-generator';
 
 interface Employee {
   id: string;
@@ -153,6 +154,35 @@ export default function EmployeesPage() {
     }
   };
 
+  const handleExportExcel = () => {
+    try {
+      const excelData = {
+        employees: employees.map(emp => ({
+          name: emp.fullNameAr,
+          employeeNumber: emp.employeeNumber,
+          nationalId: '', // Not available in current data
+          email: emp.email,
+          phone: emp.phone,
+          department: emp.department,
+          branch: '', // Could be added if available
+          jobTitle: emp.position,
+          status: emp.status,
+          hireDate: new Date(emp.hireDate),
+          basicSalary: emp.basicSalary
+        }))
+      };
+
+      const blob = generateEmployeeListExcel(excelData);
+      const filename = formatExcelFilename('employees-list');
+      downloadExcel(blob, filename);
+
+      toast.success('تم تصدير قائمة الموظفين بنجاح', 'نجاح');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('حدث خطأ أثناء التصدير', 'خطأ');
+    }
+  };
+
   const getStatusBadge = (statusValue: string) => {
     const map: Record<string, { type: 'success' | 'warning' | 'danger' | 'gray'; text: string }> = {
       ACTIVE: { type: 'success', text: 'نشط' },
@@ -289,6 +319,25 @@ export default function EmployeesPage() {
           breadcrumbs={['الرئيسية', 'شؤون الموظفين', 'الموظفين']}
           actions={
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleExportExcel}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
+                }}
+              >
+                📊 تصدير Excel
+              </button>
               <Link href="/hr/employees/new">
                 <Button variant="primary">➕ موظف جديد</Button>
               </Link>
