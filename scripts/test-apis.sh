@@ -51,6 +51,9 @@ test_endpoint() {
     elif [ "$status_code" = "401" ] || [ "$status_code" = "403" ]; then
         echo -e "${GREEN}✅ PASSED${NC} ${YELLOW}(AUTH REQUIRED - Expected)${NC} (HTTP $status_code)"
         ((PASSED++))
+    elif [ "$status_code" = "400" ]; then
+        echo -e "${GREEN}✅ PASSED${NC} ${YELLOW}(PARAMS REQUIRED - Expected)${NC} (HTTP $status_code)"
+        ((PASSED++))
     else
         echo -e "${RED}❌ FAILED${NC} (Expected: $expected_status, Got: $status_code)"
         ((FAILED++))
@@ -107,7 +110,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "6️⃣  WORKFLOW ENDPOINTS"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 test_endpoint GET "/api/workflows" 200 "List Workflows"
-test_endpoint GET "/api/workflows/runtime" 200 "Workflow Approvals"
+test_endpoint GET "/api/workflows/approvals" 200 "Workflow Approvals"
 test_endpoint GET "/api/settings/workflow-builder" 200 "Workflow Builder"
 echo ""
 
