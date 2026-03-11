@@ -6,6 +6,7 @@ import { cookies } from 'next/headers'
 import { assetNumberFor, requestNumberFor } from '@/lib/maintenance/utils'
 import { canAccessRequest, getMaintenanceAccess, isMaintenanceManager, isMaintenanceTechnician, teamForType } from '@/lib/maintenance/auth'
 import { MaintenanceHistoryAction, MaintenancePriority, MaintenanceStatus, MaintenanceType } from '@prisma/client'
+import { initiateWorkflow } from '@/lib/workflow-runtime'
 
 const createRequestSchema = z.object({
   type: z.enum(['BUILDING', 'ELECTRONICS']),
@@ -175,6 +176,37 @@ export async function POST(request: NextRequest) {
 
       return req
     })
+
+    // Initiate new workflow system
+    try {
+      const workflowResult = await initiateWorkflow({
+        module: 'MAINTENANCE',
+        requestType: 'MAINTENANCE_REQUEST',
+        requestId: created.id,
+        requestContext: {
+          employeeId: requestedById,
+          branchId: created.branchId,
+        }
+      });
+
+      console.log('✅ Maintenance workflow initiated:', workflowResult.workflow.workflow.name);
+      console.log('   First step:', workflowResult.step.titleAr);
+      console.log('   Approver:', workflowResult.approval.approverId);
+      
+      // Log workflow initiation
+      await prisma.maintenanceHistory.create({
+        data: {
+          requestId: created.id,
+          action: 'WORKFLOW_INITIATED' as any,
+          notes: `تم بدء workflow: ${workflowResult.workflow.workflow.name} - الخطوة الأولى: ${workflowResult.step.titleAr}`,
+          userId: requestedById
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Error initiating maintenance workflow:', error);
+      // Continue without failing
+    }
 
     return NextResponse.json({ request: created }, { status: 201 })
   } catch (e: any) {

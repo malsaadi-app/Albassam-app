@@ -6,6 +6,7 @@ import { getSession } from '@/lib/session';
 import { isDelegatedViewer } from '@/lib/delegation';
 import { HR_REQUEST_TYPE_CONFIG } from '@/lib/hrRequestConfig';
 import { createHRRequestAuditLog } from '@/lib/audit';
+import { initiateWorkflow } from '@/lib/workflow-runtime';
 
 // Validation schema for HR requests
 const hrRequestSchema = z.object({
@@ -227,6 +228,37 @@ export async function POST(request: NextRequest) {
       action: 'REQUEST_CREATED',
       message: 'تم إنشاء الطلب'
     });
+
+    // Initiate new workflow system
+    try {
+      const workflowResult = await initiateWorkflow({
+        module: 'HR',
+        requestType: 'HR_REQUEST',
+        requestId: hrRequest.id,
+        requestContext: {
+          employeeId: session.user.id,
+          branchId: undefined, // Get from employee if available
+          departmentId: undefined, // Get from employee if available
+        }
+      });
+
+      console.log('✅ Workflow initiated:', workflowResult.workflow.workflow.name);
+      console.log('   First step:', workflowResult.step.titleAr);
+      console.log('   Approver:', workflowResult.approval.approverId);
+      
+      // Log workflow initiation (using COMMENT action as fallback)
+      await createHRRequestAuditLog(prisma, {
+        requestId: hrRequest.id,
+        actorUserId: session.user.id,
+        action: 'COMMENT' as any,
+        message: `✅ Workflow: ${workflowResult.workflow.workflow.name} - ${workflowResult.step.titleAr}`
+      });
+      
+    } catch (error) {
+      console.error('❌ Error initiating workflow:', error);
+      // Don't log error to avoid bloating audit log
+      // The workflow will be created next time if needed
+    }
 
     // If it's a leave request, calculate days
     if (validatedData.type === 'LEAVE' && validatedData.startDate && validatedData.endDate) {

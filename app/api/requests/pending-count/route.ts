@@ -15,11 +15,12 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    // Count workflow approval logs that are:
+    // Count workflow runtime approvals that are:
     // 1. Status = PENDING
     // 2. Assigned to current user (approverId)
+    // NOTE: Using NEW workflow system (WorkflowRuntimeApproval)
     
-    const pendingApprovals = await prisma.workflowApprovalLog.findMany({
+    const pendingApprovals = await prisma.workflowRuntimeApproval.findMany({
       where: {
         approverId: userId,
         status: 'PENDING'

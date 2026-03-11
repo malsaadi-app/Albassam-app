@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/db';
 import { PurchaseCategory, PurchasePriority, PurchaseRequestStatus } from '@prisma/client';
+import { initiateWorkflow } from '@/lib/workflow-runtime';
 
 // GET /api/procurement/requests - Get all purchase requests
 export async function GET(request: NextRequest) {
@@ -220,6 +221,27 @@ export async function POST(request: NextRequest) {
         }
       }
     });
+
+    // Initiate new workflow system
+    try {
+      const workflowResult = await initiateWorkflow({
+        module: 'PROCUREMENT',
+        requestType: 'PURCHASE_REQUEST',
+        requestId: purchaseRequest.id,
+        requestContext: {
+          employeeId: session.user.id,
+          amount: budgetValue || itemsTotal,
+        }
+      });
+
+      console.log('✅ Procurement workflow initiated:', workflowResult.workflow.workflow.name);
+      console.log('   First step:', workflowResult.step.titleAr);
+      console.log('   Approver:', workflowResult.approval.approverId);
+      
+    } catch (error) {
+      console.error('❌ Error initiating procurement workflow:', error);
+      // Continue without failing the request
+    }
 
     // Send notification to the responsible person(s) for first step
     if (firstResponsibleUserIds.length > 0) {

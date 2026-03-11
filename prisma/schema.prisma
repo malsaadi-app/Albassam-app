@@ -78,6 +78,10 @@ model User {
   financeRequestsAccountant  FinanceRequest[]      @relation("FinanceAccountant")
   financeRequestsFinanceMgr  FinanceRequest[]      @relation("FinanceManager")
   workflowApprovals          WorkflowApprovalLog[] @relation("WorkflowApprovals")
+  
+  // New workflow system runtime approvals
+  workflowRuntimeApprovals   WorkflowRuntimeApproval[] @relation("WorkflowRuntimeApprovals")
+  workflowRuntimeEscalations WorkflowRuntimeApproval[] @relation("WorkflowRuntimeEscalations")
 
   // HR routing rules
   hrRoutingVpRules        HRRoutingRule[] @relation("HRRoutingVP")
@@ -1701,6 +1705,7 @@ model WorkflowVersion {
   workflow WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   rules    WorkflowRule[]
   steps    WorkflowStepDefinition[]
+  runtimeApprovals WorkflowRuntimeApproval[]
 
   creator User? @relation("WorkflowVersionCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
 
@@ -1737,9 +1742,58 @@ model WorkflowStepDefinition {
   allowDelegation   Boolean  @default(true)
 
   workflowVersion WorkflowVersion @relation(fields: [workflowVersionId], references: [id], onDelete: Cascade)
+  runtimeApprovals WorkflowRuntimeApproval[]
 
   @@unique([workflowVersionId, order])
   @@index([workflowVersionId])
+}
+
+// ==================== NEW WORKFLOW RUNTIME SYSTEM ====================
+// Runtime approval tracking for new workflow system (WorkflowDefinition-based)
+model WorkflowRuntimeApproval {
+  id               String   @id @default(cuid())
+  versionId        String   // Link to WorkflowVersion
+  stepDefinitionId String   // Link to WorkflowStepDefinition
+  requestType      String   // HR_REQUEST, PURCHASE_REQUEST, MAINTENANCE_REQUEST, ATTENDANCE_CORRECTION
+  requestId        String   // ID of the actual request
+  approverId       String   // Current approver
+  status           WorkflowRuntimeStatus @default(PENDING)
+  level            WorkflowRuntimeLevel? // STAGE, DEPARTMENT, COMPANY (from step config)
+  comments         String?
+  metadata         Json?    // Additional runtime data
+  createdAt        DateTime @default(now())
+  reviewedAt       DateTime?
+  escalatedAt      DateTime?
+  escalatedTo      String?  // User ID if escalated
+  notifyOnEntry    Boolean  @default(true)
+  notifyOnApproval Boolean  @default(true)
+  notifyOnReject   Boolean  @default(true)
+  
+  version        WorkflowVersion        @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  stepDefinition WorkflowStepDefinition @relation(fields: [stepDefinitionId], references: [id], onDelete: Cascade)
+  approver       User                   @relation("WorkflowRuntimeApprovals", fields: [approverId], references: [id])
+  escalatedToUser User?                 @relation("WorkflowRuntimeEscalations", fields: [escalatedTo], references: [id])
+  
+  @@index([requestType, requestId])
+  @@index([approverId, status])
+  @@index([status])
+  @@index([createdAt])
+  @@index([versionId])
+}
+
+enum WorkflowRuntimeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ESCALATED
+  DELEGATED
+  CONSULTED
+}
+
+enum WorkflowRuntimeLevel {
+  STAGE      // مستوى المرحلة
+  DEPARTMENT // مستوى القسم
+  COMPANY    // مستوى الشركة
 }
 
 model HRRoutingRule {

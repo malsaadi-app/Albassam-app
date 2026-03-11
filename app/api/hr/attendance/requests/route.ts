@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/session';
+import { initiateWorkflow } from '@/lib/workflow-runtime';
 
 export async function GET(request: NextRequest) {
   try {
@@ -124,6 +125,26 @@ export async function POST(request: NextRequest) {
         }
       }
     });
+
+    // Initiate new workflow system
+    try {
+      const workflowResult = await initiateWorkflow({
+        module: 'ATTENDANCE',
+        requestType: 'ATTENDANCE_CORRECTION',
+        requestId: attendanceRequest.id,
+        requestContext: {
+          employeeId: session.user.id,
+        }
+      });
+
+      console.log('✅ Attendance workflow initiated:', workflowResult.workflow.workflow.name);
+      console.log('   First step:', workflowResult.step.titleAr);
+      console.log('   Approver:', workflowResult.approval.approverId);
+      
+    } catch (error) {
+      console.error('❌ Error initiating attendance workflow:', error);
+      // Continue without failing
+    }
 
     // TODO: Send notification to admin/manager
 
