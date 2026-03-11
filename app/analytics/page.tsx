@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { CardEnhanced, CardBody, CardHeader } from '@/components/ui/CardEnhanced';
 import { ResponsiveContainer, ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
 import { SkeletonCard } from '@/components/ui/LoadingStates';
+import { exportAnalyticsToExcel } from '@/lib/excel-generator';
 
 interface AnalyticsData {
   employees: {
@@ -57,6 +58,16 @@ export default function AnalyticsPage() {
       console.error('Error fetching analytics:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (!data) return;
+    try {
+      exportAnalyticsToExcel(data);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('حدث خطأ أثناء التصدير');
     }
   };
 
@@ -117,6 +128,27 @@ export default function AnalyticsPage() {
         <PageHeader
           title="📊 لوحة التحليلات"
           breadcrumbs={['الرئيسية', 'التحليلات']}
+          actions={
+            <button
+              onClick={handleExportExcel}
+              style={{
+                padding: '12px 24px',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '10px',
+                fontSize: '15px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              📊 تصدير Excel
+            </button>
+          }
         />
 
         {/* Employees Section */}

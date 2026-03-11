@@ -8,6 +8,7 @@ import { CardEnhanced, CardBody, CardHeader } from '@/components/ui/CardEnhanced
 import { ResponsiveContainer, ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
 import { TableEnhanced, Column } from '@/components/ui/TableEnhanced';
 import { SkeletonTable } from '@/components/ui/LoadingStates';
+import { exportPayrollToExcel } from '@/lib/excel-generator';
 
 interface PayrollLine {
   id: string;
@@ -121,6 +122,27 @@ export default function PayrollDetailPage() {
     link.href = URL.createObjectURL(blob);
     link.download = `payroll-${run.year}-${run.month}.csv`;
     link.click();
+  };
+
+  const exportToExcel = () => {
+    if (!run) return;
+
+    const data = run.lines.map(line => ({
+      employeeNumber: line.employeeNumber || '',
+      employeeName: line.employeeName,
+      nationalId: line.nationalId,
+      basicSalary: line.basicSalary,
+      housingAllowance: line.housingAllowance,
+      transportAllowance: line.transportAllowance,
+      otherAllowances: line.otherAllowances,
+      additions: line.additions,
+      deductions: line.deductions,
+      totalSalary: line.totalSalary,
+      bankName: line.bankName || undefined,
+      iban: line.iban || undefined
+    }));
+
+    exportPayrollToExcel(data, run.year, run.month);
   };
 
   const columns: Column<PayrollLine>[] = [
@@ -276,10 +298,27 @@ export default function PayrollDetailPage() {
           actions={
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
               <button
-                onClick={exportToCSV}
+                onClick={exportToExcel}
                 style={{
                   padding: '12px 24px',
                   background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                }}
+              >
+                📊 تصدير Excel
+              </button>
+
+              <button
+                onClick={exportToCSV}
+                style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
