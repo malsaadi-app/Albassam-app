@@ -1,100 +1,97 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/session';
+import prisma from '@/lib/prisma';
+import { generatePayrollRun } from '@/lib/payroll';
 
-function isHR(role?: string) {
-  return role === 'ADMIN' || role === 'HR_EMPLOYEE';
-}
-
-// GET /api/hr/payroll/runs - list payroll runs
-export async function GET() {
+// GET /api/hr/payroll/runs - List all payroll runs
+export async function GET(request: NextRequest) {
   try {
     const session = await getSession(await cookies());
-    if (!session.user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
-    if (!isHR(session.user.role)) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
+
+    if (!session.user) {
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+    }
+
+    // Check permission
+    const hasPermission = session.permissions?.includes('payroll.manage');
+    if (!hasPermission) {
+      return NextResponse.json({ error: 'ليس لديك صلاحية إدارة الرواتب' }, { status: 403 });
+    }
 
     const runs = await prisma.payrollRun.findMany({
-      orderBy: [{ year: 'desc' }, { month: 'desc' }],
-      include: { _count: { select: { lines: true } } }
+      include: {
+        _count: {
+          select: { lines: true }
+        },
+        lines: {
+          select: {
+            totalSalary: true
+          }
+        }
+      },
+      orderBy: [
+        { year: 'desc' },
+        { month: 'desc' }
+      ]
     });
 
-    return NextResponse.json({ runs });
+    const formattedRuns = runs.map(run => ({
+      id: run.id,
+      year: run.year,
+      month: run.month,
+      status: run.status,
+      linesCount: run._count.lines,
+      totalAmount: run.lines.reduce((sum, line) => sum + line.totalSalary, 0),
+      createdAt: run.createdAt.toISOString()
+    }));
+
+    return NextResponse.json({ runs: formattedRuns });
+
   } catch (error) {
-    console.error('Payroll runs GET error:', error);
-    return NextResponse.json({ error: 'حدث خطأ أثناء جلب مسيرات الرواتب' }, { status: 500 });
+    console.error('Error fetching payroll runs:', error);
+    return NextResponse.json(
+      { error: 'حدث خطأ أثناء جلب البيانات' },
+      { status: 500 }
+    );
   }
 }
 
-// POST /api/hr/payroll/runs - create a payroll run and generate lines
+// POST /api/hr/payroll/runs - Create new payroll run
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession(await cookies());
-    if (!session.user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
-    if (!isHR(session.user.role)) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
+
+    if (!session.user) {
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+    }
+
+    // Check permission
+    const hasPermission = session.permissions?.includes('payroll.manage');
+    if (!hasPermission) {
+      return NextResponse.json({ error: 'ليس لديك صلاحية إدارة الرواتب' }, { status: 403 });
+    }
 
     const body = await request.json();
-    const year = Number(body.year);
-    const month = Number(body.month);
-    const notes = body.notes ? String(body.notes) : null;
+    const { year, month } = body;
 
-    if (!year || !month || month < 1 || month > 12) {
-      return NextResponse.json({ error: 'بيانات غير صحيحة (السنة/الشهر)' }, { status: 400 });
+    if (!year || !month) {
+      return NextResponse.json({ error: 'السنة والشهر مطلوبان' }, { status: 400 });
     }
 
-    // prevent duplicate
-    const existing = await prisma.payrollRun.findUnique({ where: { year_month: { year, month } } });
-    if (existing) {
-      return NextResponse.json({ error: 'مسير هذا الشهر موجود مسبقاً' }, { status: 400 });
-    }
+    const result = await generatePayrollRun(year, month, session.user.id);
 
-    const employees = await prisma.employee.findMany({
-      where: { status: { in: ['ACTIVE', 'ON_LEAVE'] } },
-      select: {
-        id: true,
-        fullNameAr: true,
-        nationalId: true,
-        bankName: true,
-        iban: true,
-        basicSalary: true,
-        transportAllowance: true,
-        housingAllowance: true,
-        otherAllowances: true,
-      }
+    return NextResponse.json({
+      success: true,
+      runId: result.runId,
+      linesCount: result.linesCount
     });
 
-    const run = await prisma.payrollRun.create({
-      data: {
-        year,
-        month,
-        notes,
-        createdBy: session.user.username,
-        lines: {
-          create: employees.map((e) => {
-            const deductions = 0;
-            const totalSalary = e.basicSalary + e.transportAllowance + e.housingAllowance + e.otherAllowances - deductions;
-            return {
-              employeeId: e.id,
-              employeeName: e.fullNameAr,
-              nationalId: e.nationalId,
-              bankName: e.bankName,
-              iban: e.iban,
-              basicSalary: e.basicSalary,
-              transportAllowance: e.transportAllowance,
-              housingAllowance: e.housingAllowance,
-              otherAllowances: e.otherAllowances,
-              deductions,
-              totalSalary,
-            };
-          })
-        }
-      },
-      include: { lines: true }
-    });
-
-    return NextResponse.json({ run }, { status: 201 });
-  } catch (error) {
-    console.error('Payroll runs POST error:', error);
-    return NextResponse.json({ error: 'حدث خطأ أثناء إنشاء مسير الرواتب' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error generating payroll run:', error);
+    return NextResponse.json(
+      { error: error.message || 'حدث خطأ أثناء إنشاء الرواتب' },
+      { status: 500 }
+    );
   }
 }

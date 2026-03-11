@@ -1,21 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/session';
+import prisma from '@/lib/prisma';
+import { deletePayrollRun } from '@/lib/payroll';
 
-function isHR(role?: string) {
-  return role === 'ADMIN' || role === 'HR_EMPLOYEE';
+interface Params {
+  params: Promise<{
+    id: string;
+  }>;
 }
 
-// GET /api/hr/payroll/runs/[id]
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// GET /api/hr/payroll/runs/[id] - Get payroll run details
+export async function GET(request: NextRequest, { params }: Params) {
   try {
     const session = await getSession(await cookies());
-    if (!session.user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
-    if (!isHR(session.user.role)) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
+
+    if (!session.user) {
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+    }
+
+    const hasPermission = session.permissions?.includes('payroll.manage');
+    if (!hasPermission) {
+      return NextResponse.json({ error: 'ليس لديك صلاحية' }, { status: 403 });
+    }
 
     const { id } = await params;
 
@@ -24,48 +31,62 @@ export async function GET(
       include: {
         lines: {
           include: {
+            items: true,
             employee: {
               select: {
-                employeeNumber: true,
-                department: true,
+                id: true,
+                fullNameAr: true,
+                employeeNumber: true
               }
             }
           },
-          orderBy: { employee: { employeeNumber: 'asc' } }
+          orderBy: {
+            employeeName: 'asc'
+          }
         }
       }
     });
 
-    if (!run) return NextResponse.json({ error: 'مسير غير موجود' }, { status: 404 });
+    if (!run) {
+      return NextResponse.json({ error: 'لم يتم العثور على الرواتب' }, { status: 404 });
+    }
 
     return NextResponse.json({ run });
+
   } catch (error) {
-    console.error('Payroll run GET error:', error);
-    return NextResponse.json({ error: 'حدث خطأ أثناء جلب المسير' }, { status: 500 });
+    console.error('Error fetching payroll run:', error);
+    return NextResponse.json(
+      { error: 'حدث خطأ أثناء جلب البيانات' },
+      { status: 500 }
+    );
   }
 }
 
-// PATCH /api/hr/payroll/runs/[id] - lock/unlock or update notes
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// DELETE /api/hr/payroll/runs/[id] - Delete payroll run
+export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     const session = await getSession(await cookies());
-    if (!session.user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
-    if (!isHR(session.user.role)) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
+
+    if (!session.user) {
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+    }
+
+    const hasPermission = session.permissions?.includes('payroll.manage');
+    if (!hasPermission) {
+      return NextResponse.json({ error: 'ليس لديك صلاحية' }, { status: 403 });
+    }
 
     const { id } = await params;
-    const body = await request.json();
 
-    const patch: any = {};
-    if (typeof body.notes === 'string') patch.notes = body.notes;
-    if (body.status && ['DRAFT', 'LOCKED'].includes(body.status)) patch.status = body.status;
+    await deletePayrollRun(id);
 
-    const updated = await prisma.payrollRun.update({ where: { id }, data: patch });
-    return NextResponse.json({ run: updated });
-  } catch (error) {
-    console.error('Payroll run PATCH error:', error);
-    return NextResponse.json({ error: 'حدث خطأ أثناء تحديث المسير' }, { status: 500 });
+    return NextResponse.json({ success: true });
+
+  } catch (error: any) {
+    console.error('Error deleting payroll run:', error);
+    return NextResponse.json(
+      { error: error.message || 'حدث خطأ أثناء الحذف' },
+      { status: 500 }
+    );
   }
 }
