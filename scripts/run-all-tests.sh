@@ -78,13 +78,16 @@ run_suite "API Endpoints Test" "./scripts/test-apis.sh" "🌐"
 # Test Suite 3: Database Integrity
 run_suite "Database Integrity Test" "node scripts/test-database.js" "🗄️"
 
-# Test Suite 4: Payroll System
+# Test Suite 4: Core Operations (Employee, Attendance, Corrections)
+run_suite "Core Operations Test" "node scripts/test-core-operations.js" "👥"
+
+# Test Suite 5: Payroll System
 run_suite "Payroll System Test" "node scripts/test-payroll.js" "💰"
 
-# Test Suite 5: Workflows & Requests
+# Test Suite 6: Workflows & Requests
 run_suite "Workflows & Requests Test" "node scripts/test-workflows.js" "🔄"
 
-# Test Suite 6: Build Verification
+# Test Suite 7: Build Verification
 run_suite "Build Verification" "./scripts/verify-build.sh" "🔧"
 
 # Generate final report
