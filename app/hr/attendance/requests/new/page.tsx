@@ -3,7 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { CardEnhanced, CardBody, CardHeader } from '@/components/ui/CardEnhanced';
+import { ResponsiveContainer, ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
+import { FloatingInput, FloatingTextarea } from '@/components/ui/FormEnhanced';
 import FileUpload, { UploadedFile } from '@/components/FileUpload';
+import { SkeletonCard } from '@/components/ui/LoadingStates';
 
 interface ProblematicDay {
   id: string;
@@ -14,9 +19,10 @@ interface ProblematicDay {
   status: string;
   hasExcuseRequest: boolean;
   excuseRequestStatus: string | null;
+  problemReason?: string; // سبب المشكلة
 }
 
-export default function NewAttendanceRequestPage() {
+export default function NewAttendanceRequestPageEnhanced() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [loadingDays, setLoadingDays] = useState(true);
@@ -25,7 +31,7 @@ export default function NewAttendanceRequestPage() {
   const [formData, setFormData] = useState({
     type: 'EXCUSE',
     reason: '',
-    permissionDate: '' // للاستئذان
+    permissionDate: ''
   });
   const [attachments, setAttachments] = useState<UploadedFile[]>([]);
 
@@ -41,13 +47,32 @@ export default function NewAttendanceRequestPage() {
       const res = await fetch('/api/hr/attendance/problematic-days');
       if (res.ok) {
         const data = await res.json();
-        setProblematicDays(data);
+        
+        // Add problem reason for each day
+        const enhancedData = data.map((day: ProblematicDay) => ({
+          ...day,
+          problemReason: getProblemReason(day)
+        }));
+        
+        setProblematicDays(enhancedData);
       }
     } catch (error) {
       console.error('Error fetching problematic days:', error);
     } finally {
       setLoadingDays(false);
     }
+  };
+
+  const getProblemReason = (day: ProblematicDay): string => {
+    if (day.status === 'ABSENT') return 'غياب كامل';
+    if (day.status === 'LATE') {
+      if (!day.checkIn) return 'لم يتم تسجيل الحضور';
+      if (!day.checkOut) return 'لم يتم تسجيل الانصراف';
+      return 'تأخر عن موعد الحضور';
+    }
+    if (!day.checkOut) return 'لم يتم تسجيل الانصراف';
+    if (!day.checkIn) return 'لم يتم تسجيل الحضور';
+    return 'مشكلة في الحضور';
   };
 
   const toggleDate = (dateStr: string) => {
@@ -62,19 +87,19 @@ export default function NewAttendanceRequestPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.type === 'EXCUSE' && selectedDates.size === 0) {
-      alert('الرجاء اختيار يوم واحد على الأقل');
+      alert('⚠️ الرجاء اختيار يوم واحد على الأقل');
       return;
     }
 
     if (formData.type === 'PERMISSION' && !formData.permissionDate) {
-      alert('الرجاء تحديد تاريخ الاستئذان');
+      alert('⚠️ الرجاء تحديد تاريخ الاستئذان');
       return;
     }
 
-    if (!formData.reason) {
-      alert('الرجاء كتابة السبب');
+    if (!formData.reason.trim()) {
+      alert('⚠️ الرجاء كتابة سبب الطلب');
       return;
     }
 
@@ -84,8 +109,7 @@ export default function NewAttendanceRequestPage() {
       const attachmentData = attachments.length > 0 ? JSON.stringify(attachments) : null;
 
       if (formData.type === 'EXCUSE') {
-        // Submit multiple requests for selected dates
-        const promises = Array.from(selectedDates).map(dateStr => 
+        const promises = Array.from(selectedDates).map(dateStr =>
           fetch('/api/hr/attendance/requests', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -108,7 +132,6 @@ export default function NewAttendanceRequestPage() {
           alert('⚠️ بعض الطلبات فشلت، الرجاء المحاولة مرة أخرى');
         }
       } else if (formData.type === 'PERMISSION') {
-        // Submit single permission request
         const res = await fetch('/api/hr/attendance/requests', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -136,48 +159,50 @@ export default function NewAttendanceRequestPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const styles: Record<string, { bg: string; text: string; label: string }> = {
-      LATE: { bg: '#f59e0b', text: '#ffffff', label: 'متأخر' },
-      ABSENT: { bg: '#ef4444', text: '#ffffff', label: 'غائب' }
+    const map: Record<string, { bg: string; color: string; text: string; icon: string }> = {
+      LATE: { bg: '#FEF3C7', color: '#92400E', text: 'متأخر', icon: '⏰' },
+      ABSENT: { bg: '#FEE2E2', color: '#991B1B', text: 'غائب', icon: '❌' }
     };
-
-    const config = styles[status] || styles.LATE;
-
+    const config = map[status] || map.LATE;
     return (
-      <span style={{
-        display: 'inline-block',
-        padding: '4px 10px',
-        borderRadius: '6px',
-        fontSize: '12px',
-        fontWeight: '600',
-        background: config.bg,
-        color: config.text
-      }}>
-        {config.label}
+      <span
+        style={{
+          background: config.bg,
+          color: config.color,
+          padding: '6px 12px',
+          borderRadius: '12px',
+          fontSize: '13px',
+          fontWeight: '600',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}
+      >
+        <span>{config.icon}</span>
+        <span>{config.text}</span>
       </span>
     );
   };
 
   const getExcuseStatusBadge = (status: string) => {
-    const styles: Record<string, { bg: string; text: string; label: string }> = {
-      PENDING: { bg: '#f59e0b', text: '#ffffff', label: 'معلق' },
-      APPROVED: { bg: '#10b981', text: '#ffffff', label: 'موافق عليه' },
-      REJECTED: { bg: '#ef4444', text: '#ffffff', label: 'مرفوض' }
+    const map: Record<string, { bg: string; color: string; text: string }> = {
+      PENDING: { bg: '#FEF3C7', color: '#92400E', text: 'معلق' },
+      APPROVED: { bg: '#D1FAE5', color: '#065F46', text: 'موافق' },
+      REJECTED: { bg: '#FEE2E2', color: '#991B1B', text: 'مرفوض' }
     };
-
-    const config = styles[status] || styles.PENDING;
-
+    const config = map[status] || map.PENDING;
     return (
-      <span style={{
-        display: 'inline-block',
-        padding: '3px 8px',
-        borderRadius: '6px',
-        fontSize: '11px',
-        fontWeight: '600',
-        background: config.bg,
-        color: config.text
-      }}>
-        {config.label}
+      <span
+        style={{
+          background: config.bg,
+          color: config.color,
+          padding: '4px 10px',
+          borderRadius: '10px',
+          fontSize: '12px',
+          fontWeight: '600'
+        }}
+      >
+        {config.text}
       </span>
     );
   };
@@ -185,496 +210,317 @@ export default function NewAttendanceRequestPage() {
   const formatTime = (dateStr: string | null) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
+    return date.toLocaleTimeString('ar-SA', {
+      hour: '2-digit',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     });
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#F9FAFB',
-      padding: '20px'
-    }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        
-        {/* Header */}
-        <div style={{ marginBottom: '24px' }}>
-          <Link 
-            href="/hr/attendance/requests"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#6B7280',
-              textDecoration: 'none',
-              marginBottom: '16px',
-              fontSize: '14px',
-              padding: '8px 16px',
-              background: 'white',
-              borderRadius: '0.5rem'
-            }}
-          >
-            <span>←</span>
-            <span>رجوع إلى الطلبات</span>
-          </Link>
-
-          <h1 style={{ 
-            fontSize: '28px', 
-            fontWeight: 'bold', 
-            color: '#111827',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
-            <span style={{ fontSize: '36px' }}>📝</span>
-            طلب حضور جديد
-          </h1>
-          <p style={{ 
-            color: '#6B7280', 
-            fontSize: '14px' 
-          }}>
-            تبرير غياب/تأخر أو طلب استئذان
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          
-          {/* Request Type Selection */}
-          <div style={{
-            background: 'white',
-            
-            borderRadius: '0.75rem',
-            padding: '24px',
-            border: '1px solid #E5E7EB',
-            marginBottom: '20px'
-          }}>
-            <h3 style={{ 
-              color: '#111827', 
-              fontSize: '16px', 
-              fontWeight: '600',
-              marginBottom: '16px'
-            }}>
-              نوع الطلب
-            </h3>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+    <div dir="rtl" style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
+      <ResponsiveContainer size="xl">
+        <PageHeader
+          title="📝 تصحيح الحضور"
+          breadcrumbs={['الرئيسية', 'الحضور', 'تصحيح الحضور']}
+          actions={
+            <Link href="/hr/attendance/requests">
               <button
-                type="button"
-                onClick={() => {
-                  setFormData({ ...formData, type: 'EXCUSE', permissionDate: '' });
-                  setSelectedDates(new Set());
-                }}
                 style={{
-                  flex: 1,
-                  minWidth: '200px',
-                  padding: '16px',
-                  background: formData.type === 'EXCUSE' 
-                    ? 'rgba(239, 68, 68, 0.3)' 
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: formData.type === 'EXCUSE'
-                    ? '2px solid rgba(239, 68, 68, 0.6)'
-                    : '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '0.5rem',
-                  color: '#111827',
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <span style={{ fontSize: '32px' }}>⚠️</span>
-                <div>
-                  <div>تبرير غياب أو تأخر</div>
-                  <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
-                    للأيام التي حصل فيها غياب أو تأخير
-                  </div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData({ ...formData, type: 'PERMISSION', permissionDate: '' });
-                  setSelectedDates(new Set());
-                }}
-                style={{
-                  flex: 1,
-                  minWidth: '200px',
-                  padding: '16px',
-                  background: formData.type === 'PERMISSION' 
-                    ? 'rgba(59, 130, 246, 0.3)' 
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: formData.type === 'PERMISSION'
-                    ? '2px solid rgba(59, 130, 246, 0.6)'
-                    : '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '0.5rem',
-                  color: '#111827',
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <span style={{ fontSize: '32px' }}>🚪</span>
-                <div>
-                  <div>طلب استئذان</div>
-                  <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
-                    مغادرة مبكرة أو تأخير متوقع
-                  </div>
-                </div>
-              </button>
-            </div>
-          </div>
-          
-          {/* Permission Date Selection */}
-          {formData.type === 'PERMISSION' && (
-            <div style={{
-              background: 'white',
-              
-              borderRadius: '0.75rem',
-              padding: '24px',
-              border: '1px solid #E5E7EB',
-              marginBottom: '20px'
-            }}>
-              <label style={{ 
-                display: 'block', 
-                color: '#111827', 
-                marginBottom: '10px',
-                fontSize: '14px',
-                fontWeight: '600'
-              }}>
-                تاريخ الاستئذان <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <input
-                type="date"
-                value={formData.permissionDate}
-                onChange={(e) => setFormData({ ...formData, permissionDate: e.target.value })}
-                min={new Date().toISOString().split('T')[0]}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '0.5rem',
-                  border: '1px solid #E5E7EB',
                   background: 'white',
-                  color: '#111827',
+                  color: '#667eea',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  border: '1px solid #E5E7EB',
+                  fontWeight: '600',
+                  cursor: 'pointer',
                   fontSize: '14px'
                 }}
-              />
-              <div style={{ 
-                marginTop: '8px',
-                fontSize: '12px',
-                color: '#9CA3AF',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <span>ℹ️</span>
-                <span>يمكنك طلب الاستئذان لليوم الحالي أو أي يوم قادم</span>
+              >
+                ← طلباتي السابقة
+              </button>
+            </Link>
+          }
+        />
+
+        {/* Info Banner */}
+        <CardEnhanced variant="outlined" style={{ marginBottom: '24px', borderLeft: '4px solid #667eea' }}>
+          <CardBody>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+              <div style={{ fontSize: '32px' }}>ℹ️</div>
+              <div>
+                <h4 style={{ fontSize: '16px', fontWeight: '700', color: '#111827', marginBottom: '8px' }}>
+                  تعليمات مهمة
+                </h4>
+                <ul style={{ fontSize: '14px', color: '#6B7280', lineHeight: '1.8', paddingRight: '20px', margin: 0 }}>
+                  <li>اختر نوع الطلب: عذر غياب أو استئذان</li>
+                  <li>حدد الأيام أو التاريخ المطلوب</li>
+                  <li>اكتب سبب واضح ومحدد</li>
+                  <li>يمكنك إرفاق مستندات داعمة (اختياري)</li>
+                  <li>سيتم مراجعة الطلب من قبل المسؤولين</li>
+                </ul>
               </div>
             </div>
-          )}
+          </CardBody>
+        </CardEnhanced>
 
-          
-          {/* Problematic Days List */}
-          {formData.type === 'EXCUSE' && (
-            <div style={{
-              background: 'white',
-              
-              borderRadius: '0.75rem',
-              padding: '24px',
-              border: '1px solid #E5E7EB',
-              marginBottom: '20px'
-            }}>
-              <h3 style={{ 
-                color: '#111827', 
-                fontSize: '18px', 
-                fontWeight: '600',
-                marginBottom: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <span>⚠️</span>
-                الأيام المتأخر أو الغائب فيها
-              </h3>
+        <form onSubmit={handleSubmit}>
+          <ResponsiveGrid columns={{ mobile: 1, desktop: 1 }} gap="lg">
+            {/* Request Type Selection */}
+            <CardEnhanced variant="elevated">
+              <CardHeader title="1️⃣ اختر نوع الطلب" />
+              <CardBody>
+                <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ ...formData, type: 'EXCUSE' });
+                      setSelectedDates(new Set());
+                    }}
+                    style={{
+                      padding: '20px',
+                      borderRadius: '12px',
+                      border: formData.type === 'EXCUSE' ? '2px solid #667eea' : '1px solid #E5E7EB',
+                      background: formData.type === 'EXCUSE' ? 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <div style={{ fontSize: '36px', marginBottom: '8px' }}>📋</div>
+                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>
+                      عذر غياب
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#6B7280' }}>
+                      لتبرير الأيام المتأخرة أو الغياب
+                    </div>
+                  </button>
 
-              {loadingDays ? (
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '40px',
-                  color: '#111827' 
-                }}>
-                  <div style={{ fontSize: '32px', marginBottom: '12px' }}>⏳</div>
-                  <div>جاري التحميل...</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ ...formData, type: 'PERMISSION' });
+                      setSelectedDates(new Set());
+                    }}
+                    style={{
+                      padding: '20px',
+                      borderRadius: '12px',
+                      border: formData.type === 'PERMISSION' ? '2px solid #667eea' : '1px solid #E5E7EB',
+                      background: formData.type === 'PERMISSION' ? 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <div style={{ fontSize: '36px', marginBottom: '8px' }}>🚪</div>
+                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>
+                      استئذان
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#6B7280' }}>
+                      للخروج خلال يوم العمل
+                    </div>
+                  </button>
                 </div>
-              ) : problematicDays.length === 0 ? (
-                <div style={{ 
-                  textAlign: 'center', 
-                  padding: '40px',
-                  color: '#111827' 
-                }}>
-                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
-                  <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '6px' }}>
-                    لا توجد أيام تحتاج تبرير
-                  </div>
-                  <div style={{ fontSize: '13px', opacity: 0.8 }}>
-                    سجل الحضور الخاص بك ممتاز!
-                  </div>
-                </div>
-              ) : (
-                <div style={{ 
-                  overflowX: 'auto',
-                  borderRadius: '0.5rem'
-                }}>
-                  <table style={{ 
-                    width: '100%', 
-                    borderCollapse: 'separate',
-                    borderSpacing: '0 6px',
-                    color: '#111827'
-                  }}>
-                    <thead>
-                      <tr style={{ 
-                        background: 'white',
-                        borderRadius: '0.5rem'
-                      }}>
-                        <th style={{ 
-                          padding: '10px', 
-                          textAlign: 'center', 
-                          fontWeight: '600', 
-                          fontSize: '13px',
-                          borderTopRightRadius: '8px',
-                          borderBottomRightRadius: '8px',
-                          width: '50px'
-                        }}>
-                          اختيار
-                        </th>
-                        <th style={{ padding: '10px', textAlign: 'center', fontWeight: '600', fontSize: '13px' }}>
-                          التاريخ
-                        </th>
-                        <th style={{ padding: '10px', textAlign: 'center', fontWeight: '600', fontSize: '13px' }}>
-                          الحالة
-                        </th>
-                        <th style={{ padding: '10px', textAlign: 'center', fontWeight: '600', fontSize: '13px' }}>
-                          الحضور
-                        </th>
-                        <th style={{ padding: '10px', textAlign: 'center', fontWeight: '600', fontSize: '13px' }}>
-                          الانصراف
-                        </th>
-                        <th style={{ padding: '10px', textAlign: 'center', fontWeight: '600', fontSize: '13px' }}>
-                          ساعات العمل
-                        </th>
-                        <th style={{ 
-                          padding: '10px', 
-                          textAlign: 'center', 
-                          fontWeight: '600', 
-                          fontSize: '13px',
-                          borderTopLeftRadius: '8px',
-                          borderBottomLeftRadius: '8px'
-                        }}>
-                          طلب تبرير
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
+              </CardBody>
+            </CardEnhanced>
+
+            {/* Date Selection */}
+            {formData.type === 'EXCUSE' && (
+              <CardEnhanced variant="elevated">
+                <CardHeader title={`2️⃣ اختر الأيام (${selectedDates.size} محدد)`} />
+                <CardBody>
+                  {loadingDays ? (
+                    <SkeletonCard />
+                  ) : problematicDays.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                      <div style={{ fontSize: '64px', marginBottom: '16px' }}>✅</div>
+                      <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#10B981', marginBottom: '8px' }}>
+                        ممتاز! لا توجد مشاكل حضور
+                      </h4>
+                      <p style={{ fontSize: '14px', color: '#6B7280' }}>
+                        سجل الحضور الخاص بك نظيف
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: '12px' }}>
                       {problematicDays.map((day) => {
-                        const dateStr = new Date(day.date).toISOString().split('T')[0];
-                        const isSelected = selectedDates.has(dateStr);
-                        const isDisabled = day.hasExcuseRequest;
+                        const isSelected = selectedDates.has(day.date);
+                        const hasRequest = day.hasExcuseRequest;
 
                         return (
-                          <tr 
+                          <button
                             key={day.id}
-                            style={{ 
-                              background: isSelected 
-                                ? 'rgba(16, 185, 129, 0.2)' 
-                                : 'rgba(255, 255, 255, 0.05)',
-                              opacity: isDisabled ? 0.5 : 1,
-                              transition: 'all 0.2s ease',
-                              borderRadius: '0.5rem'
+                            type="button"
+                            onClick={() => !hasRequest && toggleDate(day.date)}
+                            disabled={hasRequest}
+                            style={{
+                              padding: '16px',
+                              borderRadius: '12px',
+                              border: isSelected ? '2px solid #667eea' : '1px solid #E5E7EB',
+                              background: isSelected
+                                ? 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)'
+                                : hasRequest
+                                ? '#F3F4F6'
+                                : 'white',
+                              cursor: hasRequest ? 'not-allowed' : 'pointer',
+                              transition: 'all 0.2s',
+                              textAlign: 'right',
+                              display: 'grid',
+                              gridTemplateColumns: 'auto 1fr auto',
+                              gap: '16px',
+                              alignItems: 'center',
+                              opacity: hasRequest ? 0.6 : 1
                             }}
                           >
-                            <td style={{ 
-                              padding: '12px',
-                              textAlign: 'center',
-                              borderTopRightRadius: '8px',
-                              borderBottomRightRadius: '8px'
-                            }}>
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                disabled={isDisabled}
-                                onChange={() => toggleDate(dateStr)}
-                                style={{
-                                  width: '18px',
-                                  height: '18px',
-                                  cursor: isDisabled ? 'not-allowed' : 'pointer',
-                                  accentColor: '#10b981'
-                                }}
-                              />
-                            </td>
-                            <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px' }}>
-                              {new Date(day.date).toLocaleDateString('en-US', {
-                                weekday: 'short',
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })}
-                            </td>
-                            <td style={{ padding: '12px', textAlign: 'center' }}>
-                              {getStatusBadge(day.status)}
-                            </td>
-                            <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px' }}>
-                              {formatTime(day.checkIn)}
-                            </td>
-                            <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px' }}>
-                              {formatTime(day.checkOut)}
-                            </td>
-                            <td style={{ padding: '12px', textAlign: 'center', fontSize: '13px' }}>
-                              {day.workHours ? `${day.workHours.toFixed(1)} س` : '-'}
-                            </td>
-                            <td style={{ 
-                              padding: '12px', 
-                              textAlign: 'center',
-                              borderTopLeftRadius: '8px',
-                              borderBottomLeftRadius: '8px'
-                            }}>
-                              {day.hasExcuseRequest && day.excuseRequestStatus ? (
-                                getExcuseStatusBadge(day.excuseRequestStatus)
+                            {/* Checkbox */}
+                            <div
+                              style={{
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '6px',
+                                border: '2px solid ' + (isSelected ? '#667eea' : '#D1D5DB'),
+                                background: isSelected ? '#667eea' : 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontWeight: '700',
+                                fontSize: '14px'
+                              }}
+                            >
+                              {isSelected && '✓'}
+                            </div>
+
+                            {/* Day Info */}
+                            <div>
+                              <div style={{ fontSize: '15px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>
+                                {new Date(day.date).toLocaleDateString('ar-SA', {
+                                  weekday: 'long',
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </div>
+                              <div style={{ fontSize: '13px', color: '#EF4444', fontWeight: '600', marginBottom: '6px' }}>
+                                {day.problemReason}
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                                <span>🕐 دخول: {formatTime(day.checkIn)}</span>
+                                <span>🕐 خروج: {formatTime(day.checkOut)}</span>
+                                {day.workHours !== null && <span>⏱️ ساعات: {day.workHours.toFixed(1)}</span>}
+                              </div>
+                            </div>
+
+                            {/* Status Badge */}
+                            <div>
+                              {hasRequest ? (
+                                <div>
+                                  {getExcuseStatusBadge(day.excuseRequestStatus || 'PENDING')}
+                                </div>
                               ) : (
-                                <span style={{ fontSize: '11px', opacity: 0.7 }}>-</span>
+                                getStatusBadge(day.status)
                               )}
-                            </td>
-                          </tr>
+                            </div>
+                          </button>
                         );
                       })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                    </div>
+                  )}
+                </CardBody>
+              </CardEnhanced>
+            )}
 
-              {problematicDays.length > 0 && (
-                <div style={{ 
-                  marginTop: '12px',
-                  fontSize: '12px',
-                  color: '#6B7280',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}>
-                  <span>ℹ️</span>
-                  <span>
-                    تم تحديد {selectedDates.size} من {problematicDays.length} يوم
-                  </span>
+            {formData.type === 'PERMISSION' && (
+              <CardEnhanced variant="elevated">
+                <CardHeader title="2️⃣ حدد تاريخ الاستئذان" />
+                <CardBody>
+                  <FloatingInput
+                    label="التاريخ"
+                    type="date"
+                    value={formData.permissionDate}
+                    onChange={(e) => setFormData({ ...formData, permissionDate: e.target.value })}
+                    required
+                  />
+                </CardBody>
+              </CardEnhanced>
+            )}
+
+            {/* Reason */}
+            <CardEnhanced variant="elevated">
+              <CardHeader title="3️⃣ اكتب السبب" />
+              <CardBody>
+                <FloatingTextarea
+                  label="السبب التفصيلي"
+                  value={formData.reason}
+                  onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                  rows={4}
+                  placeholder="اكتب سبب واضح ومفصل..."
+                  required
+                />
+                <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px' }}>
+                  💡 نصيحة: كلما كان السبب أوضح، زادت فرصة الموافقة
                 </div>
-              )}
+              </CardBody>
+            </CardEnhanced>
+
+            {/* Attachments */}
+            <CardEnhanced variant="elevated">
+              <CardHeader title="4️⃣ إرفاق مستندات (اختياري)" />
+              <CardBody>
+                <FileUpload
+                  multiple
+                  onUpload={setAttachments}
+                  accept="image/*,application/pdf"
+                  maxSize={10}
+                  label="إرفاق المستندات"
+                  helperText="يمكنك إرفاق تقارير طبية، شهادات، أو أي مستندات داعمة (الحد الأقصى: 5 ملفات، 10 MB لكل ملف)"
+                />
+              </CardBody>
+            </CardEnhanced>
+
+            {/* Submit */}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <Link href="/hr/attendance/requests">
+                <button
+                  type="button"
+                  disabled={loading}
+                  style={{
+                    padding: '14px 28px',
+                    borderRadius: '8px',
+                    border: '1px solid #E5E7EB',
+                    background: 'white',
+                    color: '#6B7280',
+                    fontWeight: '600',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    fontSize: '15px'
+                  }}
+                >
+                  إلغاء
+                </button>
+              </Link>
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  padding: '14px 28px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: loading
+                    ? '#9CA3AF'
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  fontWeight: '700',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  fontSize: '15px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {loading ? '⏳ جاري الإرسال...' : '✅ إرسال الطلب'}
+              </button>
             </div>
-          )}
-
-          {/* Reason */}
-          <div style={{
-            background: 'white',
-            
-            borderRadius: '0.75rem',
-            padding: '24px',
-            border: '1px solid #E5E7EB',
-            marginBottom: '20px'
-          }}>
-            <label style={{ 
-              display: 'block', 
-              color: '#111827', 
-              marginBottom: '10px',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}>
-              السبب <span style={{ color: '#ef4444' }}>*</span>
-            </label>
-            <textarea
-              value={formData.reason}
-              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-              placeholder={
-                formData.type === 'EXCUSE'
-                  ? "اكتب سبب التبرير بالتفصيل... (مثال: كان لدي ظرف طارئ، موعد طبي، إلخ)"
-                  : "اكتب سبب الاستئذان... (مثال: موعد طبي، إجراء حكومي، ظرف عائلي، إلخ)"
-              }
-              rows={5}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '0.5rem',
-                border: '1px solid #E5E7EB',
-                background: 'white',
-                color: '#111827',
-                fontSize: '14px',
-                resize: 'vertical',
-                fontFamily: 'inherit'
-              }}
-            />
-          </div>
-
-          {/* Attachments */}
-          <div style={{
-            background: 'white',
-            
-            borderRadius: '0.75rem',
-            padding: '24px',
-            border: '1px solid #E5E7EB',
-            marginBottom: '20px'
-          }}>
-            <FileUpload
-              onUpload={setAttachments}
-              multiple={true}
-              label="📎 إرفاق مستندات (اختياري)"
-              helperText="يمكنك إرفاق شهادة طبية، إذن رسمي، أو أي مستندات داعمة (حد أقصى 10 ميجابايت لكل ملف)"
-            />
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading || (formData.type === 'EXCUSE' && selectedDates.size === 0) || (formData.type === 'PERMISSION' && !formData.permissionDate)}
-            style={{
-              width: '100%',
-              padding: '16px',
-              background: loading || (formData.type === 'EXCUSE' && selectedDates.size === 0) || (formData.type === 'PERMISSION' && !formData.permissionDate)
-                ? 'rgba(156, 163, 175, 0.5)' 
-                : 'rgba(16, 185, 129, 0.9)',
-              border: 'none',
-              borderRadius: '0.5rem',
-              color: '#111827',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: loading || (formData.type === 'EXCUSE' && selectedDates.size === 0) || (formData.type === 'PERMISSION' && !formData.permissionDate) ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '10px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-            }}
-          >
-            <span style={{ fontSize: '22px' }}>📤</span>
-            <span>
-              {loading 
-                ? 'جاري الإرسال...' 
-                : formData.type === 'EXCUSE' && selectedDates.size > 0 
-                  ? `إرسال ${selectedDates.size} ${selectedDates.size === 1 ? 'طلب تبرير' : 'طلبات تبرير'}` 
-                  : formData.type === 'PERMISSION'
-                    ? 'إرسال طلب الاستئذان'
-                    : 'إرسال الطلب'
-              }
-            </span>
-          </button>
+          </ResponsiveGrid>
         </form>
-      </div>
+      </ResponsiveContainer>
     </div>
   );
 }

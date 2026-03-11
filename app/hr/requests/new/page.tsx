@@ -279,14 +279,38 @@ export default function NewHRRequestPage() {
               )}
 
               {formData.type === 'SALARY_CERTIFICATE' && (
-                <Textarea
-                  label={`${t('purpose')} *`}
-                  value={formData.purpose}
-                  onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                  rows={3}
-                  placeholder={t('writeDetailsHere')}
-                  required
-                />
+                <>
+                  <div style={{ padding: 12, background: '#EFF6FF', borderRadius: 12, border: '1px solid #BFDBFE', marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, color: '#1E40AF', lineHeight: 1.6 }}>
+                      <strong>📋 ملاحظة مهمة:</strong> شهادة الراتب لن تُصدر إلا بعد موافقة المسؤولين. يُرجى تحديد الجهة المطلوب لها بدقة.
+                    </div>
+                  </div>
+                  
+                  <Input
+                    label="الجهة المطلوب لها *"
+                    value={formData.recipientOrganization}
+                    onChange={(e) => setFormData({ ...formData, recipientOrganization: e.target.value })}
+                    placeholder="مثال: البنك الأهلي، السفارة، وزارة الخارجية..."
+                    required
+                  />
+                  
+                  <Textarea
+                    label={`${t('purpose')} (الغرض من الشهادة) *`}
+                    value={formData.purpose}
+                    onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                    rows={3}
+                    placeholder="اكتب سبب الطلب بالتفصيل (قرض، تأشيرة، إجراء رسمي...)"
+                    required
+                  />
+                  
+                  <div style={{ marginTop: 4 }}>
+                    <div style={{ fontWeight: 800, marginBottom: 8 }}>📎 مرفقات داعمة (اختياري)</div>
+                    <FileUpload onUpload={setAttachments} />
+                    <div style={{ fontSize: 12, color: '#6B7280', marginTop: 8 }}>
+                      يمكنك إرفاق خطاب من الجهة المطلوبة أو أي مستند يوضح سبب الطلب
+                    </div>
+                  </div>
+                </>
               )}
 
               {formData.type === 'HOUSING_ALLOWANCE' && (

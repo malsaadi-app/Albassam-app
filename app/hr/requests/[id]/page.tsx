@@ -444,11 +444,11 @@ export default function HRRequestDetailPage() {
           </div>
         </Card>
 
-        {/* Timeline (visible to requester + approvers/admin/hr) */}
-        {auditLoaded && actionCtx && (
+        {/* Timeline - Different view for requester vs approvers */}
+        {auditLoaded && (
           <Card variant="default" style={{ marginTop: 16, marginBottom: 16 }}>
             <div style={{ padding: 16 }}>
-              <div style={{ fontWeight: 900, marginBottom: 10 }}>🧾 سجل المعاملة</div>
+              <div style={{ fontWeight: 900, marginBottom: 10 }}>🧾 حالة الطلب</div>
 
               {auditLogs.length === 0 ? (
                 <div style={{ color: '#6B7280' }}>لا يوجد سجل حتى الآن.</div>
@@ -479,6 +479,10 @@ export default function HRRequestDetailPage() {
                       return 'اعتماد'
                     })()
 
+                    // Check if current user is requester (hide comments)
+                    const isRequester = !actionCtx || actionCtx.isRequester;
+                    const shouldHideMessage = isRequester && l.message;
+
                     return (
                       <div key={l.id} style={{
                         background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
@@ -500,11 +504,27 @@ export default function HRRequestDetailPage() {
                           </div>
 
                           <div style={{ marginTop: 4, color: '#0F172A', fontWeight: 900 }}>{actionLabel}</div>
-                          <div style={{ marginTop: 6, color: '#0F172A', fontWeight: 700 }}>{actorName}</div>
+                          
+                          {/* Show approver name only if user is NOT requester */}
+                          {!isRequester && (
+                            <div style={{ marginTop: 6, color: '#0F172A', fontWeight: 700 }}>{actorName}</div>
+                          )}
 
-                          {l.message && (
+                          {/* Show comments only to approvers/admin, hide from requester */}
+                          {l.message && !shouldHideMessage && (
                             <div style={{ marginTop: 6, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
                               {l.message}
+                            </div>
+                          )}
+                          
+                          {/* For requester: show simplified status */}
+                          {isRequester && (
+                            <div style={{ marginTop: 6, color: '#6B7280', fontSize: 14 }}>
+                              {action.includes('APPROV') && '✅ تم اعتماد الطلب'}
+                              {action.includes('REJECT') && '❌ تم رفض الطلب'}
+                              {action.includes('SEND_BACK') && '↩️ تم إرجاع الطلب للتعديل'}
+                              {action.includes('DELEGATION') && '🔄 تم تحويل الطلب'}
+                              {action.includes('RESUBMIT') && '📤 تم إعادة تقديم الطلب'}
                             </div>
                           )}
                         </div>
