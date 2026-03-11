@@ -6,11 +6,12 @@
 
 const { PrismaClient } = require('@prisma/client');
 
-// Use a unique connection for each test run
+// Use a unique connection for each test run with pgbouncer mode
+const DATABASE_URL = process.env.DATABASE_URL + (process.env.DATABASE_URL.includes('?') ? '&' : '?') + 'pgbouncer=true';
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL
+      url: DATABASE_URL
     }
   }
 });
