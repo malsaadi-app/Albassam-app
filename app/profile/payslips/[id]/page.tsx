@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { CardEnhanced, CardBody, CardHeader } from '@/components/ui/CardEnhanced';
 import { ResponsiveContainer, ResponsiveGrid } from '@/components/layout/ResponsiveContainer';
 import { SkeletonCard } from '@/components/ui/LoadingStates';
+import { generatePayslipPDF, downloadPDF } from '@/lib/pdf-generator';
 
 interface PayslipItem {
   id: string;
@@ -92,6 +93,56 @@ export default function PayslipDetailPage() {
     window.print();
   };
 
+  const handleDownloadPDF = async () => {
+    if (!payslip) return;
+
+    try {
+      const additionsItems = payslip.items
+        .filter(item => item.kind === 'ADDITION')
+        .map(item => ({
+          title: item.title,
+          amount: item.amount,
+          notes: item.notes || undefined
+        }));
+
+      const deductionsItems = payslip.items
+        .filter(item => item.kind === 'DEDUCTION')
+        .map(item => ({
+          title: item.title,
+          amount: item.amount,
+          notes: item.notes || undefined
+        }));
+
+      const pdfData = {
+        employeeName: payslip.employeeName,
+        nationalId: payslip.nationalId,
+        employeeNumber: '', // Not available in current schema
+        year: payslip.payrollRun.year,
+        month: payslip.payrollRun.month,
+        basicSalary: payslip.basicSalary,
+        housingAllowance: payslip.housingAllowance,
+        transportAllowance: payslip.transportAllowance,
+        otherAllowances: payslip.otherAllowances,
+        additions: additionsItems,
+        deductions: deductionsItems,
+        totalSalary: payslip.totalSalary,
+        bankName: payslip.bankName || undefined,
+        iban: payslip.iban || undefined,
+        branch: payslip.employee?.branch?.name || undefined,
+        createdAt: new Date().toISOString()
+      };
+
+      const blob = await generatePayslipPDF(pdfData);
+      const monthName = getMonthName(payslip.payrollRun.month);
+      const filename = `payslip-${payslip.employeeName}-${monthName}-${payslip.payrollRun.year}.pdf`;
+      
+      downloadPDF(blob, filename);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('حدث خطأ أثناء توليد ملف PDF');
+    }
+  };
+
   if (loading) {
     return (
       <div dir="rtl" style={{ minHeight: '100vh', background: '#F9FAFB', padding: '24px 16px' }}>
@@ -148,7 +199,23 @@ export default function PayslipDetailPage() {
             title={`كشف راتب ${getMonthName(payslip.payrollRun.month)} ${payslip.payrollRun.year}`}
             breadcrumbs={['الرئيسية', 'الملف الشخصي', 'كشوف الرواتب', 'التفاصيل']}
             actions={
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={handleDownloadPDF}
+                  style={{
+                    padding: '12px 24px',
+                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  📥 تحميل PDF
+                </button>
+
                 <button
                   onClick={handlePrint}
                   style={{
