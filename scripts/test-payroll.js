@@ -128,9 +128,7 @@ async function testPayrollRunGeneration() {
     // Get admin user
     const adminUser = await prisma.user.findFirst({
       where: {
-        role: {
-          name: { in: ['SUPER_ADMIN', 'ADMIN'] }
-        }
+        role: { in: ['SUPER_ADMIN', 'ADMIN'] }
       }
     });
     
