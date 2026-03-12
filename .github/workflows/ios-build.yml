@@ -54,6 +54,16 @@ jobs:
       run: |
         cd ios/App
         
+        # List available schemes
+        echo "📋 Available schemes:"
+        xcodebuild -list -project App.xcodeproj
+        
+        # List installed profiles
+        echo "📋 Installed provisioning profiles:"
+        ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
+        
+        # Build
+        echo "🔨 Building iOS app..."
         xcodebuild -project App.xcodeproj \
           -scheme App \
           -configuration Release \
@@ -63,7 +73,9 @@ jobs:
           archive \
           CODE_SIGN_STYLE=Automatic \
           DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
-          -allowProvisioningUpdates
+          -allowProvisioningUpdates \
+          -verbose \
+          | tee build.log
     
     - name: Export IPA
       run: |
