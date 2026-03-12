@@ -1,0 +1,16 @@
+// Release Build Configuration
+// iOS App Store Distribution Settings
+
+// Code Signing
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = iPhone Distribution
+
+// Team & Bundle
+DEVELOPMENT_TEAM = 8JQBAUT226
+PRODUCT_BUNDLE_IDENTIFIER = com.albassam.hrapp
+
+// Deployment
+IPHONEOS_DEPLOYMENT_TARGET = 15.0
+
+// Provisioning (will be set from installed profile)
+PROVISIONING_PROFILE_SPECIFIER = 

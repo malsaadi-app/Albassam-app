@@ -54,16 +54,17 @@ jobs:
       run: |
         cd ios/App
         
-        # List available schemes
-        echo "📋 Available schemes:"
-        xcodebuild -list -project App.xcodeproj
+        # Get provisioning profile info
+        PROFILE_PATH=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | head -1)
+        PROFILE_NAME=$(security cms -D -i "$PROFILE_PATH" | plutil -extract Name raw -)
+        PROFILE_UUID=$(basename "$PROFILE_PATH" .mobileprovision)
         
-        # List installed profiles
-        echo "📋 Installed provisioning profiles:"
-        ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
+        echo "📋 Provisioning Profile:"
+        echo "  Name: $PROFILE_NAME"
+        echo "  UUID: $PROFILE_UUID"
         
-        # Build
-        echo "🔨 Building iOS app..."
+        # Build with proper signing
+        echo "🔨 Building iOS app with Manual signing..."
         xcodebuild -project App.xcodeproj \
           -scheme App \
           -configuration Release \
@@ -71,15 +72,27 @@ jobs:
           -destination 'generic/platform=iOS' \
           -archivePath $PWD/build/App.xcarchive \
           archive \
-          CODE_SIGN_STYLE=Automatic \
+          CODE_SIGN_STYLE=Manual \
+          CODE_SIGN_IDENTITY="iPhone Distribution" \
           DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
-          -allowProvisioningUpdates \
-          -verbose \
-          | tee build.log
+          PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
+          PRODUCT_BUNDLE_IDENTIFIER=com.albassam.hrapp
     
     - name: Export IPA
       run: |
         cd ios/App
+        
+        # Get provisioning profile UUID
+        PROFILE_PATH=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | head -1)
+        PROFILE_UUID=$(basename "$PROFILE_PATH" .mobileprovision)
+        
+        # Add provisioning profile to exportOptions
+        /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" exportOptions.plist 2>/dev/null || true
+        /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:com.albassam.hrapp $PROFILE_UUID" exportOptions.plist
+        
+        echo "📋 Export options configured with profile: $PROFILE_UUID"
+        
+        # Export IPA
         xcodebuild -exportArchive \
           -archivePath $PWD/build/App.xcarchive \
           -exportOptionsPlist exportOptions.plist \

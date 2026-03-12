@@ -5,7 +5,7 @@
     <key>method</key>
     <string>app-store</string>
     <key>teamID</key>
-    <string>YOUR_TEAM_ID</string>
+    <string>8JQBAUT226</string>
     <key>uploadBitcode</key>
     <false/>
     <key>uploadSymbols</key>
@@ -13,11 +13,8 @@
     <key>compileBitcode</key>
     <false/>
     <key>signingStyle</key>
-    <string>automatic</string>
-    <key>provisioningProfiles</key>
-    <dict>
-        <key>com.albassam.hrapp</key>
-        <string>YOUR_PROVISIONING_PROFILE_NAME</string>
-    </dict>
+    <string>manual</string>
+    <key>signingCertificate</key>
+    <string>iPhone Distribution</string>
 </dict>
 </plist>
