@@ -37,38 +37,22 @@ jobs:
         npx cap sync ios
     
     - name: Import certificates
-      env:
-        CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12 }}
-        CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
-        TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      uses: apple-actions/import-codesign-certs@v2
+      with:
+        p12-file-base64: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+        p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        
+    - name: Import provisioning profile
       run: |
-        # Create temporary keychain
-        security create-keychain -p "temppass" build.keychain
-        security list-keychains -d user -s build.keychain $(security list-keychains -d user | sed s/\"//g)
-        security default-keychain -s build.keychain
-        security unlock-keychain -p "temppass" build.keychain
-        security set-keychain-settings -t 3600 -l build.keychain
-        
-        # Import certificate
-        echo "$CERTIFICATE_BASE64" | base64 -D > certificate.p12
-        security import certificate.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -A
-        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "temppass" build.keychain
-        
-        # Import provisioning profile
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-        echo "$PROVISIONING_PROFILE_BASE64" | base64 -D > profile.mobileprovision
+        echo "${{ secrets.APPLE_PROVISIONING_PROFILE }}" | base64 -D > profile.mobileprovision
         PROFILE_UUID=$(security cms -D -i profile.mobileprovision | plutil -extract UUID raw -)
         cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
-        
-        echo "✅ Certificate and profile imported successfully"
+        echo "✅ Provisioning profile installed: $PROFILE_UUID"
     
     - name: Build iOS app
       run: |
         cd ios/App
-        
-        # Get provisioning profile UUID
-        PROFILE_UUID=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | head -1 | xargs basename | sed 's/.mobileprovision//')
         
         xcodebuild -project App.xcodeproj \
           -scheme App \
@@ -77,10 +61,8 @@ jobs:
           -destination 'generic/platform=iOS' \
           -archivePath $PWD/build/App.xcarchive \
           archive \
-          CODE_SIGN_IDENTITY="iPhone Distribution" \
-          CODE_SIGN_STYLE=Manual \
+          CODE_SIGN_STYLE=Automatic \
           DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
-          PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" \
           -allowProvisioningUpdates
     
     - name: Export IPA
