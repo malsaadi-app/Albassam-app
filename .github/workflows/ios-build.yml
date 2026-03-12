@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-13 # Latest macOS with Xcode
+    runs-on: macos-latest # Use latest available macOS runner
     
     steps:
     - name: Checkout code
@@ -32,7 +32,7 @@ jobs:
     - name: Setup Xcode
       uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: '15.0'
+        xcode-version: 'latest-stable'
     
     - name: Install CocoaPods dependencies
       run: |
