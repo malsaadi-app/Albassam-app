@@ -36,14 +36,6 @@ jobs:
       run: |
         npx cap sync ios
     
-    - name: Install CocoaPods dependencies
-      run: |
-        cd ios/App
-        # Update CocoaPods repo
-        pod repo update
-        # Install pods
-        pod install --verbose
-    
     - name: Import certificates
       env:
         CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12 }}
@@ -69,12 +61,16 @@ jobs:
     - name: Build iOS app
       run: |
         cd ios/App
-        xcodebuild -workspace App.xcworkspace \
+        xcodebuild -project App.xcodeproj \
           -scheme App \
           -configuration Release \
+          -sdk iphoneos \
           -destination 'generic/platform=iOS' \
           -archivePath $PWD/build/App.xcarchive \
-          archive
+          archive \
+          CODE_SIGN_IDENTITY="iPhone Distribution" \
+          CODE_SIGN_STYLE=Manual \
+          DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }}
     
     - name: Export IPA
       run: |
