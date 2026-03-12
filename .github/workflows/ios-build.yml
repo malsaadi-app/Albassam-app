@@ -39,7 +39,10 @@ jobs:
     - name: Install CocoaPods dependencies
       run: |
         cd ios/App
-        pod install --repo-update
+        # Update CocoaPods repo
+        pod repo update
+        # Install pods
+        pod install --verbose
     
     - name: Import certificates
       env:
