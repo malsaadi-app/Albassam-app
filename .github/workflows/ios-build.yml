@@ -82,22 +82,52 @@ jobs:
       run: |
         cd ios/App
         
-        # Get provisioning profile UUID
+        # Get provisioning profile info
         PROFILE_PATH=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | head -1)
         PROFILE_UUID=$(basename "$PROFILE_PATH" .mobileprovision)
+        PROFILE_NAME=$(security cms -D -i "$PROFILE_PATH" | plutil -extract Name raw -)
         
-        # Add provisioning profile to exportOptions
-        /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" exportOptions.plist 2>/dev/null || true
-        /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:com.albassam.hrapp $PROFILE_UUID" exportOptions.plist
+        echo "📋 Provisioning Profile:"
+        echo "  UUID: $PROFILE_UUID"
+        echo "  Name: $PROFILE_NAME"
         
-        echo "📋 Export options configured with profile: $PROFILE_UUID"
+        # Create complete exportOptions.plist
+        cat > exportOptions.plist << PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store</string>
+    <key>teamID</key>
+    <string>8JQBAUT226</string>
+    <key>uploadBitcode</key>
+    <false/>
+    <key>uploadSymbols</key>
+    <true/>
+    <key>compileBitcode</key>
+    <false/>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>signingCertificate</key>
+    <string>iPhone Distribution</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.albassam.hrapp</key>
+        <string>${PROFILE_UUID}</string>
+    </dict>
+</dict>
+</plist>
+PLIST
+        
+        echo "✅ Export options created with profile UUID: $PROFILE_UUID"
         
         # Export IPA
+        echo "📦 Exporting IPA..."
         xcodebuild -exportArchive \
           -archivePath $PWD/build/App.xcarchive \
           -exportOptionsPlist exportOptions.plist \
-          -exportPath $PWD/build \
-          -allowProvisioningUpdates
+          -exportPath $PWD/build
     
     - name: Upload IPA artifact
       uses: actions/upload-artifact@v4
