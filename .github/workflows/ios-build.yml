@@ -1,0 +1,189 @@
+name: iOS Build
+
+# Manual trigger only - run when needed
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-latest
+    
+    steps:
+      # Step 1: Checkout repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Step 2: Setup Flutter with stable channel
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          cache-key: flutter-${{ runner.os }}
+          cache-path: ${{ runner.tool_cache }}/flutter
+
+      # Step 3: Setup Ruby and CocoaPods
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.0'
+          bundler-cache: true
+
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods
+          pod --version
+
+      # Step 4: Install Flutter dependencies
+      - name: Install Flutter dependencies
+        run: |
+          flutter --version
+          flutter pub get
+          flutter doctor -v
+
+      # Step 5: Copy Info.plist from template
+      - name: Copy Info.plist template
+        run: |
+          if [ ! -f "ios-Info.plist.template" ]; then
+            echo "❌ Error: ios-Info.plist.template not found"
+            exit 1
+          fi
+          cp ios-Info.plist.template ios/Runner/Info.plist
+          echo "✅ Info.plist copied successfully"
+          cat ios/Runner/Info.plist
+
+      # Step 6: Setup iOS code signing
+      - name: Setup iOS code signing
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # Create variables
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          # Decode certificate and provisioning profile from base64
+          echo "📦 Decoding certificate and provisioning profile..."
+          echo -n "$APPLE_CERTIFICATE_P12" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$APPLE_PROVISIONING_PROFILE" | base64 --decode -o $PP_PATH
+
+          # Create temporary keychain
+          echo "🔐 Creating temporary keychain..."
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate to keychain
+          echo "📥 Importing certificate..."
+          security import $CERTIFICATE_PATH \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k $KEYCHAIN_PATH
+          
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Install provisioning profile
+          echo "📲 Installing provisioning profile..."
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          
+          # Verify installation
+          echo "✅ Code signing setup complete"
+          security find-identity -v -p codesigning
+
+      # Step 7: Create ExportOptions.plist
+      - name: Create ExportOptions.plist
+        run: |
+          cat > /tmp/ExportOptions.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>8JQBAUT226</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.albassam.hrapp</key>
+              <string>Albassam Platform Distribution</string>
+            </dict>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>compileBitcode</key>
+            <false/>
+          </dict>
+          </plist>
+          EOF
+          echo "✅ ExportOptions.plist created"
+          cat /tmp/ExportOptions.plist
+
+      # Step 8: Build iOS IPA
+      - name: Build iOS IPA
+        run: |
+          echo "🚀 Starting iOS build..."
+          flutter build ipa \
+            --release \
+            --export-options-plist=/tmp/ExportOptions.plist \
+            --verbose
+          
+          echo "✅ Build completed successfully"
+          
+          # Verify IPA file exists
+          if [ ! -f build/ios/ipa/*.ipa ]; then
+            echo "❌ Error: IPA file not found"
+            ls -la build/ios/ipa/ || echo "Directory doesn't exist"
+            exit 1
+          fi
+          
+          # Display IPA info
+          IPA_FILE=$(ls build/ios/ipa/*.ipa)
+          echo "📦 IPA file: $IPA_FILE"
+          ls -lh "$IPA_FILE"
+
+      # Step 9: Upload IPA artifact
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: build/ios/ipa/*.ipa
+          retention-days: 7
+          if-no-files-found: error
+
+      # Step 10: Cleanup (always runs)
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain $KEYCHAIN_PATH || true
+            echo "🧹 Keychain cleaned up"
+          fi
+
+      # Summary
+      - name: Build Summary
+        if: success()
+        run: |
+          echo "### ✅ iOS Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Bundle ID:** com.albassam.hrapp" >> $GITHUB_STEP_SUMMARY
+          echo "**Team ID:** 8JQBAUT226" >> $GITHUB_STEP_SUMMARY
+          echo "**Export Method:** app-store" >> $GITHUB_STEP_SUMMARY
+          echo "**Artifact:** ios-build" >> $GITHUB_STEP_SUMMARY
+          echo "**Retention:** 7 days" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          IPA_FILE=$(ls build/ios/ipa/*.ipa)
+          IPA_SIZE=$(ls -lh "$IPA_FILE" | awk '{print $5}')
+          echo "**IPA Size:** $IPA_SIZE" >> $GITHUB_STEP_SUMMARY
