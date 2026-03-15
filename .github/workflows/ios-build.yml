@@ -9,6 +9,11 @@ jobs:
     name: Build iOS IPA
     runs-on: macos-latest
     
+    # Set working directory for all steps
+    defaults:
+      run:
+        working-directory: mobile/albassam_platform
+    
     steps:
       # Step 1: Checkout repository code
       - name: Checkout repository
