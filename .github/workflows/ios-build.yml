@@ -9,11 +9,6 @@ jobs:
     name: Build iOS IPA
     runs-on: macos-latest
     
-    # Set working directory for all steps
-    defaults:
-      run:
-        working-directory: mobile/albassam_platform
-    
     steps:
       # Step 1: Checkout repository code
       - name: Checkout repository
@@ -44,6 +39,7 @@ jobs:
 
       # Step 4: Install Flutter dependencies
       - name: Install Flutter dependencies
+        working-directory: mobile/albassam_platform
         run: |
           flutter --version
           flutter pub get
@@ -51,6 +47,7 @@ jobs:
 
       # Step 5: Copy Info.plist from template
       - name: Copy Info.plist template
+        working-directory: mobile/albassam_platform
         run: |
           if [ ! -f "ios-Info.plist.template" ]; then
             echo "❌ Error: ios-Info.plist.template not found"
@@ -137,6 +134,7 @@ jobs:
 
       # Step 8: Build iOS IPA
       - name: Build iOS IPA
+        working-directory: mobile/albassam_platform
         run: |
           echo "🚀 Starting iOS build..."
           flutter build ipa \
@@ -163,7 +161,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-build
-          path: build/ios/ipa/*.ipa
+          path: mobile/albassam_platform/build/ios/ipa/*.ipa
           retention-days: 7
           if-no-files-found: error
 
@@ -189,6 +187,6 @@ jobs:
           echo "**Artifact:** ios-build" >> $GITHUB_STEP_SUMMARY
           echo "**Retention:** 7 days" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          IPA_FILE=$(ls build/ios/ipa/*.ipa)
+          IPA_FILE=$(ls mobile/albassam_platform/build/ios/ipa/*.ipa)
           IPA_SIZE=$(ls -lh "$IPA_FILE" | awk '{print $5}')
           echo "**IPA Size:** $IPA_SIZE" >> $GITHUB_STEP_SUMMARY
